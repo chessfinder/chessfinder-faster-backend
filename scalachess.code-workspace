@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.watcherExclude": {
+			"**/target": true
+		},
+		"metals.showImplicitArguments": true,
+		"metals.showImplicitConversionsAndClasses": true
+	}
+}

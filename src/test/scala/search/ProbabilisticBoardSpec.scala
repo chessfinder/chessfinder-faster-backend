@@ -1,0 +1,5 @@
+package search
+
+class ProbabilisticBoardSpec {
+  
+}

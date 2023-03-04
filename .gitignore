@@ -1,0 +1,15 @@
+project/.bloop/
+project/project
+project/target
+target
+
+# auto-generated eclipse files.
+/.classpath
+/.project
+/.settings/
+
+.idea
+.bsp
+.bloop/
+.metals/
+.vscode/
