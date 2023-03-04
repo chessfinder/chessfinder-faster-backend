@@ -1,5 +1,3 @@
 package search
 
-class ProbabilisticBoardSpec {
-  
-}
+class ProbabilisticBoardSpec {}

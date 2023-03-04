@@ -21,16 +21,16 @@ object WrongGuess:
     for {
       shift <- Gen.choose[Int](0, 63)
       mask       = 1L << shift
-      free = ~ board.occupied
-      freeSquare = free & mask 
+      free       = ~board.occupied
+      freeSquare = free & mask
       if freeSquare != Bitboard.empty
       color <- colorGen
-      piece  <- pieceGen
+      piece <- pieceGen
       certainBoard = modify(color, piece, board, freeSquare)
       certainlyOccupiedByUnknown = piece match
         case Piece.Unknown => freeSquare
-        case _ => Bitboard.empty
-      
+        case _             => Bitboard.empty
+
       probabilisticBoard = ProbabilisticBoard(
         certainBoard = certainBoard,
         certainlyOccupiedByUnknown = certainlyOccupiedByUnknown,
@@ -39,25 +39,28 @@ object WrongGuess:
     } yield WrongGuess(probabilisticBoard)
   }
 
-  private def modify(color: Color, piece: Piece, board: Board, freeSquare: Bitboard): Board = 
-    def ajustColorAndOccupation(color: Color, piece: Piece, freeSquare: Bitboard)(board: Board): Board = (piece, color) match
-      case (Piece.Unknown, _) => board
-      case (_, Color.White) => board.copy(white = board.white | freeSquare, occupied = board.occupied | freeSquare)
-      case (_, Color.Black) => board.copy(black = board.black | freeSquare, occupied = board.occupied | freeSquare)
+  private def modify(color: Color, piece: Piece, board: Board, freeSquare: Bitboard): Board =
+    def ajustColorAndOccupation(color: Color, piece: Piece, freeSquare: Bitboard)(board: Board): Board =
+      (piece, color) match
+        case (Piece.Unknown, _) => board
+        case (_, Color.White) =>
+          board.copy(white = board.white | freeSquare, occupied = board.occupied | freeSquare)
+        case (_, Color.Black) =>
+          board.copy(black = board.black | freeSquare, occupied = board.occupied | freeSquare)
 
-    ajustColorAndOccupation(color, piece, freeSquare){
+    ajustColorAndOccupation(color, piece, freeSquare) {
       piece match
         case Piece.King =>
-          board.copy(kings = board.kings | freeSquare) 
-        case Piece.Queen  =>
-          board.copy(queens = board.queens | freeSquare) 
-        case Piece.Rook  =>
-          board.copy(rooks = board.rooks | freeSquare) 
+          board.copy(kings = board.kings | freeSquare)
+        case Piece.Queen =>
+          board.copy(queens = board.queens | freeSquare)
+        case Piece.Rook =>
+          board.copy(rooks = board.rooks | freeSquare)
         case Piece.Bishop =>
-          board.copy(bishops = board.bishops | freeSquare)  
+          board.copy(bishops = board.bishops | freeSquare)
         case Piece.Knight =>
-          board.copy(knights = board.knights | freeSquare) 
-        case Piece.Pawn   =>
-          board.copy(pawns = board.pawns | freeSquare) 
+          board.copy(knights = board.knights | freeSquare)
+        case Piece.Pawn =>
+          board.copy(pawns = board.pawns | freeSquare)
         case _ => board
     }

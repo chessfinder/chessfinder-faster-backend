@@ -9,7 +9,7 @@ import org.scalacheck.Prop
 import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
-import chess.search.Fen.*
+import chess.format.Fen
 import chess.search.FenFixtures
 import chess.search.RealisitcGuess
 import chess.search.WrongGuess
@@ -26,7 +26,7 @@ class ProbabilisticBoardTest extends ScalaCheckSuite:
   property("all realisitc guesses should succeed") {
     val boards: Seq[Board] =
       FenFixtures.fens
-        .map { str => Fen.parse(str).getOrElse(throw RuntimeException("boooo")).board }
+        .map { str => Fen.read(str).getOrElse(throw RuntimeException("boooo")).board.board }
 
     val props = boards.map { (board: Board) =>
       given Board = board
@@ -41,7 +41,7 @@ class ProbabilisticBoardTest extends ScalaCheckSuite:
   property("all wrong guesses should fail") {
     val boards: Seq[Board] =
       FenFixtures.fens
-        .map { str => Fen.parse(str).getOrElse(throw RuntimeException("boooo")).board }
+        .map { str => Fen.read(str).getOrElse(throw RuntimeException("boooo")).board.board }
 
     val props = boards.map { (board: Board) =>
       given Board = board

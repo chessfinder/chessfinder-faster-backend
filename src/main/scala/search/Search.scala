@@ -5,7 +5,7 @@ import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }
 import cats.implicits.*
 
-import chess.Game
+import chess.{ Drop, Game, Move }
 import chess.Situation
 import chess.format.Uci
 
@@ -32,12 +32,7 @@ object Search:
             case Nil => valid(false)
             case uci :: rest =>
               uci(game.situation) match
-                case Validated.Valid(moveOrDrop) =>
-                  val newGame = moveOrDrop.fold(game.apply, game.applyDrop)
-                  rec(newGame, rest)
-                  // rec(game, rest)
-                case fail => fail
-                // case fail => ???
-                
+                case Validated.Valid(move: Move) => rec(game.apply(move), rest)
+                case Validated.Valid(drop: Drop) => rec(game.applyDrop(drop), rest)
+                case fail                        => fail.bimap(err => err.value, _ => false)
       rec(game, ucis)
-      

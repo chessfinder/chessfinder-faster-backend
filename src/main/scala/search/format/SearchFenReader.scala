@@ -10,15 +10,13 @@ trait SearchFenReader:
   def read(fen: SearchFen): Option[ProbabilisticBoard] =
     val maybePosition = fen.value.trim().takeWhile(' ' !=) match
       case word if word.count('/' ==) == 7 => Some(word)
-      case word => None
-        
+      case word                            => None
+
     for {
       positions <- maybePosition
       pieces = makePieces(List.empty)(positions.toList, 0, 7)
-      board = ProbabilisticBoard.fromMap(pieces.toMap) 
+      board  = ProbabilisticBoard.fromMap(pieces.toMap)
     } yield board
-     
-      
 
   @scala.annotation.tailrec
   private def makePieces(acc: List[(Pos, ProbabilisticPiece)])(
@@ -34,7 +32,7 @@ trait SearchFenReader:
         val newAcc = for {
           pos   <- Pos.at(x, y)
           piece <- ProbabilisticPiece.fromChar(c)
-          elem = pos -> piece
+          elem   = pos -> piece
           newAcc = elem :: acc
         } yield newAcc
         makePieces(newAcc.getOrElse(acc))(rest, x + 1, y)

@@ -55,10 +55,10 @@ object ProbabilisticBoard:
     var maybeOccupied              = Bitboard.empty
 
     partialInfo.foreach {
-      case (s, ProbabilisticPiece.CertainlyOccupied) => 
+      case (s, ProbabilisticPiece.CertainlyOccupied) =>
         // certainlyOccupiedByUnknown |= s.bitboard
         ???
-      case (s, ProbabilisticPiece.ProbablyOccupied)  => 
+      case (s, ProbabilisticPiece.ProbablyOccupied) =>
         // maybeOccupied |= s.bitboard
         ???
     }
