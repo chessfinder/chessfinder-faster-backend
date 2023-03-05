@@ -3,36 +3,38 @@ package search
 
 import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }
-import cats.implicits.*
 
 import chess.{ Drop, Game, Move }
 import chess.Situation
+import chess.variant.Variant
 import chess.format.Uci
+import chess.search.error.ValidationResult
+import chess.search.error.ValidationResultExt.* 
 
 trait Search:
 
-  def find(game: Game, probabilisticBoard: ProbabilisticBoard, ucis: List[Uci]): Validated[String, Boolean]
+  def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): ValidationResult[Boolean]
 
 object Search:
 
   class Impl() extends Search:
 
-    override def find(
+    override def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): ValidationResult[Boolean] = 
+      find(replay.setup, probabilisticBoard, replay.chronoMoves)
+
+    protected def find(
         game: Game,
         probabilisticBoard: ProbabilisticBoard,
-        ucis: List[Uci]
-    ): Validated[String, Boolean] =
+        moves: List[MoveOrDrop]
+    ): ValidationResult[Boolean] =
 
       @scala.annotation.tailrec
-      def rec(game: Game, ucis: List[Uci]): Validated[String, Boolean] =
+      def rec(game: Game, moves: List[MoveOrDrop]): ValidationResult[Boolean] =
         if probabilisticBoard.includes(game.situation.board.board)
-        then valid(true)
+        then true.validated
         else
-          ucis match
-            case Nil => valid(false)
-            case uci :: rest =>
-              uci(game.situation) match
-                case Validated.Valid(move: Move) => rec(game.apply(move), rest)
-                case Validated.Valid(drop: Drop) => rec(game.applyDrop(drop), rest)
-                case fail                        => fail.bimap(err => err.value, _ => false)
-      rec(game, ucis)
+          moves match
+            case Nil => false.validated
+            case (move: Move) :: rest => rec(game.apply(move), rest)
+            case (drop: Drop) :: rest => rec(game.applyDrop(drop), rest)
+      rec(game, moves)

@@ -51,16 +51,14 @@ object ProbabilisticBoard:
     val partialInfo   = pieces.partial
     val certainBoard  = Board.fromMap(ceratinPieces)
 
-    var certainlyOccupiedByUnknown = Bitboard.empty
-    var maybeOccupied              = Bitboard.empty
+    var certainlyOccupiedByUnknown: Bitboard = Bitboard.empty
+    var maybeOccupied                        = Bitboard.empty
 
     partialInfo.foreach {
       case (s, ProbabilisticPiece.CertainlyOccupied) =>
-        // certainlyOccupiedByUnknown |= s.bitboard
-        ???
+        certainlyOccupiedByUnknown |= s.bb
       case (s, ProbabilisticPiece.ProbablyOccupied) =>
-        // maybeOccupied |= s.bitboard
-        ???
+        maybeOccupied |= s.bb
     }
 
     ProbabilisticBoard(
