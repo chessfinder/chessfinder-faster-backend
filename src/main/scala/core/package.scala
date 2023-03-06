@@ -1,12 +1,10 @@
-package chess
-package search
+package chessfinder
+package core
 
-export ornicar.scalalib.newtypes.*
-export ornicar.scalalib.zeros.*
-export ornicar.scalalib.extensions.*
 
-import search.ProbabilisticPiece
-import search.ProbabilisticPiece.{ CertainPiece, PartialInformation }
+import core.ProbabilisticPiece
+import core.ProbabilisticPiece.{ CertainPiece, PartialInformation }
+import chess.{PieceMap, Pos}
 
 type ProbabilisticPieceMap = Map[Pos, ProbabilisticPiece]
 type PartialInformationMap = Map[Pos, PartialInformation]

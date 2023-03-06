@@ -1,5 +1,5 @@
-package chess
-package search.format
+package chessfinder
+package core.format
 
 import cats.syntax.all.*
 import munit.FunSuite
@@ -9,14 +9,13 @@ import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
-import chess.search.FenFixtures
-import chess.search.RealisitcGuess
-import chess.search.WrongGuess
-import chess.search.Arbitraries.given
+
+import core.Arbitraries.given
 import munit.ScalaCheckSuite
 import chess.search.*
 import munit.Clue.generate
-import chess.search.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import util.DescriptionHelper
 
 class SearchFenReaderTest extends FunSuite with DescriptionHelper:
 

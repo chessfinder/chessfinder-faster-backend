@@ -1,14 +1,12 @@
-package chess
-package search
+package chessfinder
+package core
 
 import cats.syntax.all.*
 
 import chess.bitboard.Bitboard
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
-import chess.search.*
-import chess.search.BitboardSetOps.⊆
-import chess.search.ProbabilisticPiece
+import BitboardSetOps.⊆
 
 case class ProbabilisticBoard(
     certainBoard: Board,

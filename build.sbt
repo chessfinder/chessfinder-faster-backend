@@ -10,18 +10,7 @@ val sonashots = "sonashots" at "https://oss.sonatype.org/content/repositories/sn
 val root = (project in file("."))
   .settings(
     name := "chess-finder",
-    libraryDependencies ++= List(
-      "org.lichess"        %% "scalachess"       % "14.5.5",
-      "com.github.ornicar" %% "scalalib"         % "9.1.2",
-      "joda-time"           % "joda-time"        % "2.12.2",
-      "org.typelevel"      %% "cats-core"        % "2.9.0",
-      "org.typelevel"      %% "alleycats-core"   % "2.9.0",
-      "org.typelevel"      %% "cats-parse"       % "0.3.9",
-      "org.lichess"        %% "scalachess"       % "14.5.5"   % Test,
-      "org.scalameta"      %% "munit"            % "1.0.0-M7" % Test,
-      "org.scalacheck"     %% "scalacheck"       % "1.17.0"   % Test,
-      "org.scalameta"      %% "munit-scalacheck" % "1.0.0-M7" % Test
-    ),
+    libraryDependencies ++= Dependencies.prod ++ Dependencies.tests,
     testFrameworks ++= List(
       new TestFramework("weaver.framework.CatsEffect"),
       new TestFramework("munit.Framework")
@@ -38,7 +27,7 @@ val root = (project in file("."))
       "-Xfatal-warnings", // Warnings as errors!
       // "-Ywarn-unused-import"
       // "-Wunused:imports",
-      "-Ywarn-unused"
+      // "-Ywarn-unused"
     ),
     resolvers ++= Seq(lilaMaven, sonashots)
   )

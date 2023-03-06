@@ -1,5 +1,5 @@
-package chess
-package search
+package chessfinder
+package core
 
 import org.scalacheck.Gen
 import cats.syntax.all.*
@@ -10,13 +10,11 @@ import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
-import chess.search.FenFixtures
-import chess.search.RealisitcGuess
-import chess.search.WrongGuess
-import chess.search.Arbitraries.given
+import chess.{Pos, Piece}
+import Arbitraries.given
 import chess.search.*
 import munit.Clue.generate
-import chess.search.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 
 class ProbabilisticPieceTest extends ScalaCheckSuite:
 

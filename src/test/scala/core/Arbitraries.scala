@@ -1,5 +1,5 @@
-package chess
-package search
+package chessfinder
+package core
 
 import org.scalacheck.{ Arbitrary, Gen }
 import chess.bitboard.{ Bitboard, Board }

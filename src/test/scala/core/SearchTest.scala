@@ -1,30 +1,30 @@
-package chess
-package search
+package chessfinder
+package core
 
 import munit.FunSuite
 import munit.ScalaCheckSuite
 import org.scalacheck.Prop
 import org.scalacheck.Arbitrary
-import chess.bitboard.Bitboard.*
-import chess.bitboard.Board
-import chess.format.Fen
-import chess.search.FenFixtures
-import chess.search.RealisitcGuess
-import chess.search.WrongGuess
-import chess.search.Arbitraries.given
+import Arbitraries.given
 import munit.ScalaCheckSuite
-import chess.search.*
 import munit.Clue.generate
-import chess.search.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
-import chess.search.format.*
+
+import chess.bitboard.Board
+import chess.bitboard.Bitboard.*
+
+import chess.format.Fen
 import chess.format.pgn.Reader
 import chess.format.pgn.PgnStr
 import chess.format.pgn.Reader.Result.Complete
 import chess.format.pgn.Reader.Result.Incomplete
-import chess.search.error.ValidationResultExt.*
-import munit.Clue.generate
 import chess.ErrorStr.value
-import chess.search.error.ValidationResult
+import chess.Replay
+
+import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import core.error.βExt.*
+import core.error.β
+import util.{ValidationUnsafeHelper, DescriptionHelper}
+import core.format.*
 
 class SearchTest extends FunSuite with ValidationUnsafeHelper with DescriptionHelper:
 
@@ -45,7 +45,7 @@ class SearchTest extends FunSuite with ValidationUnsafeHelper with DescriptionHe
     val png = PgnStr("")
 
     val replay =
-      ValidationResult
+      β
         .fromValidated {
           Reader
             .full(png)
@@ -76,7 +76,7 @@ class SearchTest extends FunSuite with ValidationUnsafeHelper with DescriptionHe
     val png = PgnStr("")
 
     val replay: Replay =
-      ValidationResult
+      β
         .fromValidated {
           Reader
             .full(png)

@@ -1,35 +1,35 @@
-package chess
-package search
+package chessfinder
+package core
 
 import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }
 
 import chess.{ Drop, Game, Move }
-import chess.Situation
+import chess.{Situation, Replay, MoveOrDrop}
 import chess.variant.Variant
 import chess.format.Uci
-import chess.search.error.ValidationResult
-import chess.search.error.ValidationResultExt.* 
+import error.β
+import error.βExt.* 
 
 trait Search:
 
-  def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): ValidationResult[Boolean]
+  def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): β[Boolean]
 
 object Search:
 
   class Impl() extends Search:
 
-    override def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): ValidationResult[Boolean] = 
+    override def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): β[Boolean] = 
       find(replay.setup, probabilisticBoard, replay.chronoMoves)
 
     protected def find(
         game: Game,
         probabilisticBoard: ProbabilisticBoard,
         moves: List[MoveOrDrop]
-    ): ValidationResult[Boolean] =
+    ): β[Boolean] =
 
       @scala.annotation.tailrec
-      def rec(game: Game, moves: List[MoveOrDrop]): ValidationResult[Boolean] =
+      def rec(game: Game, moves: List[MoveOrDrop]): β[Boolean] =
         if probabilisticBoard.includes(game.situation.board.board)
         then true.validated
         else

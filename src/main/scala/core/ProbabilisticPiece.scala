@@ -1,7 +1,7 @@
-package chess
-package search
+package chessfinder
+package core
 
-import chess.Piece
+import chess.{Piece, Color, Role}
 
 sealed trait ProbabilisticPiece
 

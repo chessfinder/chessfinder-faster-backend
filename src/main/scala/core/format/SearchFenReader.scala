@@ -1,15 +1,16 @@
-package chess
-package search.format
+package chessfinder
+package core.format
 
 import cats.implicits.*
 import cats.kernel.Monoid
 import ornicar.scalalib.zeros.given_Zero_Option
-import chess.search.{ ProbabilisticBoard, ProbabilisticPiece }
-import chess.search.error.{ ValidationError, ValidationResult }
-import chess.search.error.ValidationResultExt.*
+import core.{ ProbabilisticBoard, ProbabilisticPiece }
+import core.error.{ BrokenLogic, β }
+import core.error.βExt.*
+import chess.Pos
 
 object SearchFenReader:
-  def read(fen: SearchFen): ValidationResult[ProbabilisticBoard] =
+  def read(fen: SearchFen): β[ProbabilisticBoard] =
     val positionOrError =
       val word = fen.value.trim().takeWhile(' ' !=)
       if
