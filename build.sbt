@@ -1,3 +1,6 @@
+import sbt.*
+import EndToEndSettings._
+
 ThisBuild / organization      := "unknown"
 ThisBuild / version           := "0.1"
 ThisBuild / scalaVersion      := "3.2.2"
@@ -7,13 +10,19 @@ ThisBuild / semanticdbEnabled := true // enable SemanticDB
 val lilaMaven = "lila-maven" at "https://raw.githubusercontent.com/lichess-org/lila-maven/master"
 val sonashots = "sonashots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-val root = (project in file("."))
+// val IntegrationTests = IntegrationTest.extend(Test)
+
+
+lazy val root = (project in file("."))
+  // .configs(IntegrationTests)
+  // .configs(EndToEndTest)
   .settings(
     name := "chess-finder",
     libraryDependencies ++= Dependencies.prod ++ Dependencies.tests,
     testFrameworks ++= List(
       new TestFramework("weaver.framework.CatsEffect"),
-      new TestFramework("munit.Framework")
+      new TestFramework("munit.Framework"),
+      new TestFramework("zio.test.sbt.ZTestFramework")
     ),
     scalacOptions := Seq(
       "-encoding",
@@ -31,3 +40,9 @@ val root = (project in file("."))
     ),
     resolvers ++= Seq(lilaMaven, sonashots)
   )
+  // .settings(EndToEndSettings.e2eSettings)
+  .dependsOn(testkit % Test)
+  .aggregate(testkit)
+
+lazy val testkit = project
+  .in(file("src_testkit"))

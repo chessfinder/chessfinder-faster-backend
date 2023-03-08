@@ -8,10 +8,10 @@ import org.scalacheck.Prop
 import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
-import chess.{Pos, Color, Queen, King, Rook, Bishop, Knight, Pawn}
+import chess.{ Bishop, Color, King, Knight, Pawn, Pos, Queen, Rook }
 import chess.format.Fen
 import Arbitraries.given
-import chess.search.*
+import chessfinder.search.*
 import munit.Clue.generate
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 

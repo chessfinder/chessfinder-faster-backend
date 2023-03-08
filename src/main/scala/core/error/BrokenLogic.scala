@@ -5,6 +5,6 @@ import cats.data.NonEmptyChain
 import cats.kernel.Semigroup
 import cats.syntax.*
 
-type BrokenLogic = String
+type ValidationError = String
 
-type BrokenLogics = NonEmptyChain[BrokenLogic]
+type ValidationErrors = NonEmptyChain[ValidationError]

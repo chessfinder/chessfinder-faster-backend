@@ -1,7 +1,6 @@
 package chessfinder
 package core.format
 
-
 import ornicar.scalalib.newtypes.*
 import ornicar.scalalib.zeros.*
 import ornicar.scalalib.extensions.*

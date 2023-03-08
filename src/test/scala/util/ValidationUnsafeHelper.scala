@@ -7,9 +7,8 @@ import cats.syntax.*
 import core.error.*
 
 trait ValidationUnsafeHelper:
-  extension [T](result: β[T])
-    def get: T = result.fold(_.throwRuntime, identity)
+  extension [T](result: β[T]) def get: T = result.fold(_.throwRuntime, identity)
 
-  private given Semigroup[String] = Semigroup.instance[String]((a, b) => s"$a\n$b") 
-  extension (errors: NonEmptyChain[BrokenLogic])
+  private given Semigroup[String] = Semigroup.instance[String]((a, b) => s"$a\n$b")
+  extension (errors: NonEmptyChain[ValidationError])
     def throwRuntime: Nothing = throw new RuntimeException(errors.reduce)

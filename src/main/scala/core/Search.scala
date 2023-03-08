@@ -5,11 +5,11 @@ import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }
 
 import chess.{ Drop, Game, Move }
-import chess.{Situation, Replay, MoveOrDrop}
+import chess.{ MoveOrDrop, Replay, Situation }
 import chess.variant.Variant
 import chess.format.Uci
 import error.β
-import error.βExt.* 
+import error.βExt.*
 
 trait Search:
 
@@ -19,7 +19,7 @@ object Search:
 
   class Impl() extends Search:
 
-    override def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): β[Boolean] = 
+    override def find(replay: Replay, probabilisticBoard: ProbabilisticBoard): β[Boolean] =
       find(replay.setup, probabilisticBoard, replay.chronoMoves)
 
     protected def find(
@@ -34,7 +34,7 @@ object Search:
         then true.validated
         else
           moves match
-            case Nil => false.validated
+            case Nil                  => false.validated
             case (move: Move) :: rest => rec(game.apply(move), rest)
             case (drop: Drop) :: rest => rec(game.applyDrop(drop), rest)
       rec(game, moves)

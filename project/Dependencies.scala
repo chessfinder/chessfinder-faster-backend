@@ -1,30 +1,30 @@
 import sbt.Keys.libraryDependencies
-import sbt._
+import sbt.*
 import sbt.librarymanagement.ModuleID
 
 object Dependencies {
 
-  val spireVersion: String      = "0.17.0"
-  val catsVersion: String       = "2.6.1"
-  val taggingVersion: String    = "2.3.1"
-  val enumeratumVersion: String = "1.7.0"
-  val scalatestVersion: String  = "3.2.10"
-  val scalacheckVersion: String = "1.15.4"
-  val scalatestplusVersions: (String, String) =
-    (scalatestVersion + ".0", scalacheckVersion.split('.').take(2).mkString("-"))
-  val scalaMockVersion: String = "5.1.0"
-  val tapirVersion: String     = "1.1.1"
-//  val tapirAkkaVersion: String = "0.18.3"
-  val akkaHttpVersion: String          = "10.2.7"
-  val akkaVersion: String              = "2.6.17"
-  val logbackVersion: String           = "1.2.7"
-  val binanceVersion: String           = "1.3.8"
-  val circeVersion: String             = "0.14.1"
-  val binanceAkkaClientVersion: String = "0.0.1"
-  val scalaLoggingVersion: String      = "3.9.4"
-  val slickVersion: String             = "3.3.3"
-  val postgresDriverVersion: String    = "42.3.1"
-  val slickPgVersion: String           = "0.20.2"
+//   val spireVersion: String      = "0.17.0"
+//   val catsVersion: String       = "2.6.1"
+//   val taggingVersion: String    = "2.3.1"
+//   val enumeratumVersion: String = "1.7.0"
+//   val scalatestVersion: String  = "3.2.10"
+//   val scalacheckVersion: String = "1.15.4"
+//   val scalatestplusVersions: (String, String) =
+//     (scalatestVersion + ".0", scalacheckVersion.split('.').take(2).mkString("-"))
+//   val scalaMockVersion: String = "5.1.0"
+//   val tapirVersion: String     = "1.1.1"
+// //  val tapirAkkaVersion: String = "0.18.3"
+//   val akkaHttpVersion: String          = "10.2.7"
+//   val akkaVersion: String              = "2.6.17"
+//   val logbackVersion: String           = "1.2.7"
+//   val binanceVersion: String           = "1.3.8"
+//   val circeVersion: String             = "0.14.1"
+//   val binanceAkkaClientVersion: String = "0.0.1"
+//   val scalaLoggingVersion: String      = "3.9.4"
+//   val slickVersion: String             = "3.3.3"
+//   val postgresDriverVersion: String    = "42.3.1"
+//   val slickPgVersion: String           = "0.20.2"
 
   // val spire: Seq[ModuleID] = Seq(
   //   "org.typelevel" %% "spire" % spireVersion
@@ -54,9 +54,19 @@ object Dependencies {
   //   "org.scalatestplus" %% s"scalacheck-${scalatestplusVersions._2}" % scalatestplusVersions._1 % "test"
   // )
 
-  // val scalaMock: Seq[ModuleID] = Seq(
-  //   "org.scalamock" %% "scalamock" % scalaMockVersion % Test
-  // )
+  lazy val scalaMock: Seq[ModuleID] = {
+    val version = "5.1.0"
+    Seq(
+      "org.scalamock" %% "scalamock" % version
+    )
+  }
+
+  lazy val wiremock: Seq[ModuleID] = {
+    val version = "2.33.2"
+    Seq(
+      "com.github.tomakehurst" % "wiremock-jre8" % version
+    )
+  }
 
   // lazy val circe: Seq[ModuleID] = Seq(
   //   "io.circe" %% "circe-core",
@@ -65,18 +75,21 @@ object Dependencies {
   //   "io.circe" %% "circe-generic-extras",
   // ).map(_ % circeVersion) ++ Seq("com.beachape" %% "enumeratum-circe" % enumeratumVersion)
 
-  // lazy val tapir = Seq(
-  //   "com.softwaremill.sttp.tapir" %% "tapir-core"               % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-json-circe"         % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-cats"               % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-refined"            % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-enumeratum"         % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server"   % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle"  % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle"       % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs"       % tapirVersion,
-  //   "com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M9"
-  // )
+  lazy val tapir = {
+    val version = "1.1.1"
+    Seq(
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % version
+      // "com.softwaremill.sttp.tapir" %% "tapir-json-circe"         % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-cats"               % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-refined"            % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-enumeratum"         % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server"   % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle"  % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle"       % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs"       % tapirVersion,
+      // "com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M9"
+    )
+  }
 
   // lazy val akkaHttp = Seq(
   //   "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
@@ -98,6 +111,20 @@ object Dependencies {
     Seq(
       "org.scalameta" %% "munit"            % version,
       "org.scalameta" %% "munit-scalacheck" % version
+    )
+  }
+
+  // lazy val `zio-munit` = {
+  //   val version = "0.1.1"
+  //   Seq("com.github.poslegm" %% "munit-zio" % version)
+  // }
+
+  lazy val `zio-test` = {
+    val version = "2.0.10"
+    Seq(
+      "dev.zio" %% "zio-test"          % version,
+      "dev.zio" %% "zio-test-sbt"      % version,
+      "dev.zio" %% "zio-test-magnolia" % version
     )
   }
 
@@ -163,6 +190,7 @@ object Dependencies {
 //     "com.github.tminglei" %% "slick-pg_circe-json" % slickPgVersion
 //   )
 
-  val prod: Seq[ModuleID]  = zio ++ scalachess ++ ornicar
-  val tests: Seq[ModuleID] = munit ++ scalaCheck
+  val prod: Seq[ModuleID] = zio ++ tapir ++ scalachess ++ ornicar
+  val tests: Seq[ModuleID] =
+    (munit ++ scalaCheck ++ `zio-test` ++ wiremock).map(_ % Test)
 }

@@ -5,7 +5,7 @@ import cats.implicits.*
 import cats.kernel.Monoid
 import ornicar.scalalib.zeros.given_Zero_Option
 import core.{ ProbabilisticBoard, ProbabilisticPiece }
-import core.error.{ BrokenLogic, β }
+import core.error.β
 import core.error.βExt.*
 import chess.Pos
 

@@ -12,7 +12,7 @@ import chess.format.Fen
 
 import core.Arbitraries.given
 import munit.ScalaCheckSuite
-import chess.search.*
+import chessfinder.search.*
 import munit.Clue.generate
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import util.DescriptionHelper
@@ -29,9 +29,9 @@ class SearchFenReaderTest extends FunSuite with DescriptionHelper:
 
     val searchFen = SearchFen("")
 
-    val actualBoard = SearchFenReader.read(searchFen).get
+    val actualBoard   = SearchFenReader.read(searchFen).get
     val expectedBoard = ???
-    
+
     assertEquals(actualBoard, expectedBoard)
   }
 

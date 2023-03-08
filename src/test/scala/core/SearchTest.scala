@@ -23,7 +23,7 @@ import chess.Replay
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import core.error.βExt.*
 import core.error.β
-import util.{ValidationUnsafeHelper, DescriptionHelper}
+import util.{ DescriptionHelper, ValidationUnsafeHelper }
 import core.format.*
 
 class SearchTest extends FunSuite with ValidationUnsafeHelper with DescriptionHelper:

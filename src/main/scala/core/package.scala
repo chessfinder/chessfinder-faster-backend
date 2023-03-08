@@ -1,10 +1,9 @@
 package chessfinder
 package core
 
-
 import core.ProbabilisticPiece
 import core.ProbabilisticPiece.{ CertainPiece, PartialInformation }
-import chess.{PieceMap, Pos}
+import chess.{ PieceMap, Pos }
 
 type ProbabilisticPieceMap = Map[Pos, ProbabilisticPiece]
 type PartialInformationMap = Map[Pos, PartialInformation]

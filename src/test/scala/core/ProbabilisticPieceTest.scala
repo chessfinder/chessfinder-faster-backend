@@ -10,9 +10,9 @@ import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
-import chess.{Pos, Piece}
+import chess.{ Piece, Pos }
 import Arbitraries.given
-import chess.search.*
+import chessfinder.search.*
 import munit.Clue.generate
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 
@@ -45,11 +45,13 @@ class ProbabilisticPieceTest extends ScalaCheckSuite:
     assertEquals(ProbabilisticPiece.ProbablyOccupied, actualResult.get)
   }
 
-  property("ProbabilisticPiece of the any other symbol should be either None if the symbol is unknown or CertainPiece if the symbol is known"){
+  property(
+    "ProbabilisticPiece of the any other symbol should be either None if the symbol is unknown or CertainPiece if the symbol is known"
+  ) {
     given Gen[Char] = Gen.alphaNumChar.filterNot(ch => ch == '0' | ch == 'o' | ch == 'O' | ch == '?')
     Prop.forAll { (ch: Char) =>
       val expectedResult = Piece.fromChar(ch).map(CertainPiece.apply)
-      val actualResult = ProbabilisticPiece.fromChar(ch)
+      val actualResult   = ProbabilisticPiece.fromChar(ch)
       assertEquals(actualResult, expectedResult)
     }
   }

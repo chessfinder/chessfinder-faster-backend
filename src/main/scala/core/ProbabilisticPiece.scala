@@ -1,16 +1,16 @@
 package chessfinder
 package core
 
-import chess.{Piece, Color, Role}
+import chess.{ Color, Piece, Role }
 
 sealed trait ProbabilisticPiece
 
 object ProbabilisticPiece:
   case class CertainPiece(piece: Piece) extends ProbabilisticPiece
   object CertainPiece:
-    def apply(color: Color, role: Role): CertainPiece = 
+    def apply(color: Color, role: Role): CertainPiece =
       CertainPiece(Piece(color, role))
-  
+
   sealed trait PartialInformation extends ProbabilisticPiece
   case object CertainlyOccupied   extends PartialInformation
   case object ProbablyOccupied    extends PartialInformation

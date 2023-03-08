@@ -1,0 +1,3 @@
+package search
+
+class BoardValidatorTest {}
