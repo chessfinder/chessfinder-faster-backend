@@ -8,7 +8,7 @@
 		"files.watcherExclude": {
 			"**/target": true
 		},
-		"metals.showImplicitArguments": false,
+		"metals.showImplicitArguments": true,
 		"metals.showImplicitConversionsAndClasses": false
 	}
 }

@@ -10,10 +10,12 @@ import client.chess_com.dto.*
 import client.chess_com.dto.errors.*
 import search.entity.UserName
 import scala.util.Success
+import zio.http.Client
 
 object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
   protected lazy val `chess.com`               = ClientBackdoor("/chess_com")
-  protected lazy val client: ChessDotComClient = ChessDotComClient.Impl()
+  protected lazy val clientEnv = 
+    (Client.default >>> ChessDotComClient.impl).orDie
   def spec =
     suite("ChessDotComClient.profile")(
       test("should get user profile if request is successful") {
@@ -46,10 +48,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val uri = Uri.parse("https://www.chess.com/member/tigran-c-137").toOption.get
           Profile(uri)
 
-        val actualResult = for {
+        val actualResult = (for {
           _            <- stub
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
@@ -77,10 +79,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         val expectedResult: φ[Profile] = φ.fail(ProfileNotFound(userName))
 
-        val actualResult: φ[Profile] = for {
+        val actualResult: φ[Profile] = (for {
           _            <- stub.orDie
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
@@ -102,10 +104,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         val expectedResult: φ[Profile] = φ.fail(ServiceIsOverloaded)
 
-        val actualResult: φ[Profile] = for {
+        val actualResult: φ[Profile] = (for {
           _            <- stub.orDie
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
@@ -146,10 +148,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val uri = Uri.parse("https://www.chess.com/member/tigran-c-137").toOption.get
           Profile(uri)
 
-        val actualResult = for {
+        val actualResult = (for {
           _            <- stub
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
@@ -177,10 +179,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         val expectedResult: φ[Profile] = φ.fail(ProfileNotFound(userName))
 
-        val actualResult: φ[Profile] = for {
+        val actualResult: φ[Profile] = (for {
           _            <- stub.orDie
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
@@ -202,10 +204,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         val expectedResult: φ[Profile] = φ.fail(ServiceIsOverloaded)
 
-        val actualResult: φ[Profile] = for {
+        val actualResult: φ[Profile] = (for {
           _            <- stub.orDie
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
@@ -245,10 +247,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val uri = Uri.parse("https://www.chess.com/member/tigran-c-137").toOption.get
           Profile(uri)
 
-        val actualResult = for {
+        val actualResult = (for {
           _            <- stub
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
@@ -276,10 +278,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         val expectedResult: φ[Profile] = φ.fail(ProfileNotFound(userName))
 
-        val actualResult: φ[Profile] = for {
+        val actualResult: φ[Profile] = (for {
           _            <- stub.orDie
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
@@ -301,10 +303,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         val expectedResult: φ[Profile] = φ.fail(ServiceIsOverloaded)
 
-        val actualResult: φ[Profile] = for {
+        val actualResult: φ[Profile] = (for {
           _            <- stub.orDie
-          actualResult <- client.profile(userName)
-        } yield actualResult
+          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+        } yield actualResult).provide(clientEnv)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")

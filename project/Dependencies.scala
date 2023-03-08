@@ -68,12 +68,28 @@ object Dependencies {
     )
   }
 
-  // lazy val circe: Seq[ModuleID] = Seq(
-  //   "io.circe" %% "circe-core",
-  //   "io.circe" %% "circe-generic",
-  //   "io.circe" %% "circe-parser",
-  //   "io.circe" %% "circe-generic-extras",
-  // ).map(_ % circeVersion) ++ Seq("com.beachape" %% "enumeratum-circe" % enumeratumVersion)
+  lazy val `zio-json`: Seq[ModuleID] = {
+    val version = "0.4.2"
+    Seq(
+      "dev.zio" %% "zio-json" % version
+    )
+  }
+
+  lazy val `zio-http`: Seq[ModuleID] = {
+    val version = "0.0.4"
+    Seq(
+      "dev.zio" %% "zio-http" % version
+    )
+  }
+
+  lazy val circe: Seq[ModuleID] = {
+    val version = "0.14.3"
+    Seq(
+    "io.circe" %% "circe-core" % version,
+    "io.circe" %% "circe-generic" % version,
+    "io.circe" %% "circe-parser" % version
+    )
+  }
 
   lazy val tapir = {
     val version = "1.1.1"
@@ -190,7 +206,8 @@ object Dependencies {
 //     "com.github.tminglei" %% "slick-pg_circe-json" % slickPgVersion
 //   )
 
-  val prod: Seq[ModuleID] = zio ++ tapir ++ scalachess ++ ornicar
+  val prod: Seq[ModuleID] = zio ++ tapir ++ scalachess ++ ornicar ++ `zio-json` ++ `zio-http` ++ circe
+
   val tests: Seq[ModuleID] =
     (munit ++ scalaCheck ++ `zio-test` ++ wiremock).map(_ % Test)
 }
