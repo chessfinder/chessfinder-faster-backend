@@ -7,10 +7,12 @@ import client.chess_com.ChessDotComClient
 import chessfinder.testkit.wiremock.ClientBackdoor
 import sttp.model.Uri
 import client.chess_com.dto.*
-import client.chess_com.dto.errors.*
+import client.*
+import client.ClientError.*
 import search.entity.UserName
 import scala.util.Success
 import zio.http.Client
+import sttp.model.Uri.UriContext
 
 object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
   protected lazy val `chess.com`               = ClientBackdoor("/chess_com")
@@ -45,7 +47,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
         val expectedResult =
-          val uri = Uri.parse("https://www.chess.com/member/tigran-c-137").toOption.get
+          val uri = uri"https://www.chess.com/member/tigran-c-137"
           Profile(uri)
 
         val actualResult = (for {
@@ -77,9 +79,9 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
 
-        val expectedResult: φ[Profile] = φ.fail(ProfileNotFound(userName))
+        val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
 
-        val actualResult: φ[Profile] = (for {
+        val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
         } yield actualResult).provide(clientEnv)
@@ -102,9 +104,9 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
 
-        val expectedResult: φ[Profile] = φ.fail(ServiceIsOverloaded)
+        val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
 
-        val actualResult: φ[Profile] = (for {
+        val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
         } yield actualResult).provide(clientEnv)
@@ -112,7 +114,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
 
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ServiceIsOverloaded))) &&
+        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
         assertZIO(stubVerification)(Assertion.isUnit)
       },
     ) +
@@ -145,7 +147,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
         val expectedResult =
-          val uri = Uri.parse("https://www.chess.com/member/tigran-c-137").toOption.get
+          val uri = uri"https://www.chess.com/member/tigran-c-137"
           Profile(uri)
 
         val actualResult = (for {
@@ -177,9 +179,9 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
 
-        val expectedResult: φ[Profile] = φ.fail(ProfileNotFound(userName))
+        val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
 
-        val actualResult: φ[Profile] = (for {
+        val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
         } yield actualResult).provide(clientEnv)
@@ -202,9 +204,9 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
 
-        val expectedResult: φ[Profile] = φ.fail(ServiceIsOverloaded)
+        val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
 
-        val actualResult: φ[Profile] = (for {
+        val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
         } yield actualResult).provide(clientEnv)
@@ -212,7 +214,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
 
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ServiceIsOverloaded))) &&
+        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
         assertZIO(stubVerification)(Assertion.isUnit)
       },
     ) +
@@ -244,7 +246,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
         val expectedResult =
-          val uri = Uri.parse("https://www.chess.com/member/tigran-c-137").toOption.get
+          val uri = uri"https://www.chess.com/member/tigran-c-137"
           Profile(uri)
 
         val actualResult = (for {
@@ -276,9 +278,9 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
 
-        val expectedResult: φ[Profile] = φ.fail(ProfileNotFound(userName))
+        val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
 
-        val actualResult: φ[Profile] = (for {
+        val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
         } yield actualResult).provide(clientEnv)
@@ -301,9 +303,9 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
 
-        val expectedResult: φ[Profile] = φ.fail(ServiceIsOverloaded)
+        val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
 
-        val actualResult: φ[Profile] = (for {
+        val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
         } yield actualResult).provide(clientEnv)
@@ -311,7 +313,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
 
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ServiceIsOverloaded))) &&
+        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
         assertZIO(stubVerification)(Assertion.isUnit)
       }    
     )

@@ -5,4 +5,8 @@ import search.entity.*
 
 trait GameFinder:
 
-  def find(board: RawBoard, platform: ChessPlatform, userName: UserName): φ[Seq[MatchedGame]]
+  def find(board: RawBoard, platform: ChessPlatform, userName: UserName): φ[SearchResult]
+
+object GameFinder:
+  class Impl() extends GameFinder:
+    def find(board: RawBoard, platform: ChessPlatform, userName: UserName): φ[SearchResult] = ???

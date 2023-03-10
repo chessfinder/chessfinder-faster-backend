@@ -1,4 +1,7 @@
 package chessfinder
 package search.entity
 
-case class RawBoard(board: String)
+import chessfinder.core.format.SearchFen
+
+// FIXME deleteme
+case class RawBoard(board: SearchFen)

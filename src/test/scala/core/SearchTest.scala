@@ -23,10 +23,11 @@ import chess.Replay
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import core.error.βExt.*
 import core.error.β
-import util.{ DescriptionHelper, ValidationUnsafeHelper }
+import util.{ DescriptionHelper }
+import util.βUnsafeExt
 import core.format.*
 
-class SearchTest extends FunSuite with ValidationUnsafeHelper with DescriptionHelper:
+class SearchTest extends FunSuite with βUnsafeExt with DescriptionHelper:
 
   val search = new Search.Impl()
 

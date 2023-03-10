@@ -20,7 +20,6 @@ lazy val root = (project in file("."))
     name := "chess-finder",
     libraryDependencies ++= Dependencies.prod ++ Dependencies.tests,
     testFrameworks ++= List(
-      new TestFramework("weaver.framework.CatsEffect"),
       new TestFramework("munit.Framework"),
       new TestFramework("zio.test.sbt.ZTestFramework")
     ),
