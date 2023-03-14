@@ -17,7 +17,7 @@ case class ProbabilisticBoard(
   val certainlyOccupied: Bitboard = certainlyOccupiedByUnknown | certainBoard.occupied
   val certainlyFree               = ~(certainlyOccupied | maybeOccupied)
 
-  def includes(board: Board): Boolean = {
+  def includes(board: Board): Boolean = 
     certainBoard.pawns ⊆ board.pawns &&
     certainBoard.knights ⊆ board.knights &&
     certainBoard.bishops ⊆ board.bishops &&
@@ -28,7 +28,7 @@ case class ProbabilisticBoard(
     certainBoard.black ⊆ board.black &&
     certainlyOccupied ⊆ board.occupied &&
     certainlyFree ⊆ (~board.occupied)
-  }
+  
 
 object ProbabilisticBoard:
   val empty = ProbabilisticBoard(

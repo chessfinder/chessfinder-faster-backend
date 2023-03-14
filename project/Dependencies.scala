@@ -13,7 +13,7 @@ object Dependencies {
 //   val scalatestplusVersions: (String, String) =
 //     (scalatestVersion + ".0", scalacheckVersion.split('.').take(2).mkString("-"))
 //   val scalaMockVersion: String = "5.1.0"
-//   val tapirVersion: String     = "1.1.1"
+//   val version: String     = "1.1.1"
 // //  val tapirAkkaVersion: String = "0.18.3"
 //   val akkaHttpVersion: String          = "10.2.7"
 //   val akkaVersion: String              = "2.6.17"
@@ -68,13 +68,6 @@ object Dependencies {
     )
   }
 
-  lazy val `zio-json`: Seq[ModuleID] = {
-    val version = "0.4.2"
-    Seq(
-      "dev.zio" %% "zio-json" % version
-    )
-  }
-
   lazy val `zio-http`: Seq[ModuleID] = {
     val version = "0.0.4"
     Seq(
@@ -85,25 +78,25 @@ object Dependencies {
   lazy val circe: Seq[ModuleID] = {
     val version = "0.14.3"
     Seq(
-    "io.circe" %% "circe-core" % version,
-    "io.circe" %% "circe-generic" % version,
-    "io.circe" %% "circe-parser" % version
+      "io.circe" %% "circe-core"    % version,
+      "io.circe" %% "circe-generic" % version,
+      "io.circe" %% "circe-parser"  % version
     )
   }
 
   lazy val tapir = {
-    val version = "1.1.1"
+    val version          = "1.2.10"
+    val circeYamlVersion = "0.3.2"
     Seq(
-      "com.softwaremill.sttp.tapir" %% "tapir-core" % version
-      // "com.softwaremill.sttp.tapir" %% "tapir-json-circe"         % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-cats"               % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-refined"            % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-enumeratum"         % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server"   % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle"  % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle"       % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs"       % tapirVersion,
-      // "com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "1.0.0-M9"
+      "com.softwaremill.sttp.tapir"   %% "tapir-core"            % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-json-circe"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-cats"            % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-zio-http-server" % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-enumeratum"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-swagger-ui"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-redoc"           % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-openapi-docs"    % version,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml"    % circeYamlVersion
     )
   }
 
@@ -206,7 +199,7 @@ object Dependencies {
 //     "com.github.tminglei" %% "slick-pg_circe-json" % slickPgVersion
 //   )
 
-  val prod: Seq[ModuleID] = zio ++ tapir ++ scalachess ++ ornicar ++ `zio-json` ++ `zio-http` ++ circe
+  val prod: Seq[ModuleID] = zio ++ tapir ++ scalachess ++ ornicar ++ `zio-http` ++ circe
 
   val tests: Seq[ModuleID] =
     (munit ++ scalaCheck ++ `zio-test` ++ wiremock).map(_ % Test)
