@@ -17,7 +17,7 @@ import sttp.model.Uri.UriContext
 object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
   protected lazy val `chess.com`               = ClientBackdoor("/chess_com")
   protected lazy val clientEnv = 
-    (Client.default >>> ChessDotComClient.impl).orDie
+    (Client.default >>> ChessDotComClient.Impl.layer).orDie
   def spec =
     suite("ChessDotComClient.profile")(
       test("should get user profile if request is successful") {

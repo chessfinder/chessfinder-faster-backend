@@ -10,7 +10,7 @@ import client.chess_com.dto.*
 import zio.http.Client
 import zio.http.Request
 import zio.http.URL
-import client.μ
+import client.{μ, κ}
 import client.ClientError.*
 
 trait ChessDotComClient:
@@ -22,10 +22,17 @@ trait ChessDotComClient:
   def games(archiveLocation: Uri): μ[Games]
 
 object ChessDotComClient:
+
+  def profile(userName: UserName): κ[ChessDotComClient, Profile] = κ.serviceWithZIO[ChessDotComClient](_.profile(userName))
+
+  def srchives(userName: UserName): κ[ChessDotComClient, Archives] = κ.serviceWithZIO[ChessDotComClient](_.archives(userName))
+
+  def games(archiveLocation: Uri): κ[ChessDotComClient, Games] = κ.serviceWithZIO[ChessDotComClient](_.games(archiveLocation))
+
+
   class Impl(client: Client) extends ChessDotComClient:
 
     import ClientExt.*
-    // private val profileClient = client.mapZIO()
     override def profile(userName: UserName): μ[Profile] = 
       val urlString = s"https://api.chess.com/pub/player/${userName.value}"
       val url = μ.fromEither(URL.fromString(urlString).left.map(_ => SomethingWentWrong))
@@ -40,8 +47,9 @@ object ChessDotComClient:
     override def archives(userName: UserName): μ[Archives] = ???
     override def games(archiveLocation: Uri): μ[Games]     = ???
   
-  val impl: ZLayer[Client, Nothing, ChessDotComClient] = ZLayer {
-    for {
-      client <- ZIO.service[Client]
-    } yield Impl(client)
-  }
+  object Impl:
+    val layer = ZLayer {
+      for {
+        client <- ZIO.service[Client]
+      } yield Impl(client)
+    }

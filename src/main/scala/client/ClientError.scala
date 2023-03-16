@@ -2,7 +2,7 @@ package chessfinder
 package client
 
 import chessfinder.search.entity.UserName
-import zio.IO
+import zio.{IO, ZIO}
 import sttp.model.Uri
 
 trait ClientError(val msg: String)
@@ -13,6 +13,7 @@ object ClientError:
   case object SomethingWentWrong extends ClientError("Something went wrong!")
 
 type μ[T] = IO[ClientError, T]
+type κ[R, T] = ZIO[R, ClientError, T]
 
-val μ = zio.ZIO
-
+val μ = ZIO
+val κ = ZIO
