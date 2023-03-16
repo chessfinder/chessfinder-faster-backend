@@ -15,8 +15,8 @@ import zio.http.Client
 import sttp.model.Uri.UriContext
 
 object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
-  protected lazy val `chess.com`               = ClientBackdoor("/chess_com")
-  protected lazy val clientEnv = 
+  protected lazy val `chess.com` = ClientBackdoor("/chess_com")
+  protected lazy val clientEnv =
     (Client.default >>> ChessDotComClient.Impl.layer).orDie
   def spec =
     suite("ChessDotComClient.profile")(
@@ -61,7 +61,6 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
         assertZIO(stubVerification)(Assertion.isUnit)
       },
-
       test("should return UserNotFound if it gets 404") {
 
         val userName = UserName("tigran-c-138")
@@ -78,7 +77,6 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           )
           .stub()
 
-
         val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
 
         val actualResult: μ[Profile] = (for {
@@ -92,7 +90,6 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
         assertZIO(stubVerification)(Assertion.isUnit)
       },
-
       test("should return ServiceIsOverloaded in all other cases") {
 
         val userName = UserName("tigran-c-139")
@@ -102,7 +99,6 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .returnsStatusCode(429)
           .returnsJson("💣💣💣💣")
           .stub()
-
 
         val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
 
@@ -116,204 +112,195 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
 
         assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
         assertZIO(stubVerification)(Assertion.isUnit)
-      },
+      }
     ) +
-    suite("ChessDotComClient.archives")(
+      suite("ChessDotComClient.archives")(
+        test("should get all archives if request is successful") {
 
-      test("should get all archives if request is successful") {
+          val userName = UserName("tigran-c-137")
 
-        val userName = UserName("tigran-c-137")
+          val stub = `chess.com`
+            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
+            .returnsJson(
+              """|
+                 |{
+                 |  "player_id": 191338281,
+                 |  "@id": "https://api.chess.com/pub/player/tigran-c-137",
+                 |  "url": "https://www.chess.com/member/tigran-c-137",
+                 |  "username": "tigran-c-137",
+                 |  "followers": 10,
+                 |  "country": "https://api.chess.com/pub/country/AM",
+                 |  "last_online": 1678264516,
+                 |  "joined": 1658920370,
+                 |  "status": "premium",
+                 |  "is_streamer": false,
+                 |  "verified": false,
+                 |  "league": "Champion"
+                 |}
+                 |""".stripMargin
+            )
+            .stub()
 
-        val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
-          .returnsJson(
-            """|
-               |{
-               |  "player_id": 191338281,
-               |  "@id": "https://api.chess.com/pub/player/tigran-c-137",
-               |  "url": "https://www.chess.com/member/tigran-c-137",
-               |  "username": "tigran-c-137",
-               |  "followers": 10,
-               |  "country": "https://api.chess.com/pub/country/AM",
-               |  "last_online": 1678264516,
-               |  "joined": 1658920370,
-               |  "status": "premium",
-               |  "is_streamer": false,
-               |  "verified": false,
-               |  "league": "Champion"
-               |}
-               |""".stripMargin
-          )
-          .stub()
+          val expectedResult =
+            val uri = uri"https://www.chess.com/member/tigran-c-137"
+            Profile(uri)
 
-        val expectedResult =
-          val uri = uri"https://www.chess.com/member/tigran-c-137"
-          Profile(uri)
+          val actualResult = (for {
+            _            <- stub
+            actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+          } yield actualResult).provide(clientEnv)
 
-        val actualResult = (for {
-          _            <- stub
-          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+          val stubVerification =
+            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
 
-        val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
+          assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
+          assertZIO(stubVerification)(Assertion.isUnit)
+        },
+        test("should return UserNotFound if it gets 404") {
 
-        assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
-        assertZIO(stubVerification)(Assertion.isUnit)
-      },
+          val userName = UserName("tigran-c-138")
 
-      test("should return UserNotFound if it gets 404") {
+          val stub = `chess.com`
+            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-138")
+            .returnsStatusCode(404)
+            .returnsJson(
+              """|{
+                 |"code": 0,
+                 |"message": "User \"tigran-c-138\" not found."
+                 |}
+                 |""".stripMargin
+            )
+            .stub()
 
-        val userName = UserName("tigran-c-138")
+          val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
 
-        val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-138")
-          .returnsStatusCode(404)
-          .returnsJson(
-            """|{
-               |"code": 0,
-               |"message": "User \"tigran-c-138\" not found."
-               |}
-               |""".stripMargin
-          )
-          .stub()
+          val actualResult: μ[Profile] = (for {
+            _            <- stub.orDie
+            actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+          } yield actualResult).provide(clientEnv)
 
+          val stubVerification =
+            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
 
-        val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
+          assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
+          assertZIO(stubVerification)(Assertion.isUnit)
+        },
+        test("should return ServiceIsOverloaded in all other cases") {
 
-        val actualResult: μ[Profile] = (for {
-          _            <- stub.orDie
-          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+          val userName = UserName("tigran-c-139")
 
-        val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
+          val stub = `chess.com`
+            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
+            .returnsStatusCode(429)
+            .returnsJson("💣💣💣💣")
+            .stub()
 
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
-        assertZIO(stubVerification)(Assertion.isUnit)
-      },
-      
-      test("should return ServiceIsOverloaded in all other cases") {
+          val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
 
-        val userName = UserName("tigran-c-139")
+          val actualResult: μ[Profile] = (for {
+            _            <- stub.orDie
+            actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+          } yield actualResult).provide(clientEnv)
 
-        val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
-          .returnsStatusCode(429)
-          .returnsJson("💣💣💣💣")
-          .stub()
+          val stubVerification =
+            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
 
+          assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
+          assertZIO(stubVerification)(Assertion.isUnit)
+        }
+      ) +
+      suite("ChessDotComClient.games")(
+        test("should get a monthly games if request is successful") {
 
-        val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
+          val userName = UserName("tigran-c-137")
 
-        val actualResult: μ[Profile] = (for {
-          _            <- stub.orDie
-          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+          val stub = `chess.com`
+            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
+            .returnsJson(
+              """|
+                 |{
+                 |  "player_id": 191338281,
+                 |  "@id": "https://api.chess.com/pub/player/tigran-c-137",
+                 |  "url": "https://www.chess.com/member/tigran-c-137",
+                 |  "username": "tigran-c-137",
+                 |  "followers": 10,
+                 |  "country": "https://api.chess.com/pub/country/AM",
+                 |  "last_online": 1678264516,
+                 |  "joined": 1658920370,
+                 |  "status": "premium",
+                 |  "is_streamer": false,
+                 |  "verified": false,
+                 |  "league": "Champion"
+                 |}
+                 |""".stripMargin
+            )
+            .stub()
 
-        val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
+          val expectedResult =
+            val uri = uri"https://www.chess.com/member/tigran-c-137"
+            Profile(uri)
 
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
-        assertZIO(stubVerification)(Assertion.isUnit)
-      },
-    ) +
-    suite("ChessDotComClient.games")(
-      test("should get a monthly games if request is successful") {
+          val actualResult = (for {
+            _            <- stub
+            actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+          } yield actualResult).provide(clientEnv)
 
-        val userName = UserName("tigran-c-137")
+          val stubVerification =
+            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
 
-        val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
-          .returnsJson(
-            """|
-               |{
-               |  "player_id": 191338281,
-               |  "@id": "https://api.chess.com/pub/player/tigran-c-137",
-               |  "url": "https://www.chess.com/member/tigran-c-137",
-               |  "username": "tigran-c-137",
-               |  "followers": 10,
-               |  "country": "https://api.chess.com/pub/country/AM",
-               |  "last_online": 1678264516,
-               |  "joined": 1658920370,
-               |  "status": "premium",
-               |  "is_streamer": false,
-               |  "verified": false,
-               |  "league": "Champion"
-               |}
-               |""".stripMargin
-          )
-          .stub()
+          assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
+          assertZIO(stubVerification)(Assertion.isUnit)
+        },
+        test("should return UserNotFound if it gets 404") {
 
-        val expectedResult =
-          val uri = uri"https://www.chess.com/member/tigran-c-137"
-          Profile(uri)
+          val userName = UserName("tigran-c-138")
 
-        val actualResult = (for {
-          _            <- stub
-          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+          val stub = `chess.com`
+            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-138")
+            .returnsStatusCode(404)
+            .returnsJson(
+              """|{
+                 |"code": 0,
+                 |"message": "User \"tigran-c-138\" not found."
+                 |}
+                 |""".stripMargin
+            )
+            .stub()
 
-        val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
+          val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
 
-        assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
-        assertZIO(stubVerification)(Assertion.isUnit)
-      },
+          val actualResult: μ[Profile] = (for {
+            _            <- stub.orDie
+            actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+          } yield actualResult).provide(clientEnv)
 
-      test("should return UserNotFound if it gets 404") {
+          val stubVerification =
+            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
 
-        val userName = UserName("tigran-c-138")
+          assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
+          assertZIO(stubVerification)(Assertion.isUnit)
+        },
+        test("should return ServiceIsOverloaded in all other cases") {
 
-        val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-138")
-          .returnsStatusCode(404)
-          .returnsJson(
-            """|{
-               |"code": 0,
-               |"message": "User \"tigran-c-138\" not found."
-               |}
-               |""".stripMargin
-          )
-          .stub()
+          val userName = UserName("tigran-c-139")
 
+          val stub = `chess.com`
+            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
+            .returnsStatusCode(429)
+            .returnsJson("💣💣💣💣")
+            .stub()
 
-        val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
+          val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
 
-        val actualResult: μ[Profile] = (for {
-          _            <- stub.orDie
-          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+          val actualResult: μ[Profile] = (for {
+            _            <- stub.orDie
+            actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
+          } yield actualResult).provide(clientEnv)
 
-        val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
+          val stubVerification =
+            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
 
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
-        assertZIO(stubVerification)(Assertion.isUnit)
-      },
-      
-      test("should return ServiceIsOverloaded in all other cases") {
-
-        val userName = UserName("tigran-c-139")
-
-        val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
-          .returnsStatusCode(429)
-          .returnsJson("💣💣💣💣")
-          .stub()
-
-
-        val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
-
-        val actualResult: μ[Profile] = (for {
-          _            <- stub.orDie
-          actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
-
-        val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
-
-        assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
-        assertZIO(stubVerification)(Assertion.isUnit)
-      }    
-    )
+          assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
+          assertZIO(stubVerification)(Assertion.isUnit)
+        }
+      )

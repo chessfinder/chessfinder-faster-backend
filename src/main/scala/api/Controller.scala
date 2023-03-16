@@ -36,5 +36,5 @@ class Controller(version: String) extends ZTapir:
 
   def rest = List(`GET /game`)
 
-  lazy val endpoints: List[Endpoint[_, _, _, _, _]] = rest.map(_.endpoint)
+  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = rest.map(_.endpoint)
 

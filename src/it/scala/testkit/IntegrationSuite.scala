@@ -1,11 +1,10 @@
 package chessfinder
-package test
+package testkit
 
 import munit.FunSuite
 
-class IntegrationSuite extends FunSuite:
+trait IntegrationSuite:
 
-  override def beforeAll(): Unit = 
-    Init.run
-    supre.beforeAll
+  InitIntegration.run
+    
 

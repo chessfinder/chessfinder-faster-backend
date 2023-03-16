@@ -16,7 +16,8 @@ object GameFinder:
     ψ.serviceWithZIO[GameFinder](_.find(board, platform, userName))
 
   class Impl() extends GameFinder:
-    def find(board: SearchFen, platform: ChessPlatform, userName: UserName): φ[SearchResult] = ???
+    def find(board: SearchFen, platform: ChessPlatform, userName: UserName): φ[SearchResult] = 
+      φ.succeed(SearchResult(Seq.empty, DownloadStatus.Full))
 
   object Impl: 
     val layer = ZLayer.succeed(GameFinder.Impl())
