@@ -2,8 +2,7 @@ package chessfinder
 package search
 
 import zio.test.*
-import chessfinder.core.format.SearchFenReader
-import chessfinder.core.format.SearchFen
+import chessfinder.core.SearchFen
 import chessfinder.core.ProbabilisticBoard
 import search.BrokenLogic.*
 import search.entity.*
@@ -11,6 +10,7 @@ import sttp.model.Uri.UriContext
 import client.chess_com.dto.* 
 import chess.format.pgn.PgnStr
 
+import core.SearchFen
 class GameDownloaderTest extends ZIOSpecDefault:
 
   val service = GameDownloader.Impl()

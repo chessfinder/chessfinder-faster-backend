@@ -7,7 +7,7 @@ import zio.ZIO
 
 trait GameDownloader:
 
-  def download(userId: User): φ[DownloadingResult]
+  def download(user: User): φ[DownloadingResult]
 
 object GameDownloader:
 

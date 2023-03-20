@@ -1,5 +1,5 @@
 package chessfinder
-package core.format
+package core
 
 import cats.syntax.all.*
 import munit.FunSuite
@@ -16,8 +16,10 @@ import chessfinder.search.*
 import munit.Clue.generate
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import util.DescriptionHelper
+import util.{βUnsafeExt, DescriptionHelper}
+import core.SearchFen
 
-class SearchFenReaderTest extends FunSuite with DescriptionHelper:
+class SearchFenTest extends FunSuite with DescriptionHelper:
 
   test("""
   Search for the board the game
@@ -29,7 +31,7 @@ class SearchFenReaderTest extends FunSuite with DescriptionHelper:
 
     val searchFen = SearchFen("")
 
-    val actualBoard   = SearchFenReader.read(searchFen).get
+    val actualBoard   = SearchFen.read(searchFen).get
     val expectedBoard = ???
 
     assertEquals(actualBoard, expectedBoard)

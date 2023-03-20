@@ -10,7 +10,7 @@ import sttp.tapir.ztapir.*
 import search.GameFinder
 import search.entity.*
 import zio.*
-import core.format.SearchFen
+import core.SearchFen
 
 class Controller(version: String) extends ZTapir:
 
@@ -29,6 +29,7 @@ class Controller(version: String) extends ZTapir:
         )
 
     baseUrl
+      .in("game")
       .in(jsonBody[FindRequest])
       .out(jsonBody[FindResponse])
       .errorOut(jsonBody[ApiError])

@@ -1,13 +1,20 @@
 package chessfinder
-package core.error
+package core
 
 import cats.data.{ NonEmptyChain, Validated }
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
+import cats.data.NonEmptyChain
+import cats.kernel.Semigroup
+import cats.syntax.*
 
-type β[T] = Validated[ValidationErrors, T]
+type β[T] = Validated[β.ValidationErrors, T]
 
 object β:
+
+  type ValidationError = String
+
+  type ValidationErrors = NonEmptyChain[ValidationError]
 
   def valid[T](v: T): β[T] =
     Validated.validNec[ValidationError, T](v)
@@ -36,12 +43,13 @@ object β:
   def catchNonfatal[T](effect: => T): β[T] =
     fromTry(Try(effect))
 
-object βExt:
+  object Ext:
+    extension [OUTPUT](out: OUTPUT)
+      def validated: β[OUTPUT] =
+        β.valid[OUTPUT](out)
 
-  extension [OUTPUT](out: OUTPUT)
-    def validated: β[OUTPUT] =
-      β.valid[OUTPUT](out)
+    extension (error: ValidationError)
+      def failed[OUTPUT]: β[OUTPUT] =
+        β.invalid[OUTPUT](error)
 
-  extension (error: ValidationError)
-    def failed[OUTPUT]: β[OUTPUT] =
-      β.invalid[OUTPUT](error)
+  

@@ -1,10 +1,11 @@
 package chessfinder
 package api
 
-import io.circe.Codec
+import io.circe.{ Encoder, Decoder, Codec}
 import io.circe.generic.semiauto.deriveCodec
 import sttp.tapir.Schema
 import search.entity.ChessPlatform
+import scala.util.Try
 
 final case class FindRequest(
   user: String,
@@ -17,12 +18,14 @@ object FindRequest:
   given Schema[FindRequest] = Schema.derived[FindRequest]
 
 enum Platform:
-  case ChessDotCom
+  case `chess.com`
 
   def toPlatform = this match
-    case ChessDotCom => ChessPlatform.ChessDotCom
-  
-
+    case `chess.com` => ChessPlatform.ChessDotCom
+    
 object Platform:
-  given Codec[Platform] = deriveCodec[Platform]
+
+  private val encoder = Encoder[String].contramap[Platform](_.toString())
+  private val decoder = Decoder[String].emapTry[Platform](str => Try(Platform.valueOf(str)))
+  given Codec[Platform] = Codec.from[Platform](decoder, encoder)
   given Schema[Platform] = Schema.derivedEnumeration.defaultStringBased

@@ -13,11 +13,18 @@ import search.entity.UserName
 import scala.util.Success
 import zio.http.Client
 import sttp.model.Uri.UriContext
+import com.typesafe.config.ConfigFactory 
+import scala.util.Try
+import zio.ZLayer
 
 object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
+  protected lazy val configLayer = 
+    ZLayer.fromZIO(ZIO.fromTry(Try(ConfigFactory.load())))
+
   protected lazy val `chess.com` = ClientBackdoor("/chess_com")
-  protected lazy val clientEnv =
-    (Client.default >>> ChessDotComClient.Impl.layer).orDie
+  protected lazy val env = 
+   ((Client.default ++ configLayer) >>> ChessDotComClient.Impl.layer).orDie
+  
   def spec =
     suite("ChessDotComClient.profile")(
       test("should get user profile if request is successful") {
@@ -25,7 +32,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val userName = UserName("tigran-c-137")
 
         val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-137")
           .returnsJson(
             """|
                |{
@@ -47,16 +54,16 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           .stub()
 
         val expectedResult =
-          val uri = uri"https://www.chess.com/member/tigran-c-137"
+          val uri = uri"https://api.chess.com/pub/player/tigran-c-137"
           Profile(uri)
 
         val actualResult = (for {
           _            <- stub
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+        } yield actualResult).provide(env)
 
         val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
+          `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137")
 
         assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
         assertZIO(stubVerification)(Assertion.isUnit)
@@ -66,7 +73,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val userName = UserName("tigran-c-138")
 
         val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-138")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138")
           .returnsStatusCode(404)
           .returnsJson(
             """|{
@@ -82,10 +89,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+        } yield actualResult).provide(env)
 
         val stubVerification =
-          `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
+          `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138")
 
         assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
         assertZIO(stubVerification)(Assertion.isUnit)
@@ -95,7 +102,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val userName = UserName("tigran-c-139")
 
         val stub = `chess.com`
-          .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-139")
           .returnsStatusCode(429)
           .returnsJson("💣💣💣💣")
           .stub()
@@ -105,7 +112,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
         val actualResult: μ[Profile] = (for {
           _            <- stub.orDie
           actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-        } yield actualResult).provide(clientEnv)
+        } yield actualResult).provide(env)
 
         val stubVerification =
           `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
@@ -120,7 +127,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val userName = UserName("tigran-c-137")
 
           val stub = `chess.com`
-            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
+            .expectsEndpoint("GET", "/pub/player/tigran-c-137")
             .returnsJson(
               """|
                  |{
@@ -142,13 +149,13 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
             .stub()
 
           val expectedResult =
-            val uri = uri"https://www.chess.com/member/tigran-c-137"
+            val uri = uri"/pub/player/tigran-c-137"
             Profile(uri)
 
           val actualResult = (for {
             _            <- stub
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-          } yield actualResult).provide(clientEnv)
+          } yield actualResult).provide(env)
 
           val stubVerification =
             `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
@@ -177,10 +184,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val actualResult: μ[Profile] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-          } yield actualResult).provide(clientEnv)
+          } yield actualResult).provide(env)
 
           val stubVerification =
-            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
+            `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138")
 
           assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
           assertZIO(stubVerification)(Assertion.isUnit)
@@ -190,7 +197,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val userName = UserName("tigran-c-139")
 
           val stub = `chess.com`
-            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
+            .expectsEndpoint("GET", "/pub/player/tigran-c-139")
             .returnsStatusCode(429)
             .returnsJson("💣💣💣💣")
             .stub()
@@ -200,10 +207,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val actualResult: μ[Profile] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-          } yield actualResult).provide(clientEnv)
+          } yield actualResult).provide(env)
 
           val stubVerification =
-            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
+            `chess.com`.verify(1, "GET", "/pub/player/tigran-c-139")
 
           assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
           assertZIO(stubVerification)(Assertion.isUnit)
@@ -215,7 +222,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val userName = UserName("tigran-c-137")
 
           val stub = `chess.com`
-            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-137")
+            .expectsEndpoint("GET", "/pub/player/tigran-c-137")
             .returnsJson(
               """|
                  |{
@@ -237,16 +244,16 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
             .stub()
 
           val expectedResult =
-            val uri = uri"https://www.chess.com/member/tigran-c-137"
+            val uri = uri"/pub/player/tigran-c-137"
             Profile(uri)
 
           val actualResult = (for {
             _            <- stub
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-          } yield actualResult).provide(clientEnv)
+          } yield actualResult).provide(env)
 
           val stubVerification =
-            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-137")
+            `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137")
 
           assertZIO(actualResult)(Assertion.equalTo(expectedResult)) &&
           assertZIO(stubVerification)(Assertion.isUnit)
@@ -256,7 +263,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val userName = UserName("tigran-c-138")
 
           val stub = `chess.com`
-            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-138")
+            .expectsEndpoint("GET", "/pub/player/tigran-c-138")
             .returnsStatusCode(404)
             .returnsJson(
               """|{
@@ -272,10 +279,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val actualResult: μ[Profile] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-          } yield actualResult).provide(clientEnv)
+          } yield actualResult).provide(env)
 
           val stubVerification =
-            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-138")
+            `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138")
 
           assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(ProfileNotFound(userName)))) &&
           assertZIO(stubVerification)(Assertion.isUnit)
@@ -285,7 +292,7 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val userName = UserName("tigran-c-139")
 
           val stub = `chess.com`
-            .expectsEndpoint("GET", "/api.chess.com/pub/player/tigran-c-139")
+            .expectsEndpoint("GET", "/pub/player/tigran-c-139")
             .returnsStatusCode(429)
             .returnsJson("💣💣💣💣")
             .stub()
@@ -295,10 +302,10 @@ object ChessDotComClientTest extends ZIOSpecDefault with InitFirst:
           val actualResult: μ[Profile] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
-          } yield actualResult).provide(clientEnv)
+          } yield actualResult).provide(env)
 
           val stubVerification =
-            `chess.com`.verify(1, "GET", "https://www.chess.com/member/tigran-c-139")
+            `chess.com`.verify(1, "GET", "/pub/player/tigran-c-139")
 
           assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(SomethingWentWrong))) &&
           assertZIO(stubVerification)(Assertion.isUnit)

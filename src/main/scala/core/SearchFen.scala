@@ -1,15 +1,15 @@
 package chessfinder
-package core.format
+package core
 
 import cats.implicits.*
 import cats.kernel.Monoid
 import ornicar.scalalib.zeros.given_Zero_Option
-import core.{ ProbabilisticBoard, ProbabilisticPiece }
-import core.error.β
-import core.error.βExt.*
+import core.β.Ext.*
 import chess.Pos
 
-object SearchFenReader:
+opaque type SearchFen = String
+
+object SearchFen extends OpaqueString[SearchFen]:
   def read(fen: SearchFen): β[ProbabilisticBoard] =
     val positionOrError =
       val word = fen.value.trim().takeWhile(' ' !=)

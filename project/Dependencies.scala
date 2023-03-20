@@ -54,12 +54,12 @@ object Dependencies {
   //   "org.scalatestplus" %% s"scalacheck-${scalatestplusVersions._2}" % scalatestplusVersions._1 % "test"
   // )
 
-  lazy val scalaMock: Seq[ModuleID] = {
-    val version = "5.1.0"
-    Seq(
-      "org.scalamock" %% "scalamock" % version
-    )
-  }
+  // lazy val scalaMock: Seq[ModuleID] = {
+  //   val version = "5.1.0"
+  //   Seq(
+  //     "org.scalamock" %% "scalamock" % version
+  //   )
+  // }
 
   lazy val wiremock: Seq[ModuleID] = {
     val version = "2.33.2"
@@ -75,12 +75,26 @@ object Dependencies {
     )
   }
 
+  lazy val `zio-mock` = {
+    val version = "1.0.0-RC9"
+    Seq(
+      "dev.zio" %% "zio-mock" % version
+    )
+  }
+
   lazy val circe: Seq[ModuleID] = {
     val version = "0.14.3"
     Seq(
       "io.circe" %% "circe-core"    % version,
       "io.circe" %% "circe-generic" % version,
       "io.circe" %% "circe-parser"  % version
+    )
+  }
+
+  lazy val `circe-config`: Seq[ModuleID] = {
+    val version = "0.10.0"
+    Seq(
+      "io.circe" %% "circe-config" % version
     )
   }
 
@@ -105,9 +119,23 @@ object Dependencies {
   //   "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion
   // )
 
+  lazy val `typesafe-config` = {
+    val version = "1.4.2"
+    Seq("com.typesafe" % "config" % version)
+  }
+
   lazy val zio = {
     val version = "2.0.2"
     Seq("dev.zio" %% "zio" % version)
+  }
+
+  lazy val `zio-config` = {
+    val version = "3.0.1"
+    Seq(
+      "dev.zio" %% "zio-config"          % version,
+      "dev.zio" %% "zio-config-typesafe" % version,
+      "dev.zio" %% "zio-config-magnolia" % version
+    )
   }
 
   lazy val scalachess = {
@@ -199,8 +227,9 @@ object Dependencies {
 //     "com.github.tminglei" %% "slick-pg_circe-json" % slickPgVersion
 //   )
 
-  val prod: Seq[ModuleID] = zio ++ tapir ++ scalachess ++ ornicar ++ `zio-http` ++ circe
+  val prod: Seq[ModuleID] =
+    zio ++ tapir ++ scalachess ++ ornicar ++ `zio-http` ++ circe ++ `circe-config` ++ `typesafe-config` ++ `zio-config`
 
   val tests: Seq[ModuleID] =
-    (munit ++ scalaCheck ++ `zio-test` ++ wiremock).map(_ % Test)
+    (munit ++ scalaCheck ++ `zio-test` ++ wiremock ++ `zio-mock`).map(_ % Test)
 }
