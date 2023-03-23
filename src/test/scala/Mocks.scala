@@ -7,6 +7,14 @@ import search.*
 import core.{ SearchFen, ProbabilisticBoard}
 import chess.format.pgn.PgnStr
 import chessfinder.search.entity.{User, DownloadingResult}
+import chessfinder.search.entity.UserName
+import chessfinder.client.ClientError
+import chessfinder.client.ClientError.ProfileNotFound
+import chessfinder.client.chess_com.dto.*
+import sttp.model.Uri
+import chessfinder.client.chess_com.ChessDotComClient
+import chessfinder.client.μ
+import search.entity.*
 
 trait Mocks:
   object BoardValidatorMock extends Mock[BoardValidator]:
@@ -39,3 +47,29 @@ trait Mocks:
           override def download(user: User): φ[DownloadingResult] = proxy(Downlaod, user)
       }
   
+  object ChessDotComClientMock extends Mock[ChessDotComClient]:
+    object ArchivesMethod extends Effect[UserName, ClientError, Archives]
+    object ProfileMethod extends Effect[UserName, ClientError, Profile]
+    object GamesMethod extends Effect[Uri, ClientError, Games]
+
+    val compose: URLayer[Proxy, ChessDotComClient] = 
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new ChessDotComClient:
+
+          override def profile(userName: UserName): μ[Profile] = proxy(ProfileMethod, userName)
+          override def archives(userName: UserName): μ[Archives] = proxy(ArchivesMethod, userName)
+          override def games(uri: Uri): μ[Games] = proxy(GamesMethod, uri)
+      }
+
+  object GameFinderMock extends Mock[GameFinder]:
+    object Find extends Effect[(SearchFen, ChessPlatform, UserName), BrokenLogic, SearchResult]
+
+    val compose: URLayer[Proxy, GameFinder] = 
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new GameFinder:
+
+          override def find(board: SearchFen, platform: ChessPlatform, userName: UserName): φ[SearchResult] = proxy(Find, board, platform, userName)
+          
+      }

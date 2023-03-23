@@ -1,5 +1,5 @@
+package chessfinder
 package api
-
 
 import munit.*
 import munit.Clue.generate

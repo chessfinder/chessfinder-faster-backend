@@ -30,7 +30,7 @@ object GameFinder:
       yield searchResult
 
     private def findAll(games: DownloadingResult, board: ProbabilisticBoard): φ[SearchResult] =
-      val matchingResult= ZIO.collect(games.games) { game =>
+      val matchingResult = ZIO.collect(games.games) { game =>
         searcher
           .find(game.png, board)
           .map(if _ then Some(MatchedGame(game.resource)) else None)

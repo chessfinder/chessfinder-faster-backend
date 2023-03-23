@@ -100,12 +100,12 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val historicalGame3 = HistoricalGame(uri"https://example.com3", PgnStr("3"))
 
       val downloadingResult = DownloadingResult(
-        Seq(
+        List(
           historicalGame1,
           historicalGame2,
           historicalGame3
         ),
-        Seq.empty
+        List.empty
       )
 
       val gameDownloaderLayer = GameDownloaderMock.Downlaod(
@@ -161,12 +161,12 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val historicalGame3 = HistoricalGame(uri"https://example.com3", PgnStr("3"))
 
       val downloadingResult = DownloadingResult(
-        Seq(
+        List(
           historicalGame1,
           historicalGame2,
           historicalGame3
         ),
-        Seq.empty
+        List.empty
       )
 
       val gameDownloaderLayer = GameDownloaderMock.Downlaod(
@@ -220,11 +220,11 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val historicalGame2 = HistoricalGame(uri"https://example.com2", PgnStr("2"))
 
       val downloadingResult = DownloadingResult(
-        Seq(
+        List(
           historicalGame1,
           historicalGame2
         ),
-        Seq(uri"https://example.com3")
+        List(uri"https://example.com3")
       )
 
       val gameDownloaderLayer = GameDownloaderMock.Downlaod(

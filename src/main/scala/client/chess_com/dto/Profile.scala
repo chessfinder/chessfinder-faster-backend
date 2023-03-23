@@ -6,7 +6,7 @@ import io.circe.{ Decoder, Encoder }
 import io.circe.generic.semiauto.*
 import util.UriCodec.given
 
-final case class Profile(url: Uri)
+final case class Profile(`@id`: Uri)
 
 object Profile:
 

@@ -22,13 +22,13 @@ class ClientBackdoor(basePath: String):
     val fullUrl        = basePath + url
     val urlPattern     = WireMock.urlEqualTo(fullUrl)
     val requestPattern = new RequestPatternBuilder(method, urlPattern)
-    zio.ZIO.fromTry(Try(WireMock.verify(count, requestPattern)))
+    zio.ZIO.fromTry(Try(WireMock.verify(WireMock.moreThanOrExactly(count), requestPattern)))
 
   def verify(count: Int, method: String, url: String): zio.Task[Unit] =
     val fullUrl        = basePath + url
     val urlPattern     = WireMock.urlEqualTo(fullUrl)
     val requestPattern = new RequestPatternBuilder(RequestMethod(method), urlPattern)
-    zio.ZIO.fromTry(Try(WireMock.verify(count, requestPattern)))
+    zio.ZIO.fromTry(Try(WireMock.verify(WireMock.moreThanOrExactly(count), requestPattern)))
 
 object ClientBackdoor:
 

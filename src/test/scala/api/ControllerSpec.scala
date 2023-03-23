@@ -1,5 +1,38 @@
 package chessfinder
+package api 
 
+import zio.test.*
+import zio.*
+import client.chess_com.ChessDotComClient
+import chessfinder.testkit.wiremock.ClientBackdoor
+import sttp.model.Uri
+import client.chess_com.dto.*
+import client.*
+import client.ClientError.*
+import search.entity.UserName
+import scala.util.Success
+import zio.http.Client
+import sttp.model.Uri.UriContext
+import zio.http.service.{ ChannelFactory, EventLoopGroup }
+import zio.*
+import zio.http.Body
+import client.ClientExt.*
+import chessfinder.api.FindResponse
+import api.FindResponse
+import zio.http.Client
+import io.circe.*
+import io.circe.parser
+import scala.io.Source
+import testkit.parser.JsonReader
+import zio.test.*
+import chessfinder.core.SearchFen
+import chessfinder.core.ProbabilisticBoard
+import search.BrokenLogic.*
+import search.entity.*
+import sttp.model.Uri.UriContext
+import client.chess_com.dto.*
+import chess.format.pgn.PgnStr
+import zio.mock.Expectation
 import zio.ZIOApp
 import zio.ZIOAppDefault
 
@@ -24,34 +57,18 @@ import chessfinder.search.Searcher
 import chessfinder.client.chess_com.ChessDotComClient
 import com.typesafe.config.ConfigFactory
 
-object Main extends ZIOAppDefault:
+object ControllerSpec extends Mocks:
 
   val version    = "newborn"
   val controller = Controller(version)
 
-  private val swaggerHost: String = s"http://localhost:8080"
-
   private val config = ConfigFactory.load()
   private val configLayer = ZLayer.succeed(config)
 
-  private val servers: List[OAServer] = List(OAServer(swaggerHost).description("Admin"))
-  private val docsAsYaml: String = OpenAPIDocsInterpreter()
-    .toOpenAPI(controller.endpoints, "Trading Bot", "1.0")
-    .servers(servers)
-    .toYaml
-
   private val zioInterpreter = ZioHttpInterpreter()
-  private val swaggerEndpoint: List[ZServerEndpoint[GameFinder, Any]] =
-    val options = SwaggerUIOptions.default.copy(pathPrefix = List("docs", "swagger"))
-    SwaggerUI[zio.RIO[GameFinder, *]](docsAsYaml, options = options)
 
-  private val redocEndpoint: List[ZServerEndpoint[GameFinder, Any]] =
-    val options = RedocUIOptions.default.copy(pathPrefix = List("docs", "redoc"))
-    Redoc[zio.RIO[GameFinder, *]]("Trading Bot", spec = docsAsYaml, options = options)
-
-  private val rest: List[ZServerEndpoint[GameFinder, Any]] = controller.rest
-  private val endpoints: List[ZServerEndpoint[GameFinder, Any]] =
-    controller.rest ++ swaggerEndpoint ++ redocEndpoint
+  private val endpoints =
+    controller.rest
 
   val app =
     zioInterpreter.toHttp(endpoints).withDefaultErrorResponse
@@ -59,16 +76,13 @@ object Main extends ZIOAppDefault:
   protected lazy val clientLayer = Client.default.orDie
 
   
-  def run =
+  def run(controllerLayer: ULayer[GameFinder]) =
     Server
       .serve(app)
       .provide(
-        configLayer,
-        clientLayer,
         Server.default,
-        BoardValidator.Impl.layer,
-        GameFinder.Impl.layer,
-        Searcher.Impl.layer,
-        GameDownloader.Impl.layer,
-        ChessDotComClient.Impl.layer,
+        controllerLayer,
       )
+
+  // don't know how to right a test for the controller.
+  
