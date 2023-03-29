@@ -12,11 +12,40 @@ import search.entity.*
 import zio.*
 import core.SearchFen
 
-class Controller(version: String) extends ZTapir:
+
+class ControllerBlueprint(version: String) extends ZTapir:
 
   private val baseUrl = endpoint.in("api" / version)
-
   val `GET /game` =
+    baseUrl
+      .in("game")
+      .in(jsonBody[FindRequest])
+      .out(jsonBody[FindResponse])
+      .errorOut(jsonBody[ApiError])
+
+class PureController(blueprint: ControllerBlueprint, gameFinder: GameFinder) extends ZTapir:
+
+  val `GET /game`: ZServerEndpoint[Any, Any] =
+    def logic(request: FindRequest) =
+      val board                   = SearchFen(request.board)
+      val platform: ChessPlatform = request.platform.toPlatform
+      val userName: UserName      = UserName(request.user)
+      gameFinder
+        .find(board, platform, userName)
+        .mapBoth(
+          ApiError.fromBrokenLogic,
+          FindResponse.fromSearchResult
+        )
+
+    blueprint.`GET /game`.zServerLogic(logic)
+  
+  def rest = List(`GET /game`)
+
+  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = rest.map(_.endpoint)
+
+class DependentController(blueprint: ControllerBlueprint) extends ZTapir:
+
+  val `GET /game`: ZServerEndpoint[GameFinder, Any] =
     def logic(request: FindRequest) =
       val board                   = SearchFen(request.board)
       val platform: ChessPlatform = request.platform.toPlatform
@@ -28,14 +57,8 @@ class Controller(version: String) extends ZTapir:
           FindResponse.fromSearchResult
         )
 
-    baseUrl
-      .in("game")
-      .in(jsonBody[FindRequest])
-      .out(jsonBody[FindResponse])
-      .errorOut(jsonBody[ApiError])
-      .zServerLogic(logic)
+    blueprint.`GET /game`.zServerLogic(logic)
 
   def rest = List(`GET /game`)
 
   lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = rest.map(_.endpoint)
-

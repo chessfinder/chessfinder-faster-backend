@@ -41,7 +41,7 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.{ HttpApp, Request, Response }
 import zio.*
 import zio.http.*
-import chessfinder.api.Controller
+import chessfinder.api.{ ControllerBlueprint, DependentController}
 import chessfinder.search.GameFinder
 import zio.Console.ConsoleLive
 import sttp.apispec.openapi.Server as OAServer
@@ -60,7 +60,8 @@ import com.typesafe.config.ConfigFactory
 object ControllerSpec extends Mocks:
 
   val version    = "newborn"
-  val controller = Controller(version)
+  val blueprint = ControllerBlueprint(version)
+  val controller = DependentController(blueprint)
 
   private val config = ConfigFactory.load()
   private val configLayer = ZLayer.succeed(config)

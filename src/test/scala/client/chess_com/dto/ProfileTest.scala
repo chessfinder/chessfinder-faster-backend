@@ -28,7 +28,7 @@ class ProfileTest extends FunSuite:
          |}
          |""".stripMargin
     ).toTry.get
-    val expectedResult = Profile(uri"https://www.chess.com/member/tigran-c-137")  
+    val expectedResult = Profile(uri"https://api.chess.com/pub/player/tigran-c-137")  
     val actualResult = Decoder[Profile].decodeJson(json).toTry.get 
     assert(expectedResult == actualResult)     
   }

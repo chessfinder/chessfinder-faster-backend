@@ -8,7 +8,7 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.{ HttpApp, Request, Response }
 import zio.*
 import zio.http.*
-import chessfinder.api.Controller
+import chessfinder.api.{ DependentController, ControllerBlueprint}
 import chessfinder.search.GameFinder
 import zio.Console.ConsoleLive
 import sttp.apispec.openapi.Server as OAServer
@@ -26,8 +26,10 @@ import com.typesafe.config.ConfigFactory
 
 object Main extends ZIOAppDefault:
 
+  val organization = "eudemonia"
   val version    = "newborn"
-  val controller = Controller(version)
+  val blueprint = ControllerBlueprint(version)
+  val controller = DependentController(blueprint)
 
   private val swaggerHost: String = s"http://localhost:8080"
 
@@ -36,7 +38,7 @@ object Main extends ZIOAppDefault:
 
   private val servers: List[OAServer] = List(OAServer(swaggerHost).description("Admin"))
   private val docsAsYaml: String = OpenAPIDocsInterpreter()
-    .toOpenAPI(controller.endpoints, "Trading Bot", "1.0")
+    .toOpenAPI(controller.endpoints, "ChessFinder", "newborn")
     .servers(servers)
     .toYaml
 
