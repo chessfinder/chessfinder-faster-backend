@@ -23,7 +23,7 @@ lazy val `ztapir-aws-lambda-test` = project
       case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
       case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
-      case PathList("deriving.conf")                                               => MergeStrategy.concat
+      case PathList("deriving.conf")                                               => MergeStrategy.concat // FIXME get rid of zio.json
       case x => (assembly / assemblyMergeStrategy).value(x)
     },
     Test / test := {

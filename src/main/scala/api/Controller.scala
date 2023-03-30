@@ -22,6 +22,9 @@ class ControllerBlueprint(version: String) extends ZTapir:
       .in(jsonBody[FindRequest])
       .out(jsonBody[FindResponse])
       .errorOut(jsonBody[ApiError])
+  
+  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = List(`GET /game`)
+  
 
 class PureController(blueprint: ControllerBlueprint, gameFinder: GameFinder) extends ZTapir:
 
@@ -41,8 +44,6 @@ class PureController(blueprint: ControllerBlueprint, gameFinder: GameFinder) ext
   
   def rest = List(`GET /game`)
 
-  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = rest.map(_.endpoint)
-
 class DependentController(blueprint: ControllerBlueprint) extends ZTapir:
 
   val `GET /game`: ZServerEndpoint[GameFinder, Any] =
@@ -60,5 +61,3 @@ class DependentController(blueprint: ControllerBlueprint) extends ZTapir:
     blueprint.`GET /game`.zServerLogic(logic)
 
   def rest = List(`GET /game`)
-
-  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = rest.map(_.endpoint)

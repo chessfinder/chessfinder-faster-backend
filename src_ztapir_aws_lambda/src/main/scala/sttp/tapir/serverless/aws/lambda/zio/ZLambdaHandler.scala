@@ -13,6 +13,7 @@ import zio.{ RIO, Task, ZIO }
 import sttp.tapir.ztapir.*
 import scala.util.Try
 import sttp.tapir.serverless.aws.lambda.{ AwsRequest, AwsRequestV1, AwsResponse }
+import cats.MonadError
 
 /** [[ZLambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
   *
@@ -22,11 +23,11 @@ import sttp.tapir.serverless.aws.lambda.{ AwsRequest, AwsRequestV1, AwsResponse 
   *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]]. At the moment mapping is required as there is no support for
   *   generating API Gateway V2 definitions with AWS CDK v2.
   */
-abstract class ZLambdaHandler[Env: RIOMonadError, R: Decoder] extends RequestStreamHandler:
+abstract class ZLambdaHandler[Env: RIOMonadError]:
 
   protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]]
 
-  protected def process(input: InputStream, output: OutputStream): RIO[Env, Unit] =
+  def process[R: Decoder](input: InputStream, output: OutputStream): RIO[Env, Unit] =
     val server: AwsZServerInterpreter[Env] =
       AwsZServerInterpreter[Env](AwsZServerOptions.noEncoding[Env])
 
@@ -52,3 +53,13 @@ abstract class ZLambdaHandler[Env: RIOMonadError, R: Decoder] extends RequestStr
       }.orDie
     val use = (writer: BufferedWriter) => ZIO.attempt(writer.write(Printer.noSpaces.print(response.asJson)))
     ZIO.acquireReleaseWith(acquire)(release)(use)
+
+object ZLambdaHandler:
+
+  def apply[Env: RIOMonadError](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] = 
+    new ZLambdaHandler[Env]:
+      override protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]] = endpoints
+
+  def withMonadError[Env](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] = 
+      given RIOMonadError[Env] = RIOMonadError[Env]
+      ZLambdaHandler(endpoints)

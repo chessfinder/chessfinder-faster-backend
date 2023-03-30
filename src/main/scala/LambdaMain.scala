@@ -1,53 +1,82 @@
-// package chessfinder
+package chessfinder
 
-// import zio.ZIOApp
-// import zio.ZIOAppDefault
+import zio.ZIOApp
+import zio.ZIOAppDefault
 
-// import sttp.tapir.ztapir.*
-// import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-// import zio.http.{ HttpApp, Request, Response }
-// import zio.*
-// import zio.http.*
-// import chessfinder.api.Controller
-// import chessfinder.search.GameFinder
-// import zio.Console.ConsoleLive
-// import sttp.apispec.openapi.Server as OAServer
-// import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-// import sttp.tapir.swagger.*
-// import sttp.tapir.redoc.*
-// import sttp.tapir.redoc.RedocUIOptions
-// import sttp.apispec.openapi.circe.yaml.*
-// import sttp.tapir.server.*
-// import chessfinder.search.BoardValidator
-// import chessfinder.search.GameDownloader
-// import chessfinder.search.Searcher
-// import chessfinder.client.chess_com.ChessDotComClient
-// import com.typesafe.config.ConfigFactory
+import sttp.tapir.ztapir.*
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import zio.http.{ HttpApp, Request, Response }
+import zio.*
+import zio.http.{ App as _, * }
+import chessfinder.search.GameFinder
+import zio.Console.ConsoleLive
+import sttp.apispec.openapi.Server as OAServer
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.swagger.*
+import sttp.tapir.redoc.*
+import sttp.tapir.redoc.RedocUIOptions
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.server.*
+import chessfinder.search.BoardValidator
+import chessfinder.search.GameDownloader
+import chessfinder.search.Searcher
+import chessfinder.client.chess_com.ChessDotComClient
+import com.typesafe.config.ConfigFactory
+import sttp.tapir.serverless.aws.lambda.LambdaHandler
 
-// import sttp.model.Uri.UriContext
-// import zio.Console.*
-// import zio.*
-// import zio.json.*
-// import zio.lambda.*
-// import chessfinder.api.FindRequest
-// import chessfinder.api.FindResponse
+import cats.effect.unsafe.implicits.global
+import com.amazonaws.services.lambda.runtime.Context
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
+import java.io.{ InputStream, OutputStream }
+import cats.implicits.*
+import zio.interop.catz.*
+import sttp.tapir.serverless.aws.lambda.zio.ZLambdaHandler
+import zio.Task
+import zio.{ Task, ZIO }
+import cats.effect.unsafe.implicits.global
+import com.amazonaws.services.lambda.runtime.Context
+import io.circe.generic.auto.*
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
+import java.io.{ InputStream, OutputStream }
+import sttp.tapir.serverless.aws.lambda.zio.ZLambdaHandler
+import sttp.tapir.ztapir.ZServerEndpoint
+import sttp.tapir.ztapir.RIOMonadError
+import zio.{ Runtime, Unsafe }
+import chessfinder.api.{ ControllerBlueprint, DependentController }
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 
-// object LambdaMain extends ZLambda[CustomEvent, String]:
+object LambdaMain extends RequestStreamHandler:
 
-//   override def apply(event: CustomEvent, context: Context): Task[String] =
-//     for {
-//       _ <- printLine("We are here")
-//       _ <- printLine(event.message)
-//     } yield "Handler ran successfully"
+  val organization = "eudemonia"
+  val version      = "newborn"
 
-// final case class CustomEvent(message: String)
+  val blueprint  = ControllerBlueprint(version)
+  val controller = DependentController(blueprint)
 
-// object CustomEvent {
-//   implicit val decoder: JsonDecoder[CustomEvent] = DeriveJsonDecoder.gen[CustomEvent]
-// }
+  val handler = ZLambdaHandler.withMonadError(controller.rest)
 
-// final case class CustomResponse(message: String)
+  private val config      = ConfigFactory.load()
+  private val configLayer = ZLayer.succeed(config)
 
-// object CustomResponse {
-//   implicit val encoder: JsonEncoder[CustomResponse] = DeriveJsonEncoder.gen[CustomResponse]
-// }
+  private lazy val clientLayer = Client.default.orDie
+
+  def process(input: InputStream, output: OutputStream) =
+    handler
+      .process[AwsRequest](input, output)
+      .provide(
+        configLayer,
+        clientLayer,
+        BoardValidator.Impl.layer,
+        GameFinder.Impl.layer,
+        Searcher.Impl.layer,
+        GameDownloader.Impl.layer,
+        ChessDotComClient.Impl.layer
+      )
+
+  override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
+    val runtime = Runtime.default
+    Unsafe.unsafe { implicit unsafe =>
+      runtime.unsafe.run(process(input, output)).getOrThrowFiberFailure()
+    }

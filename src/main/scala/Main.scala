@@ -38,7 +38,7 @@ object Main extends ZIOAppDefault:
 
   private val servers: List[OAServer] = List(OAServer(swaggerHost).description("Admin"))
   private val docsAsYaml: String = OpenAPIDocsInterpreter()
-    .toOpenAPI(controller.endpoints, "ChessFinder", "newborn")
+    .toOpenAPI(blueprint.endpoints, "ChessFinder", "newborn")
     .servers(servers)
     .toYaml
 
@@ -49,7 +49,7 @@ object Main extends ZIOAppDefault:
 
   private val redocEndpoint: List[ZServerEndpoint[GameFinder, Any]] =
     val options = RedocUIOptions.default.copy(pathPrefix = List("docs", "redoc"))
-    Redoc[zio.RIO[GameFinder, *]]("Trading Bot", spec = docsAsYaml, options = options)
+    Redoc[zio.RIO[GameFinder, *]]("ChessFinder", spec = docsAsYaml, options = options)
 
   private val rest: List[ZServerEndpoint[GameFinder, Any]] = controller.rest
   private val endpoints: List[ZServerEndpoint[GameFinder, Any]] =

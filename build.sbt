@@ -78,10 +78,13 @@ lazy val root = (project in file("."))
     assembly / assemblyJarName := "chessfinder-lambda.jar",
     assembly / mainClass       := Some("chessfinder.LambdaMain"),
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "maven", _*)                              => MergeStrategy.concat
-      case PathList("META-INF", "io.netty.versions.properties", _*)       => MergeStrategy.first
-      case PathList("deriving.conf")                                      => MergeStrategy.concat
-      case PathList(path @ _*) if path.exists(_.contains("module-info.class")) => MergeStrategy.first
+      case PathList("META-INF", "maven", _*)                                       => MergeStrategy.concat
+      case PathList("META-INF", "io.netty.versions.properties", _*)                => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
+      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+      case PathList("deriving.conf")                                               => MergeStrategy.concat // FIXME get rid of zio.json
+      case PathList(path @ _*) if path.exists(_.contains("module-info.class"))     => MergeStrategy.first
       case x =>
         val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
         oldStrategy(x)
@@ -97,4 +100,3 @@ lazy val `ztapir-aws-lambda` = project
 
 lazy val `ztapir-aws-lambda-tests` = project
   .in(file("src_ztapir_aws_lambda_tests"))
-

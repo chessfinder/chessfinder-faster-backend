@@ -12,15 +12,13 @@ import sttp.tapir.serverless.aws.lambda.zio.ZLambdaHandler
 import sttp.tapir.ztapir.ZServerEndpoint
 import sttp.tapir.ztapir.RIOMonadError
 import zio.{ Runtime, Unsafe}
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 
-given RIOMonadError[Any] = RIOMonadError[Any]
 
-class ZIOLambdaHandlerV2 extends ZLambdaHandler[Any, AwsRequest]:
-
-  override protected def getAllEndpoints: List[ZServerEndpoint[Any, Any]] = all.allEndpoints.toList
-
+class ZIOLambdaHandlerV2 extends RequestStreamHandler:
+  val handler = ZLambdaHandler.withMonadError[Any](all.allEndpoints.toList)
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
     val runtime = Runtime.default
     Unsafe.unsafe { implicit unsafe =>
-      runtime.unsafe.run(process(input, output)).getOrThrowFiberFailure()
+      runtime.unsafe.run(handler.process[AwsRequest](input, output)).getOrThrowFiberFailure()
     }

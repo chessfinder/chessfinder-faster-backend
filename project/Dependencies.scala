@@ -132,7 +132,7 @@ object Dependencies {
 
   lazy val ornicar = {
     val version = "9.1.2"
-    Seq("com.github.ornicar" %% "scalalib" % version)
+    Seq("com.github.ornicarX" %% "scalalib" % version)
   }
 
   val prod: Seq[ModuleID] =
