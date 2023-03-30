@@ -96,7 +96,7 @@ object Dependencies {
 
   lazy val scalachess = {
     val version = "14.5.5"
-    Seq("org.lichess" %% "scalachess" % version)
+    Seq("org.lichess" %% "scalachess" % version exclude("com.github.ornicar", "*"))
   }
 
   lazy val munit = {
@@ -130,13 +130,13 @@ object Dependencies {
     )
   }
 
-  lazy val ornicar = {
-    val version = "9.1.2"
-    Seq("com.github.ornicarX" %% "scalalib" % version)
-  }
+  // lazy val ornicar = {
+  //   val version = "9.1.2"
+  //   Seq("com.github.ornicar" %% "scalalib" % version)
+  // }
 
   val prod: Seq[ModuleID] =
-    zio ++ tapir ++ scalachess ++ ornicar ++ `zio-http` ++ circe ++ `circe-config` ++ `typesafe-config` ++ `zio-config` ++ `zio-lambda` ++ `zio-cats`
+    zio ++ tapir ++ scalachess ++ `zio-http` ++ circe ++ `circe-config` ++ `typesafe-config` ++ `zio-config` ++ `zio-lambda` ++ `zio-cats`
 
   val tests: Seq[ModuleID] =
     (munit ++ scalaCheck ++ `zio-test` ++ wiremock ++ `zio-mock`).map(_ % Test)

@@ -16,7 +16,7 @@ object SamTemplate extends App {
   val samOptions: AwsSamOptions = AwsSamOptions(
     "Tests",
     source = CodeSource(
-      "java17",
+      "java11",
       jarPath,
       "chessfinder.LambdaMain::handleRequest"
     ),
