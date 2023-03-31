@@ -52,6 +52,7 @@ object ChessDotComClient:
         for
           url <- url
           request = Request.get(url)
+          _ <- ZIO.logInfo(s"Request $urlString")
           response <- client.request(request)
           profile <- response.status match
             case Status.Ok => response.body.to[Profile].map(Right.apply)
@@ -67,6 +68,7 @@ object ChessDotComClient:
         for
           url <- url
           request = Request.get(url)
+          _ <- ZIO.logInfo(s"Request $urlString")
           response <- client.request(request)
           profile <- response.status match
             case Status.Ok => response.body.to[Archives].map(Right.apply)
@@ -89,6 +91,7 @@ object ChessDotComClient:
         for
           url <- url
           request = Request.get(url)
+          _ <- ZIO.logInfo(s"Request ${url.toString()}")
           response <- client.request(request)
           profile <- response.status match
             case Status.Ok => response.body.to[Games].map(Right.apply)

@@ -30,7 +30,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
 import java.io.{ InputStream, OutputStream }
 import cats.implicits.*
-import zio.interop.catz.*
 import sttp.tapir.serverless.aws.lambda.zio.ZLambdaHandler
 import zio.Task
 import zio.{ Task, ZIO }
@@ -46,11 +45,15 @@ import sttp.tapir.ztapir.RIOMonadError
 import zio.{ Runtime, Unsafe }
 import chessfinder.api.{ ControllerBlueprint, DependentController }
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
+import zio.logging.*
+import chessfinder.client.ZLoggingAspect
+import zio.logging.backend.SLF4J
 
 object LambdaMain extends RequestStreamHandler:
 
   val organization = "eudemonia"
   val version      = "newborn"
+
 
   val blueprint  = ControllerBlueprint(version)
   val controller = DependentController(blueprint)
@@ -60,9 +63,11 @@ object LambdaMain extends RequestStreamHandler:
   private val config      = ConfigFactory.load()
   private val configLayer = ZLayer.succeed(config)
 
-  private lazy val clientLayer = Client.default.orDie
+  private lazy val clientLayer = 
+    Client.default.map(z => z.update(_ @@ ZLoggingAspect())).orDie
 
   def process(input: InputStream, output: OutputStream) =
+    val logging = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
     handler
       .process[AwsRequest](input, output)
       .provide(
@@ -72,7 +77,8 @@ object LambdaMain extends RequestStreamHandler:
         GameFinder.Impl.layer,
         Searcher.Impl.layer,
         GameDownloader.Impl.layer,
-        ChessDotComClient.Impl.layer
+        ChessDotComClient.Impl.layer,
+        logging
       )
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =

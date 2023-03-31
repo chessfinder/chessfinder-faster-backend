@@ -59,7 +59,6 @@ object Dependencies {
       "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml"    % circeYamlVersion
     )
   }
-  
 
   lazy val `typesafe-config` = {
     val version = "1.4.2"
@@ -96,7 +95,7 @@ object Dependencies {
 
   lazy val scalachess = {
     val version = "14.5.5"
-    Seq("org.lichess" %% "scalachess" % version exclude("com.github.ornicar", "*"))
+    Seq("org.lichess" %% "scalachess" % version exclude ("com.github.ornicar", "*"))
   }
 
   lazy val munit = {
@@ -130,13 +129,26 @@ object Dependencies {
     )
   }
 
+  lazy val `zio-logging` = {
+    val zioVersion     = "2.1.11"
+    val slf4jVersion   = "2.0.7"
+    val logbackVersion = "1.2.10"
+    Seq(
+      "dev.zio"       %% "zio-logging"       % zioVersion,
+      "dev.zio"       %% "zio-logging-slf4j2" % zioVersion,
+      "ch.qos.logback" % "logback-core"      % logbackVersion,
+      "ch.qos.logback" % "logback-classic"   % logbackVersion,
+      "org.slf4j"      % "slf4j-api"         % slf4jVersion
+    )
+  }
+
   // lazy val ornicar = {
   //   val version = "9.1.2"
   //   Seq("com.github.ornicar" %% "scalalib" % version)
   // }
 
   val prod: Seq[ModuleID] =
-    zio ++ tapir ++ scalachess ++ `zio-http` ++ circe ++ `circe-config` ++ `typesafe-config` ++ `zio-config` ++ `zio-lambda` ++ `zio-cats`
+    zio ++ tapir ++ scalachess ++ `zio-http` ++ circe ++ `circe-config` ++ `typesafe-config` ++ `zio-lambda` ++ `zio-logging`
 
   val tests: Seq[ModuleID] =
     (munit ++ scalaCheck ++ `zio-test` ++ wiremock ++ `zio-mock`).map(_ % Test)

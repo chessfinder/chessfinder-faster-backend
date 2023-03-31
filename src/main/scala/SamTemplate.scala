@@ -4,6 +4,7 @@ import sttp.tapir.serverless.aws.sam.*
 import chessfinder.api.ControllerBlueprint
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Paths}
+import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
 object SamTemplate extends App {
 
@@ -20,7 +21,8 @@ object SamTemplate extends App {
       jarPath,
       "chessfinder.LambdaMain::handleRequest"
     ),
-    memorySize = 1024
+    memorySize = 1024,
+    timeout = 180.seconds
   )
   val yaml = AwsSamInterpreter(samOptions).toSamTemplate(blueprint.endpoints).toYaml
   Files.write(Paths.get("template.yaml"), yaml.getBytes(UTF_8))

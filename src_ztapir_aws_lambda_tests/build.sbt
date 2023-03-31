@@ -14,7 +14,7 @@ val scala3 = "3.2.2"
 lazy val `ztapir-aws-lambda-test` = project
   .in(file("."))
   .settings(
-    libraryDependencies ++= zio ++ circe ++ tapir ++ (scalatest).map(_ % Test),
+    libraryDependencies ++= zio ++ `zio-logging` ++ circe ++ tapir ++ (scalatest).map(_ % Test),
     scalacOptions              := Seq("-Ykind-projector"),
     assembly / assemblyJarName := "ztapir-aws-lambda-tests.jar",
     assembly / test            := {}, // no tests before building jar

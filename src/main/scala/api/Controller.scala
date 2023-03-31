@@ -6,6 +6,7 @@ import sttp.tapir.server.ServerEndpoint
 
 import scala.concurrent.Future
 import sttp.tapir.json.circe.*
+import sttp.tapir.stringBody
 import sttp.tapir.ztapir.*
 import search.GameFinder
 import search.entity.*
@@ -13,40 +14,27 @@ import zio.*
 import core.SearchFen
 
 
-class ControllerBlueprint(version: String) extends ZTapir:
+class ControllerBlueprint(val version: String) extends ZTapir:
 
   private val baseUrl = endpoint.in("api" / version)
-  val `GET /game` =
+  val `GET /api/version/game` =
     baseUrl
       .in("game")
       .in(jsonBody[FindRequest])
       .out(jsonBody[FindResponse])
       .errorOut(jsonBody[ApiError])
   
-  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = List(`GET /game`)
-  
+  val `GET /api/version` = 
+    baseUrl
+      .out(stringBody)
 
-class PureController(blueprint: ControllerBlueprint, gameFinder: GameFinder) extends ZTapir:
 
-  val `GET /game`: ZServerEndpoint[Any, Any] =
-    def logic(request: FindRequest) =
-      val board                   = SearchFen(request.board)
-      val platform: ChessPlatform = request.platform.toPlatform
-      val userName: UserName      = UserName(request.user)
-      gameFinder
-        .find(board, platform, userName)
-        .mapBoth(
-          ApiError.fromBrokenLogic,
-          FindResponse.fromSearchResult
-        )
+  lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] = List(`GET /api/version/game`, `GET /api/version`)
 
-    blueprint.`GET /game`.zServerLogic(logic)
-  
-  def rest = List(`GET /game`)
 
 class DependentController(blueprint: ControllerBlueprint) extends ZTapir:
 
-  val `GET /game`: ZServerEndpoint[GameFinder, Any] =
+  val `GET /api/version/game`: ZServerEndpoint[GameFinder, Any] =
     def logic(request: FindRequest) =
       val board                   = SearchFen(request.board)
       val platform: ChessPlatform = request.platform.toPlatform
@@ -58,6 +46,9 @@ class DependentController(blueprint: ControllerBlueprint) extends ZTapir:
           FindResponse.fromSearchResult
         )
 
-    blueprint.`GET /game`.zServerLogic(logic)
+    blueprint.`GET /api/version/game`.zServerLogic(logic)
 
-  def rest = List(`GET /game`)
+  val `GET /api/version`: ZServerEndpoint[GameFinder, Any] =
+    blueprint.`GET /api/version`.zServerLogic(_ => ZIO.succeed(blueprint.version))
+
+  def rest = List(`GET /api/version/game`, `GET /api/version`)
