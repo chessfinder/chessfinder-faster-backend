@@ -2,16 +2,26 @@ import sbt.*
 import sbt.{ Def, _ }
 import sbt.Keys._
 
-ThisBuild / organization      := "eudemonia"
-ThisBuild / version           := "0.1"
-ThisBuild / scalaVersion      := "3.2.2"
-ThisBuild / semanticdbEnabled := true // enable SemanticDB
+enablePlugins(GraalVMNativeImagePlugin)
+enablePlugins(GitPlugin)
+enablePlugins(GitVersioning)
+// ThisBuild / enablePlugins(GitVersioning)
+
+ThisBuild / organization := "eudemonia"
+// ThisBuild / version           := "0.1"
+ThisBuild / git.useGitDescribe := true
+ThisBuild / scalaVersion       := "3.2.2"
+ThisBuild / semanticdbEnabled  := true // enable SemanticDB
 ThisBuild / testFrameworks ++= List(
   new TestFramework("munit.Framework"),
   new TestFramework("zio.test.sbt.ZTestFramework")
 )
+
+// ThisProject / LatestTag.gitLatestTag = 
+
 // ThisBuild / licenses += "AGPL-3.0" -> url("https://opensource.org/licenses/AGPL-3.0")
-enablePlugins(GraalVMNativeImagePlugin)
+
+// ThisBuild / versionScheme := Some("semver-spec")
 
 val lilaMaven = "lila-maven" at "https://raw.githubusercontent.com/lichess-org/lila-maven/master"
 val sonashots = "sonashots" at "https://oss.sonatype.org/content/repositories/snapshots"
@@ -29,6 +39,15 @@ lazy val DeepIntegrationSettings: Seq[Def.Setting[_]] =
 lazy val root = (project in file("."))
   .configs(DeepIntegrationTest)
   .settings(DeepIntegrationSettings)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    // buildInfoPackage := "hello"
+  )
+  // .settings(version := "v11.3.3")
+  .settings(git.useGitDescribe := true)
+  .settings(
+  )
   .settings(
     name := "chess-finder",
     libraryDependencies ++= Dependencies.prod ++ Dependencies.tests,
@@ -83,8 +102,8 @@ lazy val root = (project in file("."))
       case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
       case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
-      case PathList("deriving.conf")                                               => MergeStrategy.concat // FIXME get rid of zio.json
-      case PathList(path @ _*) if path.exists(_.contains("module-info.class"))     => MergeStrategy.first
+      case PathList("deriving.conf") => MergeStrategy.concat // FIXME get rid of zio.json
+      case PathList(path @ _*) if path.exists(_.contains("module-info.class")) => MergeStrategy.first
       case x =>
         val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
         oldStrategy(x)
@@ -100,3 +119,4 @@ lazy val `ztapir-aws-lambda` = project
 
 lazy val `ztapir-aws-lambda-tests` = project
   .in(file("src_ztapir_aws_lambda_tests"))
+

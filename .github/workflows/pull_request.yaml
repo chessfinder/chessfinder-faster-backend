@@ -1,0 +1,51 @@
+name: Pull Request
+
+on:
+  pull_request:
+    branches: [trunk]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Setup JDK
+        uses: actions/setup-java@v3.11.0
+        with:
+          distribution: 'corretto'
+          java-version: '11'
+      # - name: Check Fomatting
+      #   shell: bash
+      #   run: |
+      #     # sbt -v "scalafmtCheckAll;"
+      #     sbt -v "compile;"
+      - name: Compile Code
+        shell: bash
+        run: |
+          sbt -v "compile;"
+      # - name: Test Code
+      #   shell: bash
+      #   run: |
+      #     # sbt -v "test;"
+      #     sbt -v "compile;"
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - name: Packaging Code
+        shell: bash
+        run: |
+          sbt -v "assembly; runMain chessfinder.SamTemplate;"
+          cat template.yaml
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      
+      
+      - name: Deploying Application
+        run: |
+          sam deploy --template-file template.yaml --stack-name sam-app --capabilities CAPABILITY_IAM --s3-bucket [name of your bucket]
+

@@ -1,0 +1,26 @@
+name: Deploy QA
+
+on:
+  push:
+    branches: [trunk]
+
+jobs:
+  build:
+    name: Compile, Build and Deploy QA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Compile Code
+        run: |
+          echo "Compiled"
+      - name: Build Code
+        run: |
+          # sbt 'runMain chessfinder.SamTemplate' assembly
+          # 
+          echo "Build"
+      - name: Deploying QA
+        run: |
+          # sbt 'runMain chessfinder.SamTemplate' assembly
+          # 
+          echo "Deploy to Beta "
