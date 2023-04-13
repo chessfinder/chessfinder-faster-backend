@@ -6,5 +6,3 @@ import munit.FunSuite
 trait IntegrationSuite:
 
   InitIntegration.run
-    
-

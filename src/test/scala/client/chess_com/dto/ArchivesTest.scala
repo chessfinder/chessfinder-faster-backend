@@ -26,7 +26,7 @@ class ArchivesTest extends FunSuite:
       )
       .toTry
       .get
-      
+
     val expectedResult = Archives(
       Seq(
         uri"https://pub/player/tigran-c-137/games/2022/07",

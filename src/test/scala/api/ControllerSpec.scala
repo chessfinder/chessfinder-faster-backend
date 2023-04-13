@@ -1,5 +1,5 @@
 package chessfinder
-package api 
+package api
 
 import zio.test.*
 import zio.*
@@ -41,7 +41,7 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.{ HttpApp, Request, Response }
 import zio.*
 import zio.http.*
-import chessfinder.api.{ ControllerBlueprint, DependentController}
+import chessfinder.api.{ ControllerBlueprint, DependentController }
 import chessfinder.search.GameFinder
 import zio.Console.ConsoleLive
 import sttp.apispec.openapi.Server as OAServer
@@ -60,10 +60,10 @@ import com.typesafe.config.ConfigFactory
 object ControllerSpec extends Mocks:
 
   val version    = "newborn"
-  val blueprint = ControllerBlueprint(version)
+  val blueprint  = ControllerBlueprint(version)
   val controller = DependentController(blueprint)
 
-  private val config = ConfigFactory.load()
+  private val config      = ConfigFactory.load()
   private val configLayer = ZLayer.succeed(config)
 
   private val zioInterpreter = ZioHttpInterpreter()
@@ -76,14 +76,12 @@ object ControllerSpec extends Mocks:
 
   protected lazy val clientLayer = Client.default.orDie
 
-  
   def run(controllerLayer: ULayer[GameFinder]) =
     Server
       .serve(app)
       .provide(
         Server.default,
-        controllerLayer,
+        controllerLayer
       )
 
   // don't know how to right a test for the controller.
-  

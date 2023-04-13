@@ -1,7 +1,7 @@
 package chessfinder
 package client
 
-import io.circe.{ Decoder, Encoder}
+import io.circe.{ Decoder, Encoder }
 
 import io.circe.parser
 import zio.Task
@@ -15,10 +15,9 @@ object ClientExt:
     def toBody: Body = Body.fromString(Encoder[T].apply(dto).noSpaces, UTF_8)
 
   extension (body: Body)
-    def to[T](using Decoder[T]): Task[T] = 
+    def to[T](using Decoder[T]): Task[T] =
       for {
-        str <- body.asString(UTF_8)
+        str  <- body.asString(UTF_8)
         json <- ZIO.fromEither(parser.parse(str))
-        dto <- ZIO.fromEither(Decoder[T].decodeJson(json))
+        dto  <- ZIO.fromEither(Decoder[T].decodeJson(json))
       } yield dto
-      

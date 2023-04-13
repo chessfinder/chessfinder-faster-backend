@@ -16,7 +16,7 @@ import chessfinder.search.*
 import munit.Clue.generate
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import util.DescriptionHelper
-import util.{βUnsafeExt, DescriptionHelper}
+import util.{ βUnsafeExt, DescriptionHelper }
 import core.SearchFen
 
 class SearchFenTest extends FunSuite with DescriptionHelper:

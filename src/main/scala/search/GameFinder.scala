@@ -25,28 +25,29 @@ object GameFinder:
       for
         validBoard <- validator.validate(board)
         user = User(platform, userName)
-        games <- downloader.download(user = user)
+        games        <- downloader.download(user = user)
         searchResult <- findAll(games, validBoard)
       yield searchResult
 
     private def findAll(games: DownloadingResult, board: ProbabilisticBoard): φ[SearchResult] =
-      val matchingResult = ZIO.collect(games.games) { game =>
-        searcher
-          .find(game.png, board)
-          .map(if _ then Some(MatchedGame(game.resource)) else None)
-          .either
-      }.memoize
+      val matchingResult = ZIO
+        .collect(games.games) { game =>
+          searcher
+            .find(game.png, board)
+            .map(if _ then Some(MatchedGame(game.resource)) else None)
+            .either
+        }
+        .memoize
 
-      for 
-        memoized <- matchingResult
-        matchedGames <- memoized.map(_.collect{case Right(Some(game)) => game})
+      for
+        memoized           <- matchingResult
+        matchedGames       <- memoized.map(_.collect { case Right(Some(game)) => game })
         allGamesWereParsed <- memoized.map(_.forall(_.isRight))
-        dowloadStatus = 
+        dowloadStatus =
           if games.unreachableArchives.isEmpty && allGamesWereParsed
           then DownloadStatus.Full
           else DownloadStatus.Partial
-      yield 
-        SearchResult(
+      yield SearchResult(
         matched = matchedGames,
         status = dowloadStatus
       )

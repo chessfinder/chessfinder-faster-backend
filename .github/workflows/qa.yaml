@@ -2,7 +2,7 @@ name: Deploy QA
 
 on:
   push:
-    branches: [trunk]
+    branches: [master]
 
 jobs:
   build:
@@ -11,16 +11,36 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
+      
+      - name: Setup JDK
+        uses: actions/setup-java@v3.11.0
+        with:
+          distribution: 'corretto'
+          java-version: '11'
+      
       - name: Compile Code
+        shell: bash
         run: |
-          echo "Compiled"
-      - name: Build Code
+          sbt -v "compile;"
+      
+      - name: setup SAM
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      
+      - name: Packaging Code
+        shell: bash
         run: |
-          # sbt 'runMain chessfinder.SamTemplate' assembly
-          # 
-          echo "Build"
-      - name: Deploying QA
+          sbt -v "assembly; runMain chessfinder.SamTemplate;"
+          cat template.yaml
+      
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Deploying Application
         run: |
-          # sbt 'runMain chessfinder.SamTemplate' assembly
-          # 
-          echo "Deploy to Beta "
+          sam deploy --template-file template.yaml --stack-name chessfinder --capabilities CAPABILITY_IAM --s3-bucket ${{ secrets.AWS_APPLICATION_BUCKET }}

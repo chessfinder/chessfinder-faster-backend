@@ -20,10 +20,12 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val platform = ChessPlatform.ChessDotCom
       val userName = UserName("user")
 
-      val boardValidatorLayer = BoardValidatorMock.Validate.apply(
-        assertion = Assertion.equalTo(board),
-        result = Expectation.failure(InvalidSearchBoard)
-      ).toLayer
+      val boardValidatorLayer = BoardValidatorMock.Validate
+        .apply(
+          assertion = Assertion.equalTo(board),
+          result = Expectation.failure(InvalidSearchBoard)
+        )
+        .toLayer
 
       val actualResult = GameFinder
         .find(board, platform, userName)
@@ -36,18 +38,22 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
 
       val board    = SearchFen("")
       val platform = ChessPlatform.ChessDotCom
-      val userName     = UserName("user")
-      val user = User(platform, userName)
-      
-      val boardValidatorLayer = BoardValidatorMock.Validate(
-        assertion = Assertion.equalTo(board),
-        result = Expectation.value(ProbabilisticBoard.empty)
-      ).toLayer
+      val userName = UserName("user")
+      val user     = User(platform, userName)
 
-      val gameDownloaderLayer = GameDownloaderMock.Downlaod(
-        assertion = Assertion.equalTo(user),
-        result = Expectation.failure(ProfileNotFound(userName))
-      ).toLayer
+      val boardValidatorLayer = BoardValidatorMock
+        .Validate(
+          assertion = Assertion.equalTo(board),
+          result = Expectation.value(ProbabilisticBoard.empty)
+        )
+        .toLayer
+
+      val gameDownloaderLayer = GameDownloaderMock
+        .Downlaod(
+          assertion = Assertion.equalTo(user),
+          result = Expectation.failure(ProfileNotFound(userName))
+        )
+        .toLayer
 
       val actualResult = GameFinder
         .find(board, platform, userName)
@@ -57,26 +63,30 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
 
     },
     test("when board is valid but user does not have any game method find should return NoGameAvaliable") {
-      
+
       val board    = SearchFen("")
       val platform = ChessPlatform.ChessDotCom
-      val userName     = UserName("user")
-      val user = User(platform, userName)
-      
-      val boardValidatorLayer = BoardValidatorMock.Validate(
-        assertion = Assertion.equalTo(board),
-        result = Expectation.value(ProbabilisticBoard.empty)
-      ).toLayer
+      val userName = UserName("user")
+      val user     = User(platform, userName)
 
-      val gameDownloaderLayer = GameDownloaderMock.Downlaod(
-        assertion = Assertion.equalTo(user),
-        result = Expectation.failure(NoGameAvaliable(userName))
-      ).toLayer
+      val boardValidatorLayer = BoardValidatorMock
+        .Validate(
+          assertion = Assertion.equalTo(board),
+          result = Expectation.value(ProbabilisticBoard.empty)
+        )
+        .toLayer
+
+      val gameDownloaderLayer = GameDownloaderMock
+        .Downlaod(
+          assertion = Assertion.equalTo(user),
+          result = Expectation.failure(NoGameAvaliable(userName))
+        )
+        .toLayer
 
       val actualResult = GameFinder
         .find(board, platform, userName)
         .provide(boardValidatorLayer, SearcherMock.empty, gameDownloaderLayer, GameFinder.Impl.layer)
-      
+
       assertZIO(actualResult.exit)(Assertion.fails(Assertion.equalTo(NoGameAvaliable(userName))))
     },
     test(
@@ -85,15 +95,16 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val board    = SearchFen("")
       val platform = ChessPlatform.ChessDotCom
       val userName = UserName("user")
-      val user = User(platform, userName)
+      val user     = User(platform, userName)
 
       val searchBoard = ProbabilisticBoard.empty
-      
-      val boardValidatorLayer = BoardValidatorMock.Validate.apply(
-        assertion = Assertion.equalTo(board),
-        result = Expectation.value(searchBoard)
-      ).toLayer
 
+      val boardValidatorLayer = BoardValidatorMock.Validate
+        .apply(
+          assertion = Assertion.equalTo(board),
+          result = Expectation.value(searchBoard)
+        )
+        .toLayer
 
       val historicalGame1 = HistoricalGame(uri"https://example.com1", PgnStr("1"))
       val historicalGame2 = HistoricalGame(uri"https://example.com2", PgnStr("2"))
@@ -108,13 +119,15 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
         List.empty
       )
 
-      val gameDownloaderLayer = GameDownloaderMock.Downlaod(
-        assertion = Assertion.equalTo(user),
-        result = Expectation.value(downloadingResult)
-      ).toLayer
+      val gameDownloaderLayer = GameDownloaderMock
+        .Downlaod(
+          assertion = Assertion.equalTo(user),
+          result = Expectation.value(downloadingResult)
+        )
+        .toLayer
 
-      val searcherLayer = 
-        val mock = 
+      val searcherLayer =
+        val mock =
           SearcherMock.Find(
             assertion = Assertion.equalTo((historicalGame1.png, searchBoard)),
             result = Expectation.value(true)
@@ -146,15 +159,16 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val board    = SearchFen("")
       val platform = ChessPlatform.ChessDotCom
       val userName = UserName("user")
-      val user = User(platform, userName)
+      val user     = User(platform, userName)
 
       val searchBoard = ProbabilisticBoard.empty
-      
-      val boardValidatorLayer = BoardValidatorMock.Validate.apply(
-        assertion = Assertion.equalTo(board),
-        result = Expectation.value(searchBoard)
-      ).toLayer
 
+      val boardValidatorLayer = BoardValidatorMock.Validate
+        .apply(
+          assertion = Assertion.equalTo(board),
+          result = Expectation.value(searchBoard)
+        )
+        .toLayer
 
       val historicalGame1 = HistoricalGame(uri"https://example.com1", PgnStr("1"))
       val historicalGame2 = HistoricalGame(uri"https://example.com2", PgnStr("2"))
@@ -169,13 +183,15 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
         List.empty
       )
 
-      val gameDownloaderLayer = GameDownloaderMock.Downlaod(
-        assertion = Assertion.equalTo(user),
-        result = Expectation.value(downloadingResult)
-      ).toLayer
+      val gameDownloaderLayer = GameDownloaderMock
+        .Downlaod(
+          assertion = Assertion.equalTo(user),
+          result = Expectation.value(downloadingResult)
+        )
+        .toLayer
 
-      val searcherLayer = 
-        val mock = 
+      val searcherLayer =
+        val mock =
           SearcherMock.Find(
             assertion = Assertion.equalTo((historicalGame1.png, searchBoard)),
             result = Expectation.value(true)
@@ -189,7 +205,7 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
         mock.toLayer
 
       val machedGame1 = MatchedGame(uri"https://example.com1")
-      
+
       val machedGames = List(machedGame1)
 
       val expectedResult = SearchResult(machedGames, DownloadStatus.Partial)
@@ -206,15 +222,16 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
       val board    = SearchFen("")
       val platform = ChessPlatform.ChessDotCom
       val userName = UserName("user")
-      val user = User(platform, userName)
+      val user     = User(platform, userName)
 
       val searchBoard = ProbabilisticBoard.empty
-      
-      val boardValidatorLayer = BoardValidatorMock.Validate.apply(
-        assertion = Assertion.equalTo(board),
-        result = Expectation.value(searchBoard)
-      ).toLayer
 
+      val boardValidatorLayer = BoardValidatorMock.Validate
+        .apply(
+          assertion = Assertion.equalTo(board),
+          result = Expectation.value(searchBoard)
+        )
+        .toLayer
 
       val historicalGame1 = HistoricalGame(uri"https://example.com1", PgnStr("1"))
       val historicalGame2 = HistoricalGame(uri"https://example.com2", PgnStr("2"))
@@ -227,13 +244,15 @@ object GameFinderTest extends ZIOSpecDefault with Mocks:
         List(uri"https://example.com3")
       )
 
-      val gameDownloaderLayer = GameDownloaderMock.Downlaod(
-        assertion = Assertion.equalTo(user),
-        result = Expectation.value(downloadingResult)
-      ).toLayer
+      val gameDownloaderLayer = GameDownloaderMock
+        .Downlaod(
+          assertion = Assertion.equalTo(user),
+          result = Expectation.value(downloadingResult)
+        )
+        .toLayer
 
-      val searcherLayer = 
-        val mock = 
+      val searcherLayer =
+        val mock =
           SearcherMock.Find(
             assertion = Assertion.equalTo((historicalGame1.png, searchBoard)),
             result = Expectation.value(true)

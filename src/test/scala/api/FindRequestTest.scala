@@ -13,39 +13,46 @@ import zio.json.JsonDecoder
 
 class FindRequestTest extends FunSuite:
   test("FindRequest should be parsed correctly") {
-    val json = parser.parse(
-       """|{
-          |  "user":"tigran-c-137",
-          |  "platform":"chess.com",
-          |  "board":"a stupid thing"
-          |}
-          |""".stripMargin
-    ).toTry.get
+    val json = parser
+      .parse(
+        """|{
+           |  "user":"tigran-c-137",
+           |  "platform":"chess.com",
+           |  "board":"a stupid thing"
+           |}
+           |""".stripMargin
+      )
+      .toTry
+      .get
     val expectedResult = FindRequest(
       user = "tigran-c-137",
       platform = Platform.`chess.com`,
       board = "a stupid thing"
     )
-    
-    val actualResult = Decoder[FindRequest].decodeJson(json).toTry.get 
-    assert(expectedResult == actualResult)     
+
+    val actualResult = Decoder[FindRequest].decodeJson(json).toTry.get
+    assert(expectedResult == actualResult)
   }
 
   test("FindRequest should be parsed correctly using ZIO") {
-    val json = parser.parse(
-       """|{
-          |  "user":"tigran-c-137",
-          |  "platform":"chess.com",
-          |  "board":"a stupid thing"
-          |}
-          |""".stripMargin
-    ).toTry.get.noSpaces
+    val json = parser
+      .parse(
+        """|{
+           |  "user":"tigran-c-137",
+           |  "platform":"chess.com",
+           |  "board":"a stupid thing"
+           |}
+           |""".stripMargin
+      )
+      .toTry
+      .get
+      .noSpaces
     val expectedResult = FindRequest(
       user = "tigran-c-137",
       platform = Platform.`chess.com`,
       board = "a stupid thing"
     )
-    
-    val actualResult = JsonDecoder[FindRequest].decodeJson(json).toOption.get 
-    assert(expectedResult == actualResult)     
+
+    val actualResult = JsonDecoder[FindRequest].decodeJson(json).toOption.get
+    assert(expectedResult == actualResult)
   }

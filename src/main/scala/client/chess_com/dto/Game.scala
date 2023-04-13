@@ -11,6 +11,5 @@ final case class Game(
     pgn: String
 )
 
-
 object Game:
   given Decoder[Game] = deriveDecoder[Game]

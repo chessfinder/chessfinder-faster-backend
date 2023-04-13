@@ -9,16 +9,13 @@ import chessfinder.core.{ PgnReader, SearchFacade }
 import chessfinder.core.ProbabilisticBoard
 import chess.format.pgn.PgnStr
 
-
 import cats.implicits.*
 import cats.kernel.Monoid
 import ornicar.scalalib.zeros.given_Zero_Option
 
-
 trait Searcher:
 
-  def find(pgn: PgnStr, probabilisticBoard: ProbabilisticBoard):φ[Boolean]
-  
+  def find(pgn: PgnStr, probabilisticBoard: ProbabilisticBoard): φ[Boolean]
 
 object Searcher:
 
@@ -26,7 +23,7 @@ object Searcher:
     ψ.serviceWithZIO[GameFinder](_.find(board, platform, userName))
 
   class Impl() extends Searcher:
-     def find(pgn: PgnStr, probabilisticBoard: ProbabilisticBoard): φ[Boolean] =
+    def find(pgn: PgnStr, probabilisticBoard: ProbabilisticBoard): φ[Boolean] =
       SearchFacade.find(pgn, probabilisticBoard).fold(_ => ZIO.fail(BrokenLogic.InvalidGame), ZIO.succeed)
 
   object Impl:

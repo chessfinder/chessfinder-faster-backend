@@ -11,6 +11,3 @@ object InitIntegration:
     System.setProperty("config.file", "src/it/resources/local.conf")
     ConfigFactory.invalidateCaches()
     scala.concurrent.Future(Main.main(Array.empty[String]))(scala.concurrent.ExecutionContext.global)
-
-
-

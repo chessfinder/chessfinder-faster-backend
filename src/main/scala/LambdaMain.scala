@@ -54,7 +54,6 @@ object LambdaMain extends RequestStreamHandler:
   val organization = "eudemonia"
   val version      = "newborn"
 
-
   val blueprint  = ControllerBlueprint(version)
   val controller = DependentController(blueprint)
 
@@ -63,7 +62,7 @@ object LambdaMain extends RequestStreamHandler:
   private val config      = ConfigFactory.load()
   private val configLayer = ZLayer.succeed(config)
 
-  private lazy val clientLayer = 
+  private lazy val clientLayer =
     Client.default.map(z => z.update(_ @@ ZLoggingAspect())).orDie
 
   def process(input: InputStream, output: OutputStream) =

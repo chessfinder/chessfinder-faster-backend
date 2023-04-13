@@ -8,4 +8,3 @@ case class DownloadingResult(games: HistoricalGames, unreachableArchives: List[U
 
 object DownloadingResult:
   val empty = DownloadingResult(List.empty, List.empty)
-

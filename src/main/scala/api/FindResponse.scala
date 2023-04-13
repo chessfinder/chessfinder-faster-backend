@@ -20,7 +20,7 @@ object FindResponse:
   given Codec[FindResponse]  = deriveCodec[FindResponse]
   given Schema[FindResponse] = Schema.derived[FindResponse]
 
-  given JsonEncoder[Uri] = JsonEncoder[String].contramap(_.toString)
+  given JsonEncoder[Uri]          = JsonEncoder[String].contramap(_.toString)
   given JsonEncoder[FindResponse] = DeriveJsonEncoder.gen[FindResponse]
 
   def fromSearchResult(result: SearchResult): FindResponse =

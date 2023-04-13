@@ -115,7 +115,9 @@ object FindGameSpec extends ZIOSpecDefault with IntegrationSuite:
         assertZIO(actualResult.provide(clientEnv))(Assertion.equalTo(expectedResult)) &&
         assertZIO(stubVerification)(Assertion.isUnit)
       },
-      test("and everything is OK except one call for getting an archive, should should find the game and notifiy that not all games were analized") {
+      test(
+        "and everything is OK except one call for getting an archive, should should find the game and notifiy that not all games were analized"
+      ) {
         val archivesStub = `chess.com`
           .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/archives")
           .returnsJson(

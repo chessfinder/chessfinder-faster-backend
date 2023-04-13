@@ -126,7 +126,7 @@ object GameDownloaderTest extends ZIOSpecDefault with Mocks:
     },
     test("when user does not have any archive should return NoGameAvaliable") {
       val userName = UserName("user")
-      val user = User(ChessPlatform.ChessDotCom, userName)
+      val user     = User(ChessPlatform.ChessDotCom, userName)
 
       val expectedArchive = Archives(Seq.empty)
       val getArchiveCall = ChessDotComClientMock.ArchivesMethod(

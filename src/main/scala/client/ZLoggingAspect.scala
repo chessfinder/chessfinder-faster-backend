@@ -24,7 +24,7 @@ class ZLoggingAspect[Env]
           _            <- ZIO.logDebug(s"Request body: $bodyAsString")
         yield body
       }
-      .mapZIO{response =>
+      .mapZIO { response =>
         for
           bodyAsString <- response.body.asString.orElseSucceed("Response body is not a string")
           _            <- ZIO.logDebug(s"Response body: $bodyAsString")

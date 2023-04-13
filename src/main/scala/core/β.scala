@@ -51,5 +51,3 @@ object β:
     extension (error: ValidationError)
       def failed[OUTPUT]: β[OUTPUT] =
         β.invalid[OUTPUT](error)
-
-  

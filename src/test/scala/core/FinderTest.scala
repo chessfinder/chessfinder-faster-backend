@@ -23,7 +23,7 @@ import chess.Replay
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import core.β.Ext.*
 import core.β
-import util.{ DescriptionHelper, βUnsafeExt }
+import util.{ βUnsafeExt, DescriptionHelper }
 import core.*
 
 import core.SearchFen
