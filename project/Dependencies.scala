@@ -133,12 +133,14 @@ object Dependencies {
     val zioVersion     = "2.1.11"
     val slf4jVersion   = "2.0.7"
     val logbackVersion = "1.2.10"
+    val logstashVersion = "7.3"
     Seq(
       "dev.zio"       %% "zio-logging"       % zioVersion,
       "dev.zio"       %% "zio-logging-slf4j2" % zioVersion,
       "ch.qos.logback" % "logback-core"      % logbackVersion,
       "ch.qos.logback" % "logback-classic"   % logbackVersion,
-      "org.slf4j"      % "slf4j-api"         % slf4jVersion
+      "org.slf4j"      % "slf4j-api"         % slf4jVersion,
+      "net.logstash.logback" % "logstash-logback-encoder" % logstashVersion
     )
   }
 

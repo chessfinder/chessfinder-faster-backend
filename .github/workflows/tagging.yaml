@@ -3,7 +3,7 @@ name: Tagging
 on:
   push:
     branches: [master]
-    path: [version]
+    paths: [version]
 
 jobs:
   tagging:

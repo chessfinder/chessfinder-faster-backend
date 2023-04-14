@@ -35,7 +35,6 @@
                 <tags />
                 <logstashMarkers />
                 <arguments />
-                <uuid />
             </providers>
         </encoder>
     </appender>

@@ -116,19 +116,19 @@ object FindGameSpec extends ZIOSpecDefault with IntegrationSuite:
         assertZIO(stubVerification)(Assertion.isUnit)
       },
       test(
-        "and everything is OK except one call for getting an archive, should should find the game and notifiy that not all games were analized"
+        "and everything is OK except one call for getting an archive, should find the game and notifiy that not all games were analized"
       ) {
         val archivesStub = `chess.com`
-          .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/archives")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138/games/archives")
           .returnsJson(
             """|
                |{
                | "archives": [
-               |  "https://example.com/pub/player/tigran-c-137/games/2022/07",
-               |  "https://example.com/pub/player/tigran-c-137/games/2022/08",
-               |  "https://example.com/pub/player/tigran-c-137/games/2022/09",
-               |  "https://example.com/pub/player/tigran-c-137/games/2022/10",
-               |  "https://example.com/pub/player/tigran-c-137/games/2022/11"
+               |  "https://example.com/pub/player/tigran-c-138/games/2022/07",
+               |  "https://example.com/pub/player/tigran-c-138/games/2022/08",
+               |  "https://example.com/pub/player/tigran-c-138/games/2022/09",
+               |  "https://example.com/pub/player/tigran-c-138/games/2022/10",
+               |  "https://example.com/pub/player/tigran-c-138/games/2022/11"
                |  ]
                |}
                |""".stripMargin
@@ -136,12 +136,12 @@ object FindGameSpec extends ZIOSpecDefault with IntegrationSuite:
           .stub()
 
         val `2022-07` = `chess.com`
-          .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/2022/07")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138/games/2022/07")
           .returnsJson(JsonReader.readResource("samples/2022-07.json"))
           .stub()
 
         val `2022-08` = `chess.com`
-          .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/2022/08")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138/games/2022/08")
           .returnsJson(
             """|
                |{
@@ -154,17 +154,17 @@ object FindGameSpec extends ZIOSpecDefault with IntegrationSuite:
           .stub()
 
         val `2022-09` = `chess.com`
-          .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/2022/09")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138/games/2022/09")
           .returnsJson(JsonReader.readResource("samples/2022-09.json"))
           .stub()
 
         val `2022-10` = `chess.com`
-          .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/2022/10")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138/games/2022/10")
           .returnsJson(JsonReader.readResource("samples/2022-10.json"))
           .stub()
 
         val `2022-11` = `chess.com`
-          .expectsEndpoint("GET", "/pub/player/tigran-c-137/games/2022/11")
+          .expectsEndpoint("GET", "/pub/player/tigran-c-138/games/2022/11")
           .returnsJson(JsonReader.readResource("samples/2022-11.json"))
           .stub()
 
@@ -176,7 +176,7 @@ object FindGameSpec extends ZIOSpecDefault with IntegrationSuite:
         val actualResult =
           val body = Body.fromString(
             """|{
-               |  "user":"tigran-c-137",
+               |  "user":"tigran-c-138",
                |  "platform":"chess.com",
                |  "board":"????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"
                |}
@@ -197,12 +197,12 @@ object FindGameSpec extends ZIOSpecDefault with IntegrationSuite:
         val stubVerification =
           for {
             _ <- ZIO.unit
-            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137/games/archives")
-            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137/games/2022/07")
-            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137/games/2022/08")
-            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137/games/2022/09")
-            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137/games/2022/10")
-            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-137/games/2022/11")
+            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138/games/archives")
+            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138/games/2022/07")
+            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138/games/2022/08")
+            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138/games/2022/09")
+            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138/games/2022/10")
+            _ <- `chess.com`.verify(1, "GET", "/pub/player/tigran-c-138/games/2022/11")
           } yield ()
 
         assertZIO(actualResult.provide(clientEnv))(Assertion.equalTo(expectedResult)) &&

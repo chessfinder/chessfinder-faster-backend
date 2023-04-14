@@ -24,10 +24,19 @@ jobs:
         shell: bash
         run: |
           sbt -v "compile;"
-      # - name: Test Code
-      #   shell: bash
-      #   run: |
-      #     # sbt -v "test;"
-      #     sbt -v "compile;"
+      - name: Unit Tests
+        shell: bash
+        run: |
+          docker compose -f ./src/test/resources/docker-compose.yaml --env-file ./src/test/resources/.env up -d
+          sleep 10s
+          sbt -v "test;"
+          docker compose -f ./src/test/resources/docker-compose.yaml down
+      - name: Integration Tests
+        shell: bash
+        run: |
+          docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
+          sleep 10s
+          sbt -v "IntegrationTest / test;"
+          docker compose -f ./src/it/resources/docker-compose.yaml down
 
 
