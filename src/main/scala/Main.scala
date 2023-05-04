@@ -8,9 +8,8 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.{ HttpApp, Request, Response }
 import zio.*
 import zio.http.*
-import chessfinder.api.{ ControllerBlueprint, DependentController }
+import chessfinder.api.{ AsyncController, SyncController }
 import chessfinder.search.GameFinder
-import zio.Console.ConsoleLive
 import sttp.apispec.openapi.Server as OAServer
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.swagger.*
@@ -19,47 +18,65 @@ import sttp.tapir.redoc.RedocUIOptions
 import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.server.*
 import chessfinder.search.BoardValidator
-import chessfinder.search.GameDownloader
+import chessfinder.search.GameFetcher
 import chessfinder.search.Searcher
 import chessfinder.client.chess_com.ChessDotComClient
 import com.typesafe.config.ConfigFactory
+import chessfinder.api.ApiVersion
+import chessfinder.search.repo.{ GameRepo, TaskRepo, UserRepo }
+import zio.aws.netty
+import zio.aws.core.config.AwsConfig
+import persistence.core.DefaultDynamoDBExecutor
+import zio.dynamodb.*
+import util.EndpointCombiner
+import chessfinder.search.TaskStatusChecker
+import chessfinder.persistence.GameRecord
+import chessfinder.search.GameDownloader
+import sttp.tapir.server.ziohttp.*
+import zio.logging.*
+import zio.config.typesafe.TypesafeConfigProvider
 
-object Main extends ZIOAppDefault:
+object Main extends BaseMain with ZIOAppDefault:
 
-  val organization = "eudemonia"
-  val version      = "newborn"
-  val blueprint    = ControllerBlueprint(version)
-  val controller   = DependentController(blueprint)
-
-  private val swaggerHost: String = s"http://localhost:8080"
-
-  private val config      = ConfigFactory.load()
-  private val configLayer = ZLayer.succeed(config)
-
-  private val servers: List[OAServer] = List(OAServer(swaggerHost).description("Admin"))
+  private val servers: List[OAServer] = List(
+    OAServer("http://localhost:8080").description("Chessfinder APIs")
+  )
   private val docsAsYaml: String = OpenAPIDocsInterpreter()
-    .toOpenAPI(blueprint.endpoints, "ChessFinder", "newborn")
+    .toOpenAPI(
+      syncControllerBlueprint.endpoints ++ asyncControllerBlueprint.endpoints,
+      "ChessFinder",
+      "Backend"
+    )
     .servers(servers)
     .toYaml
 
-  private val zioInterpreter = ZioHttpInterpreter()
-  private val swaggerEndpoint: List[ZServerEndpoint[GameFinder, Any]] =
+  private val zioInterpreter =
+    ZioHttpInterpreter[Any](
+      ZioHttpServerOptions.customiseInterceptors
+        .serverLog(serverLogger)
+        .options
+    )
+
+  private val swaggerEndpoint =
     val options = SwaggerUIOptions.default.copy(pathPrefix = List("docs", "swagger"))
-    SwaggerUI[zio.RIO[GameFinder, *]](docsAsYaml, options = options)
+    SwaggerUI[zio.RIO[Any, *]](docsAsYaml, options = options)
 
-  private val redocEndpoint: List[ZServerEndpoint[GameFinder, Any]] =
+  private val redocEndpoint =
     val options = RedocUIOptions.default.copy(pathPrefix = List("docs", "redoc"))
-    Redoc[zio.RIO[GameFinder, *]]("ChessFinder", spec = docsAsYaml, options = options)
+    Redoc[zio.RIO[Any, *]]("ChessFinder", spec = docsAsYaml, options = options)
 
-  private val rest: List[ZServerEndpoint[GameFinder, Any]] = controller.rest
-  private val endpoints: List[ZServerEndpoint[GameFinder, Any]] =
-    controller.rest ++ swaggerEndpoint ++ redocEndpoint
+  private val rest =
+    EndpointCombiner.many(asyncController.rest, syncController.rest)
+
+  private val endpoints =
+    EndpointCombiner.many(EndpointCombiner.many(rest, swaggerEndpoint), redocEndpoint)
 
   val app =
     zioInterpreter.toHttp(endpoints).withDefaultErrorResponse
 
-  protected lazy val clientLayer = Client.default.orDie
+  override val bootstrap = configLayer >+> loggingLayer
 
+  ZIOAspect
   def run =
     Server
       .serve(app)
@@ -68,8 +85,17 @@ object Main extends ZIOAppDefault:
         clientLayer,
         Server.default,
         BoardValidator.Impl.layer,
-        GameFinder.Impl.layer,
+        GameFinder.Impl.layer[ApiVersion.Newborn.type],
+        GameFinder.Impl.layer[ApiVersion.Async.type],
         Searcher.Impl.layer,
+        GameFetcher.Impl.layer,
+        GameFetcher.Local.layer,
+        ChessDotComClient.Impl.layer,
+        UserRepo.Impl.layer,
+        TaskRepo.Impl.layer,
+        GameRepo.Impl.layer,
+        TaskStatusChecker.Impl.layer,
         GameDownloader.Impl.layer,
-        ChessDotComClient.Impl.layer
+        dynamodbLayer,
+        ZLayer.succeed(zio.Random.RandomLive)
       )

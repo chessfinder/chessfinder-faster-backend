@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Chessfinder - application for finding chessgame having only partial information about the game.
+
+Resources:
+  Roles:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/role.yaml
+
+  DynamoDB:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/db.yaml
+
+  Api:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/api.yaml
+      Parameters:
+        LambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+
+Outputs:
+  OrderApiEndpoint:
+    Description: "Chessfinder API Gateway Endpoint URL"
+    Value: !GetAtt Api.Outputs.ChessfinderUrl
+
+  RoleForChessfinderLambdaArn:
+    Description: "Chessfinder Lambda Role"
+    Value: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn

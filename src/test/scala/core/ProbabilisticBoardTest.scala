@@ -35,6 +35,19 @@ class ProbabilisticBoardTest extends ScalaCheckSuite:
     Prop.all(props*)
   }
 
+  /*
+      X chessfinder.core.ProbabilisticBoardTest.all wrong guesses shouldit.FailException: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finest\scala\core\ProbabilisticBoardTest.scala:51
+    50:    Prop.all(props*)ch.repo.TaskRepoTest 1s
+    51:  } chessfinder.client.chess_com.ChessDotComClientTest 2s
+    52: => chessfinder.core.ProbabilisticBoardTest 2s
+      | => chessfinder.search.repo.GameRepoTest 2s
+    Failing seed: n9YufSlugYHERKixQx4lf7zM_hqQWDulJhsu4i0bYxE=
+    You can reproduce this failure by adding the following override to you
+
+      override def scalaCheckInitialSeed = "n9YufSlugYHERKixQx4lf7zM_hqQWD
+
+    Gave up after only 98 passed tests. 501 tests were discarded.
+   */
   property("all wrong guesses should fail") {
     val boards: Seq[Board] =
       FenFixtures.fens

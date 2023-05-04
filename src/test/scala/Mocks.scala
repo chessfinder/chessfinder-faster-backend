@@ -6,7 +6,7 @@ import search.*
 
 import core.{ ProbabilisticBoard, SearchFen }
 import chess.format.pgn.PgnStr
-import chessfinder.search.entity.{ DownloadingResult, User }
+import chessfinder.search.entity.{ FetchingResult, User }
 import chessfinder.search.entity.UserName
 import chessfinder.client.ClientError
 import chessfinder.client.ClientError.ProfileNotFound
@@ -15,6 +15,10 @@ import sttp.model.Uri
 import chessfinder.client.chess_com.ChessDotComClient
 import chessfinder.client.μ
 import search.entity.*
+import chessfinder.search.repo.*
+import chessfinder.api.TaskStatusResponse
+import chessfinder.api.ApiVersion
+import java.util.UUID
 
 trait Mocks:
   object BoardValidatorMock extends Mock[BoardValidator]:
@@ -38,14 +42,24 @@ trait Mocks:
             proxy(Find, pgn, probabilisticBoard)
       }
 
-  object GameDownloaderMock extends Mock[GameDownloader]:
-    object Downlaod extends Effect[User, BrokenLogic, DownloadingResult]
+  object AsyncGameFetcherMock extends Mock[GameFetcher[ApiVersion.Async.type]]:
+    object Fetch extends Effect[User, BrokenLogic, FetchingResult]
 
-    val compose: URLayer[Proxy, GameDownloader] =
+    val compose: URLayer[Proxy, GameFetcher[ApiVersion.Async.type]] =
       ZLayer {
         for proxy <- ZIO.service[Proxy]
-        yield new GameDownloader:
-          override def download(user: User): φ[DownloadingResult] = proxy(Downlaod, user)
+        yield new GameFetcher:
+          override def fetch(user: User): φ[FetchingResult] = proxy(Fetch, user)
+      }
+
+  object NewbornGameFetcherMock extends Mock[GameFetcher[ApiVersion.Newborn.type]]:
+    object Fetch extends Effect[User, BrokenLogic, FetchingResult]
+
+    val compose: URLayer[Proxy, GameFetcher[ApiVersion.Newborn.type]] =
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new GameFetcher:
+          override def fetch(user: User): φ[FetchingResult] = proxy(Fetch, user)
       }
 
   object ChessDotComClientMock extends Mock[ChessDotComClient]:
@@ -63,15 +77,72 @@ trait Mocks:
           override def games(uri: Uri): μ[Games]                 = proxy(GamesMethod, uri)
       }
 
-  object GameFinderMock extends Mock[GameFinder]:
+  object GameFinderMock extends Mock[GameFinder[ApiVersion.Async.type]]:
     object Find extends Effect[(SearchFen, ChessPlatform, UserName), BrokenLogic, SearchResult]
 
-    val compose: URLayer[Proxy, GameFinder] =
+    val compose: URLayer[Proxy, GameFinder[ApiVersion.Async.type]] =
       ZLayer {
         for proxy <- ZIO.service[Proxy]
         yield new GameFinder:
 
           override def find(board: SearchFen, platform: ChessPlatform, userName: UserName): φ[SearchResult] =
             proxy(Find, board, platform, userName)
+
+      }
+
+  object UserRepoMock extends Mock[UserRepo]:
+    object GetUser  extends Effect[User, BrokenLogic, UserIdentified]
+    object SaveUser extends Effect[UserIdentified, BrokenLogic, Unit]
+
+    val compose: URLayer[Proxy, UserRepo] =
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new UserRepo:
+          override def get(user: User): φ[UserIdentified] =
+            proxy(GetUser, user)
+
+          override def save(user: UserIdentified): φ[Unit] =
+            proxy(SaveUser, user)
+      }
+
+  object GameRepoMock extends Mock[GameRepo]:
+    object ListGames extends Effect[UserIdentified, BrokenLogic, Seq[HistoricalGame]]
+    object SaveGames extends Effect[(UserId, Seq[HistoricalGame]), BrokenLogic, Unit]
+
+    val compose: URLayer[Proxy, GameRepo] =
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new:
+
+          override def list(user: UserIdentified): φ[Seq[HistoricalGame]] =
+            proxy(ListGames, user)
+
+          override def save(userId: UserId, games: Seq[HistoricalGame]): φ[Unit] =
+            proxy(SaveGames, userId, games)
+
+      }
+
+  object TaskRepoMock extends Mock[TaskRepo]:
+    object InitiateTask     extends Effect[(TaskId, Int), BrokenLogic, Unit]
+    object GetTask          extends Effect[TaskId, BrokenLogic, TaskStatusResponse]
+    object SuccessIncrement extends Effect[TaskId, BrokenLogic, Unit]
+    object FailureIncrement extends Effect[TaskId, BrokenLogic, Unit]
+
+    val compose: URLayer[Proxy, TaskRepo] =
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new:
+
+          override def initiate(taskId: TaskId, total: Int): φ[Unit] =
+            proxy(InitiateTask, taskId, total)
+
+          override def get(taskId: TaskId): φ[TaskStatusResponse] =
+            proxy(GetTask, taskId)
+
+          override def successIncrement(taskId: TaskId): φ[Unit] =
+            proxy(SuccessIncrement, taskId)
+
+          override def failureIncrement(taskId: TaskId): φ[Unit] =
+            proxy(FailureIncrement, taskId)
 
       }

@@ -18,5 +18,7 @@ object ApiError:
 
   def fromBrokenLogic(err: BrokenLogic): ApiError = err match
     case err: BrokenLogic.ProfileNotFound => ApiError("PROFILE_NOT_FOUND", err.msg)
+    case err: BrokenLogic.TaskNotFound    => ApiError("TASK_NOT_FOUND", err.msg)
     case BrokenLogic.InvalidSearchBoard   => ApiError("INVALID_SEARCH_BOARD", err.msg)
     case err: BrokenLogic.NoGameAvaliable => ApiError("NO_GAME_AVAILABLE", err.msg)
+    case err                              => ApiError("SERVER_OVERLOADED", err.msg)

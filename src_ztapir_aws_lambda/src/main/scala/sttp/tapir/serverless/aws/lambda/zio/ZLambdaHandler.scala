@@ -15,6 +15,7 @@ import scala.util.Try
 import sttp.tapir.serverless.aws.lambda.{ AwsRequest, AwsRequestV1, AwsResponse }
 import cats.MonadError
 import sttp.tapir.server.ziohttp.ZioHttpServerOptions
+import sttp.tapir.serverless.aws.lambda.AwsServerOptions
 
 /** [[ZLambdaHandler]] is an entry point for handling requests sent to AWS Lambda application which exposes Tapir endpoints.
   *
@@ -24,7 +25,7 @@ import sttp.tapir.server.ziohttp.ZioHttpServerOptions
   *   AWS API Gateway request type [[AwsRequestV1]] or [[AwsRequest]]. At the moment mapping is required as there is no support for
   *   generating API Gateway V2 definitions with AWS CDK v2.
   */
-abstract class ZLambdaHandler[Env: RIOMonadError]:
+abstract class ZLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RIO[Env, *]]):
 
   protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]]
 
@@ -72,10 +73,28 @@ abstract class ZLambdaHandler[Env: RIOMonadError]:
 
 object ZLambdaHandler:
 
-  def apply[Env: RIOMonadError](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] =
-    new ZLambdaHandler[Env]:
+  def apply[Env: RIOMonadError](endpoints: List[ZServerEndpoint[Env, Any]], options: AwsServerOptions[RIO[Env, *]]): ZLambdaHandler[Env] =
+    new ZLambdaHandler[Env](options):
       override protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]] = endpoints
+
+
+  def apply[Env: RIOMonadError](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] =
+    val serverLogger =
+        ZioHttpServerOptions.defaultServerLog[Env]
+
+    val options =
+      AwsZServerOptions.noEncoding[Env](
+        AwsZServerOptions.customiseInterceptors[Env]
+          .serverLog(serverLogger)
+          .options
+      )
+    
+    ZLambdaHandler(endpoints)
 
   def withMonadError[Env](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] =
     given RIOMonadError[Env] = RIOMonadError[Env]
     ZLambdaHandler(endpoints)
+
+  def withMonadError[Env](endpoints: List[ZServerEndpoint[Env, Any]], options: AwsServerOptions[RIO[Env, *]]): ZLambdaHandler[Env] =
+    given RIOMonadError[Env] = RIOMonadError[Env]
+    ZLambdaHandler(endpoints, options)

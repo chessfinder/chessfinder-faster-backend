@@ -9,6 +9,9 @@ import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import com.google.common.net.HttpHeaders.CONTENT_TYPE
 import testkit.wiremock.ClientBackdoor.Context
 import scala.util.Try
+import zio.test.TestResult
+import zio.test.assertZIO
+import zio.test.Assertion
 
 class ClientBackdoor(basePath: String):
 
@@ -22,13 +25,16 @@ class ClientBackdoor(basePath: String):
     val fullUrl        = basePath + url
     val urlPattern     = WireMock.urlEqualTo(fullUrl)
     val requestPattern = new RequestPatternBuilder(method, urlPattern)
-    zio.ZIO.fromTry(Try(WireMock.verify(WireMock.moreThanOrExactly(count), requestPattern)))
+    for
+      _ <- zio.ZIO.attempt(WireMock.configureFor("localhost", 18443)) // FIXME make me configurable
+      _ <- zio.ZIO.attempt(WireMock.verify(WireMock.moreThanOrExactly(count), requestPattern))
+    yield ()
 
   def verify(count: Int, method: String, url: String): zio.Task[Unit] =
-    val fullUrl        = basePath + url
-    val urlPattern     = WireMock.urlEqualTo(fullUrl)
-    val requestPattern = new RequestPatternBuilder(RequestMethod(method), urlPattern)
-    zio.ZIO.fromTry(Try(WireMock.verify(WireMock.moreThanOrExactly(count), requestPattern)))
+    verify(count, RequestMethod(method), url)
+
+  def check(count: Int, method: String, url: String): zio.Task[TestResult] =
+    assertZIO(verify(count, RequestMethod(method), url))(Assertion.isUnit)
 
 object ClientBackdoor:
 
@@ -89,7 +95,10 @@ object ClientBackdoor:
     ) extends Context[ResponseContext]:
 
       def stub(): zio.Task[StubMapping] =
-        zio.ZIO.fromTry(Try(WireMock.stubFor(mappingBuilder.willReturn(responseDefinitionBuilder))))
+        for
+          _    <- zio.ZIO.attempt(WireMock.configureFor("localhost", 18443))  // FIXME make me configurable
+          stub <- zio.ZIO.attempt(WireMock.stubFor(mappingBuilder.willReturn(responseDefinitionBuilder)))
+        yield stub
 
       override protected def update(
           mappingBuilder: MappingBuilder

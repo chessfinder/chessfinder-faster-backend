@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  LambdaRoleArn:
+    Type: String
+    Description: "Lambda role for basic execution and dynamodb access"
+
+Resources:
+  ChessfinderFunction:
+    Properties:
+      Timeout: 29
+      MemorySize: 1024
+      Events:
+        AnyApiNewborn:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: ANY
+            Path: /api/newborn
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiAsyncTask:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/async/task
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        AnyApiNewbornGame:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: ANY
+            Path: /api/newborn/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        PostApiAsyncGame:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: POST
+            Path: /api/async/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        PostApiAsyncBoard:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: POST
+            Path: /api/async/board
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiAsync:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/async
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Runtime: java11
+      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.2.2\chessfinder-lambda.jar
+      Handler: chessfinder.LambdaMain::handleRequest
+      Role: !Ref LambdaRoleArn
+    Type: AWS::Serverless::Function
+  ChessfinderHttpApi:
+    Properties:
+      StageName: $default
+    Type: AWS::Serverless::HttpApi
+Outputs:
+  ChessfinderUrl:
+    Description: Base URL of your endpoints
+    Value:
+      Fn::Sub: https://${ChessfinderHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}

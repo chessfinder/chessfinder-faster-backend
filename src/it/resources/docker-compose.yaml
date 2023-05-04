@@ -19,32 +19,15 @@ services:
         "--root-dir",
         "/home/wiremock/storage"
       ]
-
-#   dynamodb:
-#     image: amazon/dynamodb-local:latest
-#     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
-#     container_name: dynamodb
-#     restart: always
-#     hostname: dynamodb
-#     ports:
-#       - "${DYNAMO_DB_EXTERNAL_PORT}:8000"
-#     volumes:
-#       - ${STORAGE}/dynamodb:/home/dynamodblocal/data
-#     depends_on:
-#       liquibase:
-#         condition: service_completed_successfully
-
-#   dynamodb-admin:
-#     image: aaronshaf/dynamodb-admin:latest
-#     container_name: dynamodb_admin
-#     restart: always
-#     hostname: dynamodb-admin
-#     ports:
-#       - "${DYNAMO_DB_ADMIN_PORT}:8001"
-#     environment:
-#       DYNAMO_ENDPOINT: http://dynamodb:8000
-#       AWS_REGION: ${AWS_REGION}
-# #      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-# #      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-#     depends_on:
-#       - dynamodb
+  
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    # command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    command: "-jar DynamoDBLocal.jar -inMemory -cors *"
+    container_name: dynamodb
+    restart: always
+    hostname: dynamodb
+    ports:
+      - "${DYNAMO_DB_EXTERNAL_PORT}:8000"
+    # volumes:
+    #   - ${STORAGE}/dynamodb:/home/dynamodblocal/data

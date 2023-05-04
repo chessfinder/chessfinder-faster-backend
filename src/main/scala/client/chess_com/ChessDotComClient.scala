@@ -1,7 +1,6 @@
 package chessfinder
 package client.chess_com
 
-import com.typesafe.config.*
 import chessfinder.search.entity.UserName
 import sttp.model.Uri
 import zio.ZIO
@@ -18,11 +17,10 @@ import sttp.model.Uri
 import io.circe.{ Decoder, Encoder }
 import io.circe.generic.semiauto.*
 import util.UriCodec.given
-import io.circe.config.syntax.*
-import io.circe.config.*
-import zio.IO
+import zio.Config
 import zio.http.model.Status
 import chessfinder.client.ClientError
+import zio.config.magnolia.deriveConfig
 
 trait ChessDotComClient:
 
@@ -37,7 +35,7 @@ object ChessDotComClient:
   def profile(userName: UserName): κ[ChessDotComClient, Profile] =
     κ.serviceWithZIO[ChessDotComClient](_.profile(userName))
 
-  def srchives(userName: UserName): κ[ChessDotComClient, Archives] =
+  def archives(userName: UserName): κ[ChessDotComClient, Archives] =
     κ.serviceWithZIO[ChessDotComClient](_.archives(userName))
 
   def games(archiveLocation: Uri): κ[ChessDotComClient, Games] =
@@ -106,15 +104,11 @@ object ChessDotComClient:
   object Impl:
     val layer = ZLayer.apply {
       for
-        conf         <- ZIO.service[Config]
-        clientConfig <- Configuration.fromConfig(conf)
+        clientConfig <- ZIO.config[Configuration](Configuration.config)
         client       <- ZIO.service[Client]
       yield Impl(clientConfig, client)
     }
 
     case class Configuration(baseUrl: Uri)
     object Configuration:
-      given Decoder[Configuration] = deriveDecoder[Configuration]
-
-      def fromConfig(rootConfig: Config): IO[io.circe.Error, Configuration] =
-        ZIO.fromEither(rootConfig.as[Configuration]("client.chesscom"))
+      given config: Config[Configuration] = deriveConfig[Configuration].nested("client", "chesscom")

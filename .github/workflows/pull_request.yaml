@@ -27,10 +27,7 @@ jobs:
       - name: Unit Tests
         shell: bash
         run: |
-          docker compose -f ./src/test/resources/docker-compose.yaml --env-file ./src/test/resources/.env up -d
-          sleep 10s
           sbt -v "test;"
-          docker compose -f ./src/test/resources/docker-compose.yaml down
       - name: Integration Tests
         shell: bash
         run: |

@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: "Chessfinder roles and identities"
+Resources:
+  RoleForChessfinderLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: "Lambda role for basic execution and dynamodb access"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+      MaxSessionDuration: 43200
+      Path: "/chessfinder/"
+      RoleName: "RoleForChessfinderLambda"
+
+Outputs:
+  RoleForChessfinderLambdaArn:
+    Description: ARN of the Lambda role for basic execution and dynamodb access
+    Value: !GetAtt RoleForChessfinderLambda.Arn
+    Export:
+      Name: RoleForChessfinderLambdaArn

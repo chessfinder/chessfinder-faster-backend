@@ -10,6 +10,7 @@ import sttp.model.Uri.UriContext
 import chessfinder.api.FindRequest
 import chessfinder.api.Platform
 import zio.json.JsonDecoder
+import api.Platform
 
 class FindRequestTest extends FunSuite:
   test("FindRequest should be parsed correctly") {

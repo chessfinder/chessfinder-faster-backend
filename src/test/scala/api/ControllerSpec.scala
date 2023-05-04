@@ -41,9 +41,8 @@ import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zio.http.{ HttpApp, Request, Response }
 import zio.*
 import zio.http.*
-import chessfinder.api.{ ControllerBlueprint, DependentController }
+import chessfinder.api.SyncController
 import chessfinder.search.GameFinder
-import zio.Console.ConsoleLive
 import sttp.apispec.openapi.Server as OAServer
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.swagger.*
@@ -52,16 +51,17 @@ import sttp.tapir.redoc.RedocUIOptions
 import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.server.*
 import chessfinder.search.BoardValidator
-import chessfinder.search.GameDownloader
+import chessfinder.search.GameFetcher
 import chessfinder.search.Searcher
 import chessfinder.client.chess_com.ChessDotComClient
 import com.typesafe.config.ConfigFactory
+import chessfinder.api.ApiVersion
 
 object ControllerSpec extends Mocks:
 
   val version    = "newborn"
-  val blueprint  = ControllerBlueprint(version)
-  val controller = DependentController(blueprint)
+  val blueprint  = SyncController(version)
+  val controller = SyncController.Impl(blueprint)
 
   private val config      = ConfigFactory.load()
   private val configLayer = ZLayer.succeed(config)
@@ -76,7 +76,7 @@ object ControllerSpec extends Mocks:
 
   protected lazy val clientLayer = Client.default.orDie
 
-  def run(controllerLayer: ULayer[GameFinder]) =
+  def run(controllerLayer: ULayer[GameFinder[ApiVersion.Newborn.type]]) =
     Server
       .serve(app)
       .provide(
@@ -84,4 +84,4 @@ object ControllerSpec extends Mocks:
         controllerLayer
       )
 
-  // don't know how to right a test for the controller.
+  // don't know how to write a test for the controller.

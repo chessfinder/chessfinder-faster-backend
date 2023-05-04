@@ -19,8 +19,8 @@ trait Searcher:
 
 object Searcher:
 
-  def find(board: SearchFen, platform: ChessPlatform, userName: UserName): ψ[GameFinder, SearchResult] =
-    ψ.serviceWithZIO[GameFinder](_.find(board, platform, userName))
+  def find(pgn: PgnStr, probabilisticBoard: ProbabilisticBoard): ψ[Searcher, Boolean] =
+    ψ.serviceWithZIO[Searcher](_.find(pgn, probabilisticBoard))
 
   class Impl() extends Searcher:
     def find(pgn: PgnStr, probabilisticBoard: ProbabilisticBoard): φ[Boolean] =
