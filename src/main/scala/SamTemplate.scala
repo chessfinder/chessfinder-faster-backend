@@ -20,7 +20,8 @@ object SamTemplate extends App:
     source = CodeSource(
       "java11",
       jarPath,
-      "chessfinder.LambdaMain::handleRequest"
+      "chessfinder.LambdaMain::handleRequest",
+      hasRole = true
     ),
     memorySize = 1024,
     timeout = 29.seconds

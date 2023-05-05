@@ -2,7 +2,7 @@ name: Deploy QA
 
 on:
   push:
-    branches: [Xmaster]
+    branches: [master]
 
 jobs:
   build:

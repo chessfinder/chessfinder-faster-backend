@@ -41,23 +41,31 @@ object Dependencies {
     )
   }
 
-  lazy val tapir = {
+  lazy val tapirPartial = {
     val version          = "1.2.10"
     val circeYamlVersion = "0.3.2"
     Seq(
-      "com.softwaremill.sttp.tapir"   %% "tapir-core"            % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-json-circe"      % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-cats"            % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-zio-http-server" % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-enumeratum"      % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-swagger-ui"      % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-redoc"           % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-openapi-docs"    % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-aws-lambda"      % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-aws-cdk"         % version,
-      "com.softwaremill.sttp.tapir"   %% "tapir-aws-sam"         % version,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml"    % circeYamlVersion
+      "com.softwaremill.sttp.tapir" %% "tapir-core"            % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-json-circe"      % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-cats"            % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-enumeratum"      % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui"      % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-redoc"           % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs"    % version,
+      "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda"      % version,
+      // "com.softwaremill.sttp.tapir"   %% "tapir-aws-cdk"         % version,
+      // "com.softwaremill.sttp.tapir"   %% "tapir-aws-sam"         % version,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % circeYamlVersion
     )
+  }
+
+  lazy val tapir = {
+    val version = "1.2.10"
+    // Seq(
+    //   "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % version
+    // ) ++
+      tapirPartial
   }
 
   lazy val tagging = {

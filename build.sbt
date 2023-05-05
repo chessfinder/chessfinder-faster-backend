@@ -17,7 +17,7 @@ ThisBuild / testFrameworks ++= List(
   new TestFramework("zio.test.sbt.ZTestFramework")
 )
 
-// ThisProject / LatestTag.gitLatestTag = 
+// ThisProject / LatestTag.gitLatestTag =
 
 // ThisBuild / licenses += "AGPL-3.0" -> url("https://opensource.org/licenses/AGPL-3.0")
 
@@ -41,7 +41,7 @@ lazy val root = (project in file("."))
   .settings(DeepIntegrationSettings)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
     // buildInfoPackage := "hello"
   )
   // .settings(version := "v11.3.3")
@@ -109,7 +109,7 @@ lazy val root = (project in file("."))
         oldStrategy(x)
     }
   )
-  .dependsOn(`ztapir-aws-lambda`, testkit % Test)
+  .dependsOn(`ztapir-aws-lambda`, `tapir-aws-sam`, testkit % Test)
 
 lazy val testkit = project
   .in(file("src_testkit"))
@@ -120,3 +120,5 @@ lazy val `ztapir-aws-lambda` = project
 lazy val `ztapir-aws-lambda-tests` = project
   .in(file("src_ztapir_aws_lambda_tests"))
 
+lazy val `tapir-aws-sam` = project
+  .in(file("src_tapir_aws_sam"))

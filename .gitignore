@@ -14,5 +14,5 @@ target
 .metals/
 .vscode/
 hole/
-# .infrastructure/api.yaml
+.infrastructure/api.yaml
 

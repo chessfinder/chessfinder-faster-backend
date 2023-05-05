@@ -19,7 +19,7 @@ Resources:
     Properties:
       Location: .infrastructure/api.yaml
       Parameters:
-        LambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
 
 Outputs:
   OrderApiEndpoint:

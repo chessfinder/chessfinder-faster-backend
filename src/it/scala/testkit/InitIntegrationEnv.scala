@@ -28,14 +28,8 @@ open class InitIntegrationEnv:
   private val loggingLayer = Runtime.removeDefaultLoggers >>> zio.logging.consoleJsonLogger()
 
   def run =
-    println("Envs with AWS")
-    println("Envs with AWS")
-    println(sys.env.keys.filter(_.toUpperCase.contains("AWS")))
-    import scala.jdk.CollectionConverters.*
     System.setProperty("aws.accessKeyId", "aKey")
     System.setProperty("aws.secretAccessKey", "sSecret")
-    println("System Properties with AWS")
-    println(System.getProperties().asScala.keys.filter(_.toUpperCase.contains("AWS")))
 
     setupMock()
     System.setProperty("config.file", "src/it/resources/local.conf")

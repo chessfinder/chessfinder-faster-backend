@@ -1,10 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
-  LambdaRoleArn:
+  ChessfinderLambdaRoleArn:
     Type: String
-    Description: "Lambda role for basic execution and dynamodb access"
-
+    Description: Lambda role for basic execution and permissions
 Resources:
   ChessfinderFunction:
     Properties:
@@ -62,7 +61,7 @@ Resources:
       Runtime: java11
       CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.2.2\chessfinder-lambda.jar
       Handler: chessfinder.LambdaMain::handleRequest
-      Role: !Ref LambdaRoleArn
+      Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
   ChessfinderHttpApi:
     Properties:
