@@ -8,6 +8,7 @@ import zio.ZLayer
 import chessfinder.core.ProbabilisticBoard
 import api.ApiVersion
 import izumi.reflect.Tag
+import aspect.Span
 
 trait GameFinder[Version <: ApiVersion]:
 
@@ -20,7 +21,7 @@ object GameFinder:
       platform: ChessPlatform,
       userName: UserName
   ): ψ[GameFinder[Version], SearchResult] =
-    ψ.serviceWithZIO[GameFinder[Version]](_.find(board, platform, userName))
+    ψ.serviceWithZIO[GameFinder[Version]](_.find(board, platform, userName)) @@ Span.log
 
   class Impl[Version <: ApiVersion](
       validator: BoardValidator,

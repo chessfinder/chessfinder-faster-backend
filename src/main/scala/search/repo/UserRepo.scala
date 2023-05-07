@@ -10,6 +10,7 @@ import persistence.PlatformType
 import search.*
 import zio.dynamodb.DynamoDBError
 import zio.Cause
+import aspect.Span
 
 trait UserRepo:
   def get(user: User): φ[UserIdentified]
@@ -27,7 +28,7 @@ object UserRepo:
     private val layer = ZLayer.succeed(executor)
 
     override def get(user: User): φ[UserIdentified] =
-      UserRecord.Table
+      val eff = UserRecord.Table
         .get[UserRecord](user.userName, PlatformType.fromPlatform(user.platform))
         .provideLayer(layer)
         .tapError(e => ZIO.logErrorCause(e.getMessage(), Cause.fail(e)))
@@ -40,13 +41,15 @@ object UserRepo:
           case _                              => ZIO.fail(BrokenLogic.ServiceOverloaded)
         }
         .map(_.toUser)
+      eff @@ Span.log
 
     override def save(user: UserIdentified): φ[Unit] =
-      UserRecord.Table
+      val eff = UserRecord.Table
         .put(UserRecord.fromUserIdentified(user))
         .provideLayer(layer)
         .tapError(e => ZIO.logErrorCause(e.getMessage(), Cause.fail(e)))
         .mapError(_ => BrokenLogic.ServiceOverloaded)
+      eff @@ Span.log
 
   object Impl:
     val layer = ZLayer {

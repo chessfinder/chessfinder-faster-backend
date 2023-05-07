@@ -21,6 +21,7 @@ import zio.Config
 import zio.http.model.Status
 import chessfinder.client.ClientError
 import zio.config.magnolia.deriveConfig
+import aspect.Span
 
 trait ChessDotComClient:
 
@@ -33,13 +34,13 @@ trait ChessDotComClient:
 object ChessDotComClient:
 
   def profile(userName: UserName): κ[ChessDotComClient, Profile] =
-    κ.serviceWithZIO[ChessDotComClient](_.profile(userName))
+    κ.serviceWithZIO[ChessDotComClient](_.profile(userName)) @@ Span.log
 
   def archives(userName: UserName): κ[ChessDotComClient, Archives] =
-    κ.serviceWithZIO[ChessDotComClient](_.archives(userName))
+    κ.serviceWithZIO[ChessDotComClient](_.archives(userName)) @@ Span.log
 
   def games(archiveLocation: Uri): κ[ChessDotComClient, Games] =
-    κ.serviceWithZIO[ChessDotComClient](_.games(archiveLocation))
+    κ.serviceWithZIO[ChessDotComClient](_.games(archiveLocation)) @@ Span.log
 
   class Impl(config: Impl.Configuration, client: Client) extends ChessDotComClient:
 

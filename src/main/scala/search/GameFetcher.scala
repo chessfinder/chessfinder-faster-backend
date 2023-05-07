@@ -20,6 +20,7 @@ import zio.dynamodb.*
 import search.repo.*
 import api.ApiVersion
 import izumi.reflect.Tag
+import aspect.Span
 
 trait GameFetcher[Version <: ApiVersion]:
 
@@ -28,7 +29,7 @@ trait GameFetcher[Version <: ApiVersion]:
 object GameFetcher:
 
   def fetch[Version <: ApiVersion: Tag](user: User): ψ[GameFetcher[Version], FetchingResult] =
-    ZIO.serviceWithZIO[GameFetcher[Version]](_.fetch(user))
+    ZIO.serviceWithZIO[GameFetcher[Version]](_.fetch(user)) @@ Span.log
 
   @Deprecated
   class Impl(client: ChessDotComClient) extends GameFetcher[ApiVersion.Newborn.type]:
@@ -74,11 +75,13 @@ object GameFetcher:
   class Local(userRepo: UserRepo, gameRepo: GameRepo) extends GameFetcher[ApiVersion.Async.type]:
 
     def fetch(user: User): φ[FetchingResult] =
-      for
-        userCached <- userRepo.get(user)
-        games      <- gameRepo.list(userCached)
-        result = FetchingResult(games, Seq.empty[Uri])
-      yield result
+      val eff =
+        for
+          userCached <- userRepo.get(user)
+          games      <- gameRepo.list(userCached)
+          result = FetchingResult(games, Seq.empty[Uri])
+        yield result
+      eff @@ Span.log
 
   object Local:
     val layer = ZLayer {

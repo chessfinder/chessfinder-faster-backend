@@ -9,6 +9,8 @@ import zio.dynamodb.DynamoDBExecutor
 import persistence.PlatformType
 import search.*
 import chessfinder.persistence.GameRecord
+import aspect.Span
+import zio.Cause
 
 trait GameRepo:
   def list(user: UserIdentified): φ[Seq[HistoricalGame]]
@@ -16,10 +18,20 @@ trait GameRepo:
 
 object GameRepo:
   def list(user: UserIdentified): ψ[GameRepo, Seq[HistoricalGame]] =
-    ψ.serviceWithZIO[GameRepo](_.list(user))
+    ψ.serviceWithZIO[GameRepo](_.list(user)) @@ Span.log
 
   def save(userId: UserId, games: Seq[HistoricalGame]): ψ[GameRepo, Unit] =
-    ψ.serviceWithZIO[GameRepo](_.save(userId, games))
+    val eff =
+      for
+        _   <- ZIO.logInfo(s"Saving ${games.length} into table ...")
+        res <- ψ.serviceWithZIO[GameRepo](_.save(userId, games))
+      yield res
+
+    val effLogged = eff.tapBoth(
+      e => ZIO.logErrorCause(s"Failed to save ${games.length}!", Cause.fail(e)),
+      _ => ZIO.logInfo(s"Successfully saved ${games.length} into table!")
+    )
+    effLogged @@ Span.log
 
   class Impl(executor: DynamoDBExecutor) extends GameRepo:
     private val layer = ZLayer.succeed(executor)
@@ -40,11 +52,18 @@ object GameRepo:
       yield historicalGames
 
     override def save(userId: UserId, games: Seq[HistoricalGame]): φ[Unit] =
-      val records = games.map(game => GameRecord.fromGame(userId, game))
-      GameRecord.Table
-        .putMany(records*)
-        .provideLayer(layer)
-        .catchNonFatalOrDie(e => ZIO.logError(e.getMessage()) *> ZIO.fail(BrokenLogic.ServiceOverloaded))
+      val eff =
+        val records = games.map(game => GameRecord.fromGame(userId, game))
+        GameRecord.Table
+          .putMany(records*)
+          .provideLayer(layer)
+          .catchNonFatalOrDie(e => ZIO.logError(e.getMessage()) *> ZIO.fail(BrokenLogic.ServiceOverloaded))
+
+      val effLogged = (ZIO.logInfo(s"Saving ${games.length} into table ...") *> eff).tapBoth(
+        e => ZIO.logErrorCause(s"Failed to save ${games.length}!", Cause.fail(e)),
+        _ => ZIO.logInfo(s"Successfully saved ${games.length} into table!")
+      )
+      effLogged @@ Span.log
 
   object Impl:
     val layer = ZLayer {

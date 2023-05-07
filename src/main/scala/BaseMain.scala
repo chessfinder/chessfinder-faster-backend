@@ -39,15 +39,16 @@ import zio.config.typesafe.TypesafeConfigProvider
 import chessfinder.client.ZLoggingAspect
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 
-open class BaseMain:
+abstract class BaseMain:
 
   val organization = "eudemonia"
 
-  protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
+  // protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
+  protected def configLayer: ZLayer[Any, Nothing, Unit]
   // protected val loggingLayer = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
   protected val loggingLayer = Runtime.removeDefaultLoggers >>> zio.logging.consoleJsonLogger()
 
-  protected val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
+  protected lazy val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
     val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
     in >>> DefaultDynamoDBExecutor.layer
 

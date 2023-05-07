@@ -17,6 +17,8 @@ ThisBuild / testFrameworks ++= List(
   new TestFramework("zio.test.sbt.ZTestFramework")
 )
 
+fork := true
+
 // ThisProject / LatestTag.gitLatestTag =
 
 // ThisBuild / licenses += "AGPL-3.0" -> url("https://opensource.org/licenses/AGPL-3.0")

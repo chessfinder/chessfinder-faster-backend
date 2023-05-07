@@ -25,6 +25,7 @@ import chessfinder.search.BrokenLogic.ServiceOverloaded
 import zio.Random
 import chessfinder.api.TaskStatusResponse
 import chessfinder.search.BrokenLogic.NoGameAvaliable
+import aspect.Span
 
 trait GameDownloader:
 

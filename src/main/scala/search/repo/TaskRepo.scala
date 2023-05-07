@@ -13,6 +13,7 @@ import chessfinder.api.TaskStatusResponse
 import chessfinder.api.TaskResponse
 import zio.dynamodb.DynamoDBError
 import zio.Cause
+import aspect.Span
 
 trait TaskRepo:
   def get(taskId: TaskId): φ[TaskStatusResponse]
@@ -44,28 +45,32 @@ object TaskRepo:
       getTaskRecord(taskId).map(_.toStatus)
 
     override def successIncrement(taskId: TaskId): φ[Unit] =
-      for
-        task <- getTaskRecord(taskId)
-        _ <-
-          if task.succeed < task.total
-          then putTaskRecord(task.incrementSuccess)
-          else ZIO.fail(BrokenLogic.TaskProgressOverflown(taskId))
-      yield ()
+      val eff =
+        for
+          task <- getTaskRecord(taskId)
+          _ <-
+            if task.succeed < task.total
+            then putTaskRecord(task.incrementSuccess)
+            else ZIO.fail(BrokenLogic.TaskProgressOverflown(taskId))
+        yield ()
+      eff @@ Span.log
 
     override def failureIncrement(taskId: TaskId): φ[Unit] =
-      for
-        task <- getTaskRecord(taskId)
-        _ <-
-          if task.succeed < task.total
-          then putTaskRecord(task.incrementFailure)
-          else ZIO.fail(BrokenLogic.TaskProgressOverflown(taskId))
-      yield ()
+      val eff =
+        for
+          task <- getTaskRecord(taskId)
+          _ <-
+            if task.succeed < task.total
+            then putTaskRecord(task.incrementFailure)
+            else ZIO.fail(BrokenLogic.TaskProgressOverflown(taskId))
+        yield ()
+      eff @@ Span.log
 
     override def initiate(taskId: TaskId, total: Int): φ[Unit] =
-      putTaskRecord(TaskRecord(taskId, total))
+      putTaskRecord(TaskRecord(taskId, total)) @@ Span.log
 
     private def getTaskRecord(taskId: TaskId): φ[TaskRecord] =
-      TaskRecord.Table
+      val eff = TaskRecord.Table
         .get[TaskRecord](taskId)
         .provideLayer(layer)
         .tapError(e => ZIO.logErrorCause(e.getMessage(), Cause.fail(e)))
@@ -77,13 +82,15 @@ object TaskRepo:
           case e: DynamoDBError.ValueNotFound => ZIO.fail(BrokenLogic.TaskNotFound(taskId))
           case _                              => ZIO.fail(BrokenLogic.ServiceOverloaded)
         }
+      eff @@ Span.log
 
     private def putTaskRecord(task: TaskRecord): φ[Unit] =
-      TaskRecord.Table
+      val eff = TaskRecord.Table
         .put(task)
         .provideLayer(layer)
         .tapError(e => ZIO.logErrorCause(e.getMessage(), Cause.fail(e)))
         .mapError(_ => BrokenLogic.ServiceOverloaded)
+      eff @@ Span.log
 
   object Impl:
     val layer = ZLayer {

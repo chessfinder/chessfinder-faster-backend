@@ -61,6 +61,8 @@ import sttp.tapir.serverless.aws.lambda.zio.AwsZServerOptions
 
 object LambdaMain extends BaseMain with RequestStreamHandler:
 
+  override protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
+
   private val handler =
     def options[R] =
       AwsZServerOptions.noEncoding[R](

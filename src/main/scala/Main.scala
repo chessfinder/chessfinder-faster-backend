@@ -38,6 +38,9 @@ import zio.config.typesafe.TypesafeConfigProvider
 
 object Main extends BaseMain with ZIOAppDefault:
 
+  override protected val configLayer =
+    Runtime.setConfigProvider(TypesafeConfigProvider.fromHoconFilePath("src/it/resources/local.conf"))
+
   private val servers: List[OAServer] = List(
     OAServer("http://localhost:8080").description("Chessfinder APIs")
   )
