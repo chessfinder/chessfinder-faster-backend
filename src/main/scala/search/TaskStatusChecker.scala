@@ -34,7 +34,7 @@ object TaskStatusChecker:
   import zio.logging.fileAsyncJsonLogger
 
   def check(taskId: TaskId): ψ[TaskStatusChecker, TaskStatusResponse] =
-    ZIO.serviceWithZIO[TaskStatusChecker](_.check(taskId)) @@ Span.log("TaskStatusChecker")
+    ZIO.serviceWithZIO[TaskStatusChecker](_.check(taskId)) @@ Span.log
 
   class Impl(taskRepo: TaskRepo) extends TaskStatusChecker:
 

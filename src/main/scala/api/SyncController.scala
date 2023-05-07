@@ -52,6 +52,6 @@ object SyncController:
       blueprint.`GET /api/version/game`.zServerLogic(logic)
 
     val `GET /api/version`: ZServerEndpoint[GameFinder[V], Any] =
-      blueprint.`GET /api/version`.zServerLogic(_ => ZIO.succeed(buildinfo.BuildInfo.toString))
+      blueprint.`GET /api/version`.zServerLogic(_ => ZIO.succeed(ChessfinderBuildInfo.toString))
 
     def rest = List(`GET /api/version/game`, `GET /api/version`)

@@ -43,8 +43,9 @@ lazy val root = (project in file("."))
   .settings(DeepIntegrationSettings)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion)
-    // buildInfoPackage := "hello"
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "chessfinder",
+    buildInfoObject  := "ChessfinderBuildInfo",
   )
   // .settings(version := "v11.3.3")
   .settings(git.useGitDescribe := true)
