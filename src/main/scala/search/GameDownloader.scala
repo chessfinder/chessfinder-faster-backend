@@ -50,29 +50,39 @@ object GameDownloader:
   ) extends GameDownloader:
 
     def download(user: UserIdentified, archives: Archives, taskId: TaskId): φ[Unit] =
+      val eff = ZIO.foldLeft(archives.archives)(DownloadingResult.empty) { case (previousResult, resource) =>
+        val downloadingAndSavingGames =
+          for
+            _     <- ZIO.logInfo(s"Donwloading the archive ${resource.toString} ...")
+            games <- client.games(resource).mapError(_ => ServiceOverloaded)
+            _ <- ZIO.logInfo(
+              s"Donwloaded ${games.games.length} games from the archive ${resource.toString}!"
+            )
+            gameRecords = games.games.map(game => HistoricalGame(game.url, PgnStr(game.pgn)))
+            _ <- gameRepo.save(user.userId, gameRecords)
+            _ <- ZIO.logInfo(s"Games for the archive ${resource.toString} are saved!")
+          yield ()
 
-      @tailrec def rec(result: φ[DownloadingResult], archives: List[Uri]): φ[DownloadingResult] =
-        archives match
-          case resource :: tail =>
-            val downloadingAndSavingGames =
-              for
-                games <- client.games(resource).mapError(_ => ServiceOverloaded)
-                gameRecords = games.games.map(game => HistoricalGame(game.url, PgnStr(game.pgn)))
-                _ <- gameRepo.save(user.userId, gameRecords)
-              yield ()
+        def processFailure(err: BrokenLogic) =
+          for
+            _ <- ZIO.logError(s"Failure is registering for ${err}...")
+            _ <- taskRepo.failureIncrement(taskId)
+            _ <- ZIO.logInfo("Failure is registered ...")
+          yield DownloadingResult(resource +: previousResult.failedArchives)
 
-            val processFailure =
-              for
-                _   <- taskRepo.failureIncrement(taskId)
-                res <- result
-              yield DownloadingResult(resource +: res.failedArchives)
-            val processSuccess = taskRepo.successIncrement(taskId) *> result
-            val downloadingAndSavingGamesRecovered = downloadingAndSavingGames
-              .foldZIO(err => processFailure, _ => processSuccess)
-            rec(downloadingAndSavingGamesRecovered, tail)
-          case _ => result
+        val processSuccess =
+          for
+            _ <- ZIO.logInfo("Success is registering ...")
+            _ <- taskRepo.successIncrement(taskId)
+            _ <- ZIO.logInfo("Success is registered ...")
+          yield previousResult
 
-      rec(φ.succeed(DownloadingResult.empty), archives.archives.toList.reverse).unit
+        downloadingAndSavingGames
+          .foldZIO(err => processFailure(err), _ => processSuccess)
+
+      }
+
+      eff.unit
 
     def cache(user: User): φ[TaskId] =
       val gettingProfile = client

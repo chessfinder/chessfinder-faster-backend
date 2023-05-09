@@ -21,13 +21,13 @@ class ZLoggingAspect[Env]
       .contramapZIO[E, Throwable, Body] { body =>
         for
           bodyAsString <- body.asString.orElseSucceed("Request body is not a string")
-          _            <- ZIO.logDebug(s"Request body: $bodyAsString")
+          _            <- ZIO.logInfo(s"Request body: $bodyAsString")
         yield body
       }
       .mapZIO { response =>
         for
           bodyAsString <- response.body.asString.orElseSucceed("Response body is not a string")
-          _            <- ZIO.logDebug(s"Response body: $bodyAsString")
+          _            <- ZIO.logInfo(s"Response body: $bodyAsString".take(250))
           _            <- ZIO.logInfo(s"Response: ${response.status.code}")
         yield response
       }

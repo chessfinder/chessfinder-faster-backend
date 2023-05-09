@@ -32,19 +32,6 @@ abstract class ZLambdaHandler[Env: RIOMonadError](options: AwsServerOptions[RIO[
   def process[R: Decoder](input: InputStream, output: OutputStream): RIO[Env, Unit] =
 
     val server: AwsZServerInterpreter[Env] =
-      val serverLogger =
-        ZioHttpServerOptions.defaultServerLog[Env]
-          .copy(
-            logWhenReceived = true,
-            logAllDecodeFailures = true
-          )
-
-      val options =
-        AwsZServerOptions.noEncoding[Env](
-          AwsZServerOptions.customiseInterceptors[Env]
-            .serverLog(serverLogger)
-            .options
-        )
       AwsZServerInterpreter[Env](options)
 
     for
@@ -78,7 +65,7 @@ object ZLambdaHandler:
       override protected def getAllEndpoints: List[ZServerEndpoint[Env, Any]] = endpoints
 
 
-  def apply[Env: RIOMonadError](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] =
+  def default[Env: RIOMonadError](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] =
     val serverLogger =
         ZioHttpServerOptions.defaultServerLog[Env]
 
@@ -89,11 +76,11 @@ object ZLambdaHandler:
           .options
       )
     
-    ZLambdaHandler(endpoints)
+    ZLambdaHandler(endpoints, options)
 
   def withMonadError[Env](endpoints: List[ZServerEndpoint[Env, Any]]): ZLambdaHandler[Env] =
     given RIOMonadError[Env] = RIOMonadError[Env]
-    ZLambdaHandler(endpoints)
+    ZLambdaHandler.default(endpoints)
 
   def withMonadError[Env](endpoints: List[ZServerEndpoint[Env, Any]], options: AwsServerOptions[RIO[Env, *]]): ZLambdaHandler[Env] =
     given RIOMonadError[Env] = RIOMonadError[Env]

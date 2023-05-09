@@ -80,8 +80,6 @@ object LambdaMain extends BaseMain with RequestStreamHandler:
     handler
       .process[AwsRequest](input, output)
       .provide(
-        configLayer,
-        loggingLayer,
         clientLayer,
         BoardValidator.Impl.layer,
         GameFinder.Impl.layer[ApiVersion.Newborn.type],
@@ -102,5 +100,10 @@ object LambdaMain extends BaseMain with RequestStreamHandler:
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
     Unsafe.unsafe { implicit unsafe =>
       val runtime = Runtime.unsafe.fromLayer(configLayer >+> loggingLayer)
-      runtime.unsafe.run(process(input, output)).getOrThrowFiberFailure()
+      runtime.unsafe
+        .run(
+          process(input, output) @@ aspect.BuildInfo.log @@ aspect.CorrelationId
+            .log(context.getAwsRequestId())
+        )
+        .getOrThrowFiberFailure()
     }

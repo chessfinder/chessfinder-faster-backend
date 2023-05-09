@@ -182,6 +182,14 @@ object Dependencies {
     )
   }
 
+  lazy val `zio-sqs` = {
+    val version = "0.5.0+15-3ad474c0-SNAPSHOT"
+    Seq(
+      "dev.zio" %% "zio-sqs"            % version
+    )
+  }
+  
+
   // lazy val ornicar = {
   //   val version = "9.1.2"
   //   Seq("com.github.ornicar" %% "scalalib" % version)
@@ -200,7 +208,8 @@ object Dependencies {
       `zio-logging` ++
       `zio-schema` ++
       `zio-aws` ++
-      `zio-dynamodb`
+      `zio-dynamodb` ++
+      `zio-sqs`
 
   val tests: Seq[ModuleID] =
     (munit ++ scalaCheck ++ `zio-test` ++ wiremock ++ `zio-mock` ++ `zio-munit`).map(_ % Test)

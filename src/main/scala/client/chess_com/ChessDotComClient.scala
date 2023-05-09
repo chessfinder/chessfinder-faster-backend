@@ -22,6 +22,7 @@ import zio.http.model.Status
 import chessfinder.client.ClientError
 import zio.config.magnolia.deriveConfig
 import aspect.Span
+import zio.Cause
 
 trait ChessDotComClient:
 
@@ -94,13 +95,40 @@ object ChessDotComClient:
         for
           url <- url
           request = Request.get(url)
-          _        <- ZIO.logInfo(s"Request ${url.toString()}")
-          response <- client.request(request)
+          _ <- ZIO.logInfo(s"Request ${url.toString()}")
+          response <- client
+            .request(request)
+            .tapError(err =>
+              ZIO.logErrorCause(
+                s"Fetching the archive ${archiveLocation} has resulted an error ${err.getMessage()}",
+                Cause.fail(err)
+              )
+            )
           profile <- response.status match
-            case Status.Ok => response.body.to[Games].map(Right.apply)
-            case _         => μ.succeed(Left(SomethingWentWrong))
+            case Status.Ok =>
+              response.body
+                .to[Games]
+                .map(Right.apply)
+                .tapError(err =>
+                  ZIO.logErrorCause(
+                    s"Parsing the archive ${archiveLocation} has resulted an error ${err.getMessage()}",
+                    Cause.fail(err)
+                  )
+                )
+            case status =>
+              val logging = for
+                bodyAsString <- response.body.asString.orElseSucceed("Request body is not a string")
+                _            <- ZIO.logError(s"Response ${status.toString}: $bodyAsString")
+              yield ()
+              logging.ignore *> μ.succeed(Left(SomethingWentWrong))
         yield profile
-      effect.foldZIO(_ => μ.fail(SomethingWentWrong), μ.fromEither)
+
+      effect.foldZIO(
+        err =>
+          ZIO.logError(s"Fetching the archive ${archiveLocation} has resulted an error ${err.toString}") *> μ
+            .fail(SomethingWentWrong),
+        μ.fromEither
+      )
 
   object Impl:
     val layer = ZLayer.apply {

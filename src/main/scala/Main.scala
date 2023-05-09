@@ -84,7 +84,6 @@ object Main extends BaseMain with ZIOAppDefault:
     Server
       .serve(app)
       .provide(
-        configLayer,
         clientLayer,
         Server.default,
         BoardValidator.Impl.layer,
@@ -101,4 +100,4 @@ object Main extends BaseMain with ZIOAppDefault:
         GameDownloader.Impl.layer,
         dynamodbLayer,
         ZLayer.succeed(zio.Random.RandomLive)
-      )
+      ) @@ aspect.BuildInfo.log
