@@ -6,7 +6,6 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.typesafe.config.ConfigFactory
 import chessfinder.persistence.core.*
-import chessfinder.persistence.config.*
 import chessfinder.persistence.*
 import zio.dynamodb.*
 import zio.{ Clock, IO, TaskLayer, ULayer, Unsafe, ZIO, ZLayer }
@@ -21,11 +20,25 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import zio.Runtime
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.Cause
+import zio.sqs.{ SqsStream, SqsStreamSettings, Utils }
+import zio.aws.sqs.Sqs
+import zio.aws.sqs.model.QueueAttributeName
+import pubsub.core.*
+import software.amazon.awssdk.services.sqs.model.QueueAttributeName as JQueueAttributeName
 
 open class InitIntegrationEnv:
 
-  private val configLayer  = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
-  private val loggingLayer = Runtime.removeDefaultLoggers >>> zio.logging.consoleJsonLogger()
+  val configLayer =
+    Runtime.setConfigProvider(TypesafeConfigProvider.fromHoconFilePath("src/it/resources/local.conf")).debug
+  val loggingLayer = Runtime.removeDefaultLoggers >>> zio.logging.consoleJsonLogger()
+
+  val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
+    val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
+    in >>> DefaultDynamoDBExecutor.layer
+
+  val sqsLayer: TaskLayer[Sqs] =
+    val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
+    in >>> DefaultSqsExecutor.layer
 
   def run =
     System.setProperty("aws.accessKeyId", "aKey")
@@ -41,10 +54,6 @@ open class InitIntegrationEnv:
     WireMock.removeAllMappings()
 
   private def setupDynamoDb() =
-    val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
-      val in = (configLayer >+> loggingLayer) >+> ((netty.NettyHttpClient.default >+> AwsConfig.default))
-      in >>> DefaultDynamoDBExecutor.layer
-
     Try {
       val io: IO[Throwable, Unit] =
         val dependentIo =
@@ -58,8 +67,13 @@ open class InitIntegrationEnv:
             _ <- createUniqueTableWithSingleKey(TaskRecord.Table).catchNonFatalOrDie(e =>
               ZIO.logErrorCause(e.getMessage, Cause.fail(e))
             )
+
+            _ <- Utils.createQueue(
+              "download-games.fifo",
+              Map(QueueAttributeName.wrap(JQueueAttributeName.FIFO_QUEUE) -> "true")
+            )
           yield ()
-        dependentIo.provide(dynamodbLayer)
+        dependentIo.provide(dynamodbLayer ++ sqsLayer)
 
       Await.result(
         Unsafe.unsafe { implicit unsafe =>

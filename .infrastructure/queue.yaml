@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  ChessfinderLambdaRoleArn:
+    Type: String
+    Description: Lambda role for basic execution and permissions
+Resources:
+  DownloadGames: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: "DownloadGames.fifo"
+      FifoQueue: true
+
+  DownloadGamesFunction:
+    Properties:
+      MemorySize: 1024
+      Events:
+        DownloadGamesCommand:
+          Properties:
+            Queue: !GetAtt DownloadGames.Arn
+            BatchSize: 10
+          Type: SQS
+      Timeout: 900
+      Runtime: java11
+      Handler: chessfinder.DownloadGameCommandHandler::handleRequest
+      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.2.2\chessfinder-lambda.jar
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+
+Outputs:
+  DownloadGamesQueueURL: 
+    Description: "URL of DownloadGamesQueue"
+    Value: !Ref DownloadGames
+  DownloadGamesQueueARN: 
+    Description: "ARN of new AmazonSQS Queue"
+    Value: !GetAtt DownloadGames.Arn

@@ -14,12 +14,20 @@ Resources:
     Properties:
       Location: .infrastructure/db.yaml
 
+  SQS:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/queue.yaml
+      Parameters:
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+
   Api:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/api.yaml
       Parameters:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+
 
 Outputs:
   OrderApiEndpoint:

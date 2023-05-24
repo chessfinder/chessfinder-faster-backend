@@ -41,14 +41,22 @@ import chessfinder.persistence.UserRecord
 import chessfinder.persistence.PlatformType
 import chessfinder.persistence.GameRecord
 import chessfinder.search.GameDownloader
+import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
+import pubsub.core.PubSub
+import pubsub.DownloadGameCommand
+import zio.stream.ZSink
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.api.client.api.LambdaContext
+import scala.jdk.CollectionConverters.*
 
-object DownloadGamesSpec extends BroadIntegrationSuite:
+object ConsumeDownloadGamesCommandsSpec extends BroadIntegrationSuite:
 
   protected lazy val `chess.com` = ClientBackdoor("/chess_com")
   protected lazy val clientLayer = Client.default.orDie
 
   def spec =
-    suite("Chessfinder when the username and platform are provided")(
+    suite("Chessfinder when the ther are Download games commands in queue")(
       test("should check that user exists and download all the user's games") {
         val userName = RandomReadableString()
         val userStub = `chess.com`
@@ -115,6 +123,27 @@ object DownloadGamesSpec extends BroadIntegrationSuite:
             task <- res.body.to[TaskResponse]
           yield task
 
+        val gettingCommandsFromTheQueue =
+          for
+            subscriber             <- ZIO.service[PubSub[DownloadGameCommand]]
+            actualCommandsOrErrors <- subscriber.subscribe.run(ZSink.collectAllToSet)
+            actualCommands = actualCommandsOrErrors.collect { case Right(command) => command }
+          yield actualCommands
+
+        def mimicCommandHandling(commands: Set[DownloadGameCommand]) =
+
+          val messages = commands.map { command =>
+            val message = SQSMessage()
+
+            message.setMessageId(RandomReadableString())
+            message.setBody(Encoder[DownloadGameCommand].apply(command).spaces2)
+            message
+          }
+          val event = SQSEvent()
+          event.setRecords(messages.toList.asJava)
+          val context = LambdaContext(0, 0L, RandomReadableString(), "", "", "", null, "", "", null)
+          ZIO.attempt(DownloadGameCommandHandler.handleRequest(event, context))
+
         def getTaskStatus(taskResponse: TaskResponse) =
           for
             response <- Client.request(url =
@@ -153,6 +182,8 @@ object DownloadGamesSpec extends BroadIntegrationSuite:
           _                <- `2022-07`
           _                <- `2022-08`
           taskReponse      <- createTask
+          foundCommands    <- gettingCommandsFromTheQueue
+          _                <- mimicCommandHandling(foundCommands)
           actualTaskStatus <- getTaskStatus(taskReponse).repeatUntil(_.pending == 0)
           expectedTaskStatus = makeExpectedTaskStatus(actualTaskStatus)
           equality          <- assertTrue(expectedTaskStatus == actualTaskStatus)
@@ -165,4 +196,6 @@ object DownloadGamesSpec extends BroadIntegrationSuite:
         yield equality && gameAreCached && userStubCheck && userStubCheck && archivesStubCheck && `2022-07_check` && `2022-08_check`
 
       }
-    ).provideShared(clientLayer ++ dynamodbLayer) @@ TestAspect.sequential @@ TestAspect.ignore
+    ).provideShared(
+      configLayer >+> (clientLayer ++ dynamodbLayer ++ sqsLayer) >+> DownloadGameCommand.Queue.layer
+    ) @@ TestAspect.sequential

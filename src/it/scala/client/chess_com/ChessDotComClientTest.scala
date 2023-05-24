@@ -23,9 +23,6 @@ import testkit.NarrowIntegrationSuite
 import com.github.tomakehurst.wiremock.client.WireMock
 
 object ChessDotComClientTest extends NarrowIntegrationSuite:
-  // protected lazy val configLayer =
-  //   ZLayer.fromZIO(ZIO.attempt(ConfigFactory.load()))
-
   protected lazy val `chess.com` =
     WireMock.configureFor("localhost", 18443)
     ClientBackdoor("/chess_com")

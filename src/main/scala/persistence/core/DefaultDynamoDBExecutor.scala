@@ -8,7 +8,6 @@ import zio.aws.core.httpclient.HttpClient
 import zio.aws.core.config.AwsConfig
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import zio.dynamodb.*
-import persistence.config.DynamoDbConfiguration
 
 object DefaultDynamoDBExecutor:
 

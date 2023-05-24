@@ -29,14 +29,9 @@ import aspect.Span
 
 trait GameDownloader:
 
-  def cache(user: User): φ[TaskId]
-
   def download(user: UserIdentified, archives: Archives, taskId: TaskId): φ[Unit]
 
 object GameDownloader:
-
-  def cache(user: User): ψ[GameDownloader, TaskId] =
-    ZIO.serviceWithZIO[GameDownloader](_.cache(user))
 
   def download(user: UserIdentified, archives: Archives, taskId: TaskId): ψ[GameDownloader, Unit] =
     ZIO.serviceWithZIO[GameDownloader](_.download(user, archives, taskId))
@@ -66,51 +61,23 @@ object GameDownloader:
         def processFailure(err: BrokenLogic) =
           for
             _ <- ZIO.logError(s"Failure is registering for ${err}...")
-            _ <- taskRepo.failureIncrement(taskId)
+            _ <- taskRepo.failureIncrement(taskId).ignore
             _ <- ZIO.logInfo("Failure is registered ...")
           yield DownloadingResult(resource +: previousResult.failedArchives)
 
         val processSuccess =
           for
             _ <- ZIO.logInfo("Success is registering ...")
-            _ <- taskRepo.successIncrement(taskId)
+            _ <- taskRepo.successIncrement(taskId).ignore
             _ <- ZIO.logInfo("Success is registered ...")
           yield previousResult
 
         downloadingAndSavingGames
           .foldZIO(err => processFailure(err), _ => processSuccess)
-
       }
 
       eff.unit
 
-    def cache(user: User): φ[TaskId] =
-      val gettingProfile = client
-        .profile(user.userName)
-        .mapError {
-          case ClientError.ProfileNotFound(userName) => BrokenLogic.ProfileNotFound(user)
-          case _                                     => BrokenLogic.ServiceOverloaded
-        }
-        .map(profile => user.identified(UserId(profile.`@id`.toString)))
-
-      val gettingArchives = client
-        .archives(user.userName)
-        .mapError {
-          case ClientError.ProfileNotFound(userName) => BrokenLogic.ProfileNotFound(user)
-          case _                                     => BrokenLogic.ServiceOverloaded
-        }
-        .filterOrFail(_.archives.nonEmpty)(NoGameAvaliable(user))
-
-      for
-        userIdentified <- gettingProfile
-        _              <- userRepo.save(userIdentified)
-        archives       <- gettingArchives
-        taskId         <- random.nextUUID.map(uuid => TaskId(uuid))
-        _              <- taskRepo.initiate(taskId, archives.archives.length)
-        _              <- download(userIdentified, archives, taskId).forkDaemon
-      yield taskId
-
-  @Deprecated
   object Impl:
     val layer = ZLayer {
       for

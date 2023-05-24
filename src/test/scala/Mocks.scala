@@ -19,6 +19,7 @@ import chessfinder.search.repo.*
 import chessfinder.api.TaskStatusResponse
 import chessfinder.api.ApiVersion
 import java.util.UUID
+import chessfinder.search.queue.GameDownloadingProducer
 
 trait Mocks:
   object BoardValidatorMock extends Mock[BoardValidator]:
@@ -145,4 +146,16 @@ trait Mocks:
           override def failureIncrement(taskId: TaskId): φ[Unit] =
             proxy(FailureIncrement, taskId)
 
+      }
+
+  object GameDownloadingProducerMock extends Mock[GameDownloadingProducer]:
+
+    object PublishMethod extends Effect[(UserIdentified, Archives, TaskId), BrokenLogic, Unit]
+
+    val compose: URLayer[Proxy, GameDownloadingProducer] =
+      ZLayer {
+        for proxy <- ZIO.service[Proxy]
+        yield new:
+          override def publish(user: UserIdentified, archives: Archives, taskId: TaskId): φ[Unit] =
+            proxy(PublishMethod, user, archives, taskId)
       }

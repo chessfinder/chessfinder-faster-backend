@@ -8,7 +8,7 @@ import scala.concurrent.Future
 import sttp.tapir.json.circe.*
 import sttp.tapir.stringBody
 import sttp.tapir.ztapir.*
-import search.{ GameDownloader, GameFinder, TaskStatusChecker }
+import search.{ ArchiveDownloader, GameDownloader, GameFinder, TaskStatusChecker }
 import search.entity.*
 import zio.*
 import core.SearchFen
@@ -61,12 +61,12 @@ object AsyncController:
 
   class Impl(blueprint: AsyncController) extends ZTapir:
 
-    val `POST /api/version/game`: ZServerEndpoint[GameDownloader, Any] =
-      def logic(request: DownloadRequest): zio.ZIO[GameDownloader, ApiError, TaskResponse] =
+    val `POST /api/version/game`: ZServerEndpoint[ArchiveDownloader, Any] =
+      def logic(request: DownloadRequest): zio.ZIO[ArchiveDownloader, ApiError, TaskResponse] =
         val platform: ChessPlatform = request.platform.toPlatform
         val userName: UserName      = UserName(request.user)
         val user: User              = User(platform, userName)
-        GameDownloader
+        ArchiveDownloader
           .cache(user)
           .mapBoth(
             ApiError.fromBrokenLogic,

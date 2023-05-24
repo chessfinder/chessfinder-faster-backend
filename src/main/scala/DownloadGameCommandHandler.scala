@@ -61,59 +61,85 @@ import sttp.tapir.serverless.aws.lambda.zio.AwsZServerOptions
 import search.queue.GameDownloadingProducer
 import pubsub.DownloadGameCommand
 
-object LambdaMain extends BaseMain with RequestStreamHandler:
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.RequestHandler
+import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
+
+import search.*
+import queue.*
+import zio.ZIO
+import zio.sqs.producer.Producer
+import zio.sqs.producer.ProducerEvent
+import zio.Cause
+import search.entity.*
+import chessfinder.client.chess_com.dto.Archives
+import pubsub.DownloadGameCommand
+import zio.ZLayer
+import pubsub.core.Subscriber
+import zio.stream.ZSink
+import io.circe.Decoder
+import io.circe.parser
+import scala.jdk.CollectionConverters.*
+
+object DownloadGameCommandHandler extends BaseMain with RequestHandler[SQSEvent, Unit]:
 
   override protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
 
-  private val handler =
-    def options[R] =
-      AwsZServerOptions.noEncoding[R](
-        AwsZServerOptions
-          .customiseInterceptors[R]
-          .serverLog(serverLogger)
-          .options
+  private def process(input: SQSEvent, context: Context) =
+    for
+      messages <- ZIO.succeed(input.getRecords().asScala)
+      _        <- ZIO.logInfo(s"Recieved Messages ${messages.length}")
+      _ <- ZIO.collectAll(
+        messages.map(message =>
+          processSingle(message, context) @@ aspect.MessageId.log(message.getMessageId())
+        )
       )
-    ZLambdaHandler.withMonadError(
-      EndpointCombiner.many(syncController.rest, asyncController.rest),
-      options
-    )
+      _ <- ZIO.logInfo(s"Messages ${messages.length} are processed")
+    yield ()
 
-  def process(input: InputStream, output: OutputStream) =
-    val hand = handler
-      .process[AwsRequest](input, output)
+  private def processSingle(message: SQSMessage, context: Context) =
+    val maybeCommand =
+      Option(message.getBody)
+        .toRight(
+          new RuntimeException(s"Body is missing in Event ${Option(message.getMessageId()).getOrElse("???")}")
+        )
+        .flatMap(parser.parse)
+        .flatMap(Decoder[DownloadGameCommand].decodeJson)
 
-    (for
-      _ <- ZIO.logInfo("BEFORE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-      r <- hand
-      _ <- ZIO.logInfo("AFTER $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-    yield r).provide(
-      clientLayer,
-      BoardValidator.Impl.layer,
-      GameFinder.Impl.layer[ApiVersion.Newborn.type],
-      GameFinder.Impl.layer[ApiVersion.Async.type],
-      Searcher.Impl.layer,
-      GameFetcher.Impl.layer,
-      GameFetcher.Local.layer,
-      ChessDotComClient.Impl.layer,
-      UserRepo.Impl.layer,
-      GameRepo.Impl.layer,
-      TaskRepo.Impl.layer,
-      TaskStatusChecker.Impl.layer,
-      ArchiveDownloader.Impl.layer,
-      GameDownloadingProducer.Impl.layer,
-      DownloadGameCommand.Queue.layer,
-      dynamodbLayer,
-      sqsLayer,
-      ZLayer.succeed(zio.Random.RandomLive)
-    )
+    maybeCommand match
+      case Right(command) =>
+        val user =
+          UserIdentified(command.platform.toPlatform, UserName(command.userName), UserId(command.userId))
+        val archives = Archives(Seq(command.resource))
+        val taskId   = TaskId(command.taskId)
+        GameDownloader
+          .download(user, archives, taskId)
+          .tapBoth(
+            err => ZIO.logError(s"$err for archive ${command.resource}"),
+            _ => ZIO.logInfo(s"Command ${command.resource} has succeessfully processed")
+          )
+          .ignore
+      case Left(err) => ZIO.logError(s"${err.getMessage} for archive ???")
 
-  override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
+  override def handleRequest(input: SQSEvent, context: Context): Unit =
     Unsafe.unsafe { implicit unsafe =>
       val runtime = Runtime.unsafe.fromLayer(configLayer >+> loggingLayer)
       runtime.unsafe
         .run(
-          process(input, output) @@ aspect.BuildInfo.log @@ aspect.CorrelationId
-            .log(context.getAwsRequestId())
+          process(input, context)
+            .provide(
+              clientLayer,
+              ChessDotComClient.Impl.layer,
+              UserRepo.Impl.layer,
+              GameRepo.Impl.layer,
+              TaskRepo.Impl.layer,
+              GameDownloader.Impl.layer,
+              dynamodbLayer,
+              ZLayer.succeed(zio.Random.RandomLive)
+            ) @@
+            aspect.BuildInfo.log @@
+            aspect.CorrelationId.log(context.getAwsRequestId())
         )
         .getOrThrowFiberFailure()
     }

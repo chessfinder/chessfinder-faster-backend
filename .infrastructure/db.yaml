@@ -19,8 +19,8 @@ Resources:
         - AttributeName: platform
           KeyType: RANGE
       ProvisionedThroughput:
-        ReadCapacityUnits: 20
-        WriteCapacityUnits: 20
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
   TasksTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -32,8 +32,8 @@ Resources:
         - AttributeName: task_id
           KeyType: HASH
       ProvisionedThroughput:
-        ReadCapacityUnits: 20
-        WriteCapacityUnits: 20
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 2
   GamesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -48,9 +48,7 @@ Resources:
           KeyType: HASH
         - AttributeName: game_id
           KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: 20
-        WriteCapacityUnits: 20
+      BillingMode: PAY_PER_REQUEST
 
 Outputs:
   UsersTableName:

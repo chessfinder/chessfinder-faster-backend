@@ -38,6 +38,8 @@ import zio.logging.*
 import zio.config.typesafe.TypesafeConfigProvider
 import chessfinder.client.ZLoggingAspect
 import sttp.tapir.server.interceptor.log.DefaultServerLog
+import pubsub.core.DefaultSqsExecutor
+import zio.aws.sqs.Sqs
 
 abstract class BaseMain:
 
@@ -51,6 +53,10 @@ abstract class BaseMain:
   protected lazy val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
     val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
     in >>> DefaultDynamoDBExecutor.layer
+
+  protected lazy val sqsLayer: TaskLayer[Sqs] =
+    val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
+    in >>> DefaultSqsExecutor.layer
 
   protected lazy val clientLayer =
     Client.default.map(z => z.update(_ @@ ZLoggingAspect())).orDie

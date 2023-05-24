@@ -65,7 +65,7 @@ object Dependencies {
     // Seq(
     //   "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % version
     // ) ++
-      tapirPartial
+    tapirPartial
   }
 
   lazy val tagging = {
@@ -182,13 +182,19 @@ object Dependencies {
     )
   }
 
+  lazy val `java-aws` = {
+    Seq(
+      "com.amazonaws" % "aws-lambda-java-events" % "3.11.1",
+      "com.amazonaws" % "aws-lambda-java-core"   % "1.2.2"
+    )
+  }
+
   lazy val `zio-sqs` = {
     val version = "0.5.0+15-3ad474c0-SNAPSHOT"
     Seq(
-      "dev.zio" %% "zio-sqs"            % version
+      "dev.zio" %% "zio-sqs" % version
     )
   }
-  
 
   // lazy val ornicar = {
   //   val version = "9.1.2"
@@ -209,7 +215,8 @@ object Dependencies {
       `zio-schema` ++
       `zio-aws` ++
       `zio-dynamodb` ++
-      `zio-sqs`
+      `zio-sqs` ++
+      `java-aws`
 
   val tests: Seq[ModuleID] =
     (munit ++ scalaCheck ++ `zio-test` ++ wiremock ++ `zio-mock` ++ `zio-munit`).map(_ % Test)

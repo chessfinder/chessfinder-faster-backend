@@ -98,7 +98,6 @@ lazy val root = (project in file("."))
   )
   .settings(
     assembly / assemblyJarName := "chessfinder-lambda.jar",
-    assembly / mainClass       := Some("chessfinder.LambdaMain"),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "maven", _*)                                       => MergeStrategy.concat
       case PathList("META-INF", "io.netty.versions.properties", _*)                => MergeStrategy.first

@@ -13,9 +13,10 @@ abstract class BroadIntegrationSuite extends ZIOSpecDefault:
 
   InitIntegrationEnv.Broad.run
 
-  val configLayer =
-    Runtime.setConfigProvider(TypesafeConfigProvider.fromHoconFilePath("src/it/resources/local.conf"))
-  val loggingLayer = Runtime.removeDefaultLoggers >>> zio.logging.consoleJsonLogger()
+  val configLayer   = InitIntegrationEnv.Broad.configLayer
+  val loggingLayer  = InitIntegrationEnv.Broad.loggingLayer
+  val dynamodbLayer = InitIntegrationEnv.Narrow.dynamodbLayer
+  val sqsLayer      = InitIntegrationEnv.Narrow.sqsLayer
 
   override val bootstrap: ZLayer[Any, Any, TestEnvironment] =
     configLayer >+> loggingLayer ++ testEnvironment

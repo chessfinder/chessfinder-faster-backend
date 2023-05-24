@@ -35,6 +35,10 @@ import chessfinder.search.GameDownloader
 import sttp.tapir.server.ziohttp.*
 import zio.logging.*
 import zio.config.typesafe.TypesafeConfigProvider
+import chessfinder.search.GameDownloader
+import chessfinder.search.ArchiveDownloader
+import search.queue.GameDownloadingProducer
+import pubsub.DownloadGameCommand
 
 object Main extends BaseMain with ZIOAppDefault:
 
@@ -97,7 +101,10 @@ object Main extends BaseMain with ZIOAppDefault:
         TaskRepo.Impl.layer,
         GameRepo.Impl.layer,
         TaskStatusChecker.Impl.layer,
-        GameDownloader.Impl.layer,
+        ArchiveDownloader.Impl.layer,
+        GameDownloadingProducer.Impl.layer,
+        DownloadGameCommand.Queue.layer,
+        sqsLayer,
         dynamodbLayer,
         ZLayer.succeed(zio.Random.RandomLive)
       ) @@ aspect.BuildInfo.log

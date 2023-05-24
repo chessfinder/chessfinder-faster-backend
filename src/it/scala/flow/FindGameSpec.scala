@@ -44,10 +44,6 @@ object FindGameSpec extends BroadIntegrationSuite:
   protected lazy val `chess.com` = ClientBackdoor("/chess_com")
   protected lazy val clientLayer = Client.default.orDie
 
-  private lazy val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
-    val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
-    in >>> DefaultDynamoDBExecutor.layer
-
   def spec =
     suite("Chessfinder when the game is provided")(
       test("and everything is OK, should find the game") {
