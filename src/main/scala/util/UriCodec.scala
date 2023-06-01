@@ -2,12 +2,13 @@ package chessfinder
 package util
 
 import sttp.model.Uri
-import io.circe.{ Codec, Decoder, Encoder }
-import sttp.tapir.Schema
-import zio.json.*
 import sttp.model.Uri.UriContext
-import zio.config.magnolia.{ deriveConfigFromConfig, DeriveConfig }
+import sttp.tapir.Schema
+
+import io.circe.{ Codec, Decoder, Encoder }
 import zio.Config
+import zio.config.magnolia.{ deriveConfigFromConfig, DeriveConfig }
+import zio.json.*
 
 object UriCodec:
   private val decoder: Decoder[Uri] = Decoder[String].emap(Uri.parse)

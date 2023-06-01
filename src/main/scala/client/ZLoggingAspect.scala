@@ -1,11 +1,9 @@
 package chessfinder
 package client
 
-import zio.http.ZClientAspect
-import zio.http.ZClient
-import zio.http.model.*
-import zio.http.*
 import zio.ZIO
+import zio.http.*
+import zio.http.model.*
 
 class ZLoggingAspect[Env]
     extends ZClientAspect[Env, Env, Body, Body, Throwable, Throwable, Response, Response]:

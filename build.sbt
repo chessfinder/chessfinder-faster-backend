@@ -7,6 +7,7 @@ enablePlugins(GitPlugin)
 enablePlugins(GitVersioning)
 // ThisBuild / enablePlugins(GitVersioning)
 
+ThisBuild / idePackagePrefix := Some("chessfinder")
 ThisBuild / organization := "eudemonia"
 // ThisBuild / version           := "0.1"
 ThisBuild / git.useGitDescribe := true

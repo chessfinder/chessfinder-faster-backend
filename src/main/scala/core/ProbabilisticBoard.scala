@@ -1,12 +1,11 @@
 package chessfinder
 package core
 
-import cats.syntax.all.*
+import core.BitboardSetOps.⊆
 
-import chess.bitboard.Bitboard
+import cats.syntax.all.*
 import chess.bitboard.Bitboard.*
-import chess.bitboard.Board
-import BitboardSetOps.⊆
+import chess.bitboard.{ Bitboard, Board }
 
 case class ProbabilisticBoard(
     certainBoard: Board,

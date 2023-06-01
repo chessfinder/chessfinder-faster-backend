@@ -1,11 +1,12 @@
 package chessfinder
 package util
 
+import core.β
+
 import cats.data.NonEmptyChain
 import cats.kernel.Semigroup
 import cats.syntax.*
 
-import core.β
 trait βUnsafeExt:
   extension [T](result: β[T]) def get: T = result.fold(_.throwRuntime, identity)
 

@@ -1,8 +1,8 @@
 package chessfinder
 package util
 
-import zio.{ Config, ConfigProvider, IO }
 import zio.config.magnolia.DeriveConfig
+import zio.{ Config, ConfigProvider, IO }
 
 object ConfigExtension:
 

@@ -10,6 +10,7 @@ Resources:
     Properties: 
       QueueName: "DownloadGames.fifo"
       FifoQueue: true
+      VisibilityTimeout: 900
 
   DownloadGamesFunction:
     Properties:
@@ -23,7 +24,30 @@ Resources:
       Timeout: 900
       Runtime: java11
       Handler: chessfinder.DownloadGameCommandHandler::handleRequest
-      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.2.2\chessfinder-lambda.jar
+      CodeUri: ../target/scala-3.2.2/chessfinder-lambda.jar
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+
+  SearchBoard: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: "SearchBoard.fifo"
+      FifoQueue: true
+      VisibilityTimeout: 900
+
+  SearchBoardFunction:
+    Properties:
+      MemorySize: 1024
+      Events:
+        SearchBoardCommand:
+          Properties:
+            Queue: !GetAtt SearchBoard.Arn
+            BatchSize: 1
+          Type: SQS
+      Timeout: 900
+      Runtime: java11
+      Handler: chessfinder.SearchBoardCommandHandler::handleRequest
+      CodeUri: ../target/scala-3.2.2/chessfinder-lambda.jar
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
 
@@ -32,5 +56,12 @@ Outputs:
     Description: "URL of DownloadGamesQueue"
     Value: !Ref DownloadGames
   DownloadGamesQueueARN: 
-    Description: "ARN of new AmazonSQS Queue"
+    Description: "ARN of DownloadGamesQueue"
     Value: !GetAtt DownloadGames.Arn
+  
+  SearchBoardQueueURL: 
+    Description: "URL of SearchBoardQueue"
+    Value: !Ref SearchBoard
+  SearchBoardQueueARN: 
+    Description: "ARN of SearchBoardQueue"
+    Value: !GetAtt SearchBoard.Arn

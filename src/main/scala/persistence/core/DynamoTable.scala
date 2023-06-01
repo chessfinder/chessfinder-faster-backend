@@ -2,13 +2,12 @@ package chessfinder
 package persistence.core
 
 import zio.ZIO
+import zio.dynamodb.*
 import zio.dynamodb.DynamoDBQuery.*
 import zio.dynamodb.KeyConditionExpression.*
 import zio.dynamodb.UpdateExpression.Action
-import zio.dynamodb.*
 import zio.schema.Schema
-import zio.stream.ZSink
-import zio.stream.ZStream
+import zio.stream.{ ZSink, ZStream }
 
 sealed trait DynamoTable:
 

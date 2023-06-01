@@ -1,16 +1,13 @@
 package chessfinder
 package search.repo
 
-import chessfinder.search.entity.User
-import chessfinder.persistence.UserRecord
-import search.entity.*
-import zio.{ ZIO, ZLayer }
-import zio.dynamodb.DynamoDBExecutor
-import persistence.PlatformType
-import search.*
-import zio.dynamodb.DynamoDBError
-import zio.Cause
 import aspect.Span
+import persistence.{ PlatformType, UserRecord }
+import search.*
+import search.entity.*
+
+import zio.dynamodb.{ DynamoDBError, DynamoDBExecutor }
+import zio.{ Cause, ZIO, ZLayer }
 
 trait UserRepo:
   def get(user: User): φ[UserIdentified]
@@ -18,11 +15,6 @@ trait UserRepo:
   def save(user: UserIdentified): φ[Unit]
 
 object UserRepo:
-  def get(user: User): ψ[UserRepo, UserIdentified] =
-    ψ.serviceWithZIO[UserRepo](_.get(user))
-
-  def save(user: UserIdentified): ψ[UserRepo, Unit] =
-    ψ.serviceWithZIO[UserRepo](_.save(user))
 
   class Impl(executor: DynamoDBExecutor) extends UserRepo:
     private val layer = ZLayer.succeed(executor)

@@ -1,71 +1,63 @@
 package chessfinder
 
-import zio.ZIOApp
-import zio.ZIOAppDefault
-
 import sttp.tapir.ztapir.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.http.{ HttpApp, Request, Response }
-import zio.*
-import zio.http.*
-import chessfinder.api.{ AsyncController, SyncController }
-import chessfinder.search.GameFinder
-import sttp.apispec.openapi.Server as OAServer
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.swagger.*
-import sttp.tapir.redoc.*
-import sttp.tapir.redoc.RedocUIOptions
-import sttp.apispec.openapi.circe.yaml.*
-import sttp.tapir.server.*
-import chessfinder.search.BoardValidator
-import chessfinder.search.GameFetcher
-import chessfinder.search.Searcher
-import chessfinder.client.chess_com.ChessDotComClient
-import com.typesafe.config.ConfigFactory
-import chessfinder.api.ApiVersion
-import chessfinder.search.repo.{ GameRepo, TaskRepo, UserRepo }
-import zio.aws.netty
-import zio.aws.core.config.AwsConfig
+
+import zio.{ ZIOApp, ZIOAppDefault, * }
+import chessfinder.api.Controller
+import client.ZLoggingAspect
+import client.chess_com.ChessDotComClient
+import persistence.GameRecord
 import persistence.core.DefaultDynamoDBExecutor
-import zio.dynamodb.*
-import zio.logging.backend.SLF4J
-import util.EndpointCombiner
-import chessfinder.search.TaskStatusChecker
-import chessfinder.persistence.GameRecord
-import chessfinder.search.GameDownloader
-import sttp.tapir.server.ziohttp.*
-import zio.logging.*
-import zio.config.typesafe.TypesafeConfigProvider
-import chessfinder.client.ZLoggingAspect
-import sttp.tapir.server.interceptor.log.DefaultServerLog
 import pubsub.core.DefaultSqsExecutor
+import search.*
+import zio.http.Client
+import search.repo.{ GameRepo, TaskRepo, UserRepo }
+import sttp.apispec.openapi.Server as OAServer
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.redoc.*
+import sttp.tapir.server.*
+import sttp.tapir.server.interceptor.log.DefaultServerLog
+import sttp.tapir.server.ziohttp.*
+import sttp.tapir.swagger.*
+import util.EndpointCombiner
+
+import com.typesafe.config.ConfigFactory
+import zio.aws.core.config.AwsConfig
+import zio.aws.netty
 import zio.aws.sqs.Sqs
+import zio.config.typesafe.TypesafeConfigProvider
+import zio.dynamodb.*
+import zio.http.{ HttpApp, Request, Response }
+import zio.logging.*
 
-abstract class BaseMain:
-
-  val organization = "eudemonia"
-
+trait ConfigModule:
   // protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
   protected def configLayer: ZLayer[Any, Nothing, Unit]
   // protected val loggingLayer = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
   protected val loggingLayer = Runtime.removeDefaultLoggers >>> zio.logging.consoleJsonLogger()
 
+trait ClientModule extends ConfigModule:
+  protected lazy val clientLayer =
+    Client.default.map(z => z.update(_ @@ ZLoggingAspect())).orDie
+
+trait DynamoDbModule extends ClientModule:
   protected lazy val dynamodbLayer: TaskLayer[DynamoDBExecutor] =
     val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
     in >>> DefaultDynamoDBExecutor.layer
+
+trait SqsModule extends ClientModule:
 
   protected lazy val sqsLayer: TaskLayer[Sqs] =
     val in = ((netty.NettyHttpClient.default >+> AwsConfig.default) ++ configLayer)
     in >>> DefaultSqsExecutor.layer
 
-  protected lazy val clientLayer =
-    Client.default.map(z => z.update(_ @@ ZLoggingAspect())).orDie
+trait BaseMain extends DynamoDbModule with SqsModule with ClientModule:
 
-  protected val syncControllerBlueprint = SyncController("newborn")
-  protected val syncController          = SyncController.Impl(syncControllerBlueprint)
+  val organization = "eudemonia"
 
-  protected val asyncControllerBlueprint = AsyncController("async")
-  protected val asyncController          = AsyncController.Impl(asyncControllerBlueprint)
+  protected val controllerBlueprint = Controller("async")
+  protected val controller          = Controller.Impl(controllerBlueprint)
 
   def serverLogger[R]: DefaultServerLog[RIO[R, *]] = ZioHttpServerOptions.defaultServerLog
     .copy(

@@ -1,16 +1,15 @@
 package chessfinder
 package persistence
 
-import persistence.core.DynamoTable
-import zio.schema.{ DeriveSchema, Schema }
-import java.time.Instant
-import persistence.core.DynamoTypeMappers
-import chessfinder.search.entity.*
-import chessfinder.search.GameFinder
-import chessfinder.search.entity.HistoricalGame
+import persistence.core.{ DynamoTable, DynamoTypeMappers }
+import search.entity.*
 import sttp.model.Uri
+
 import chess.format.pgn.PgnStr
 import zio.schema.annotation.recordName
+import zio.schema.{ DeriveSchema, Schema }
+
+import java.time.Instant
 
 case class GameRecord(
     user_id: UserId,

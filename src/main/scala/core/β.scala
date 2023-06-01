@@ -2,11 +2,11 @@ package chessfinder
 package core
 
 import cats.data.{ NonEmptyChain, Validated }
-import scala.util.{ Failure, Success, Try }
-import scala.util.control.NonFatal
-import cats.data.NonEmptyChain
 import cats.kernel.Semigroup
 import cats.syntax.*
+
+import scala.util.control.NonFatal
+import scala.util.{ Failure, Success, Try }
 
 type β[T] = Validated[β.ValidationErrors, T]
 

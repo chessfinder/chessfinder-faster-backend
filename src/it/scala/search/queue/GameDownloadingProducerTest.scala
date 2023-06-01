@@ -1,42 +1,40 @@
 package chessfinder
 package search.queue
 
-import zio.test.*
-import zio.*
-import client.chess_com.ChessDotComClient
-import chessfinder.testkit.wiremock.ClientBackdoor
-import sttp.model.Uri
-import client.chess_com.dto.*
 import client.*
 import client.ClientError.*
-import search.entity.UserName
-import scala.util.Success
-import zio.http.Client
-import sttp.model.Uri.UriContext
-import com.typesafe.config.ConfigFactory
-import scala.util.Try
-import zio.ZLayer
-import search.entity.*
-import testkit.parser.JsonReader
-import chessfinder.client.ClientError.ArchiveNotFound
-import testkit.NarrowIntegrationSuite
-import zio.aws.netty
-import zio.aws.core.config.AwsConfig
-import persistence.core.DefaultDynamoDBExecutor
-import zio.dynamodb.*
-import chessfinder.pubsub.Platform
+import client.chess_com.ChessDotComClient
+import client.chess_com.dto.*
 import persistence.GameRecord
-import util.UriParser
-import chess.format.pgn.PgnStr
-import io.circe.*
-import chessfinder.util.RandomReadableString
-import java.util.UUID
-import sttp.model.UriInterpolator.*
-import chessfinder.pubsub.DownloadGameCommand
+import persistence.core.DefaultDynamoDBExecutor
+import pubsub.{ DownloadGameCommand, Platform }
 import pubsub.core.PubSub
+import search.entity.*
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
+import sttp.model.UriInterpolator.*
+import testkit.NarrowIntegrationSuite
+import testkit.parser.JsonReader
+import testkit.wiremock.ClientBackdoor
+import util.{ RandomReadableString, UriParser }
+
+import chess.format.pgn.PgnStr
+import com.typesafe.config.ConfigFactory
+import io.circe.*
+import zio.*
+import zio.aws.core.config.AwsConfig
+import zio.aws.netty
+import zio.dynamodb.*
+import zio.http.Client
 import zio.stream.ZSink
+import zio.test.*
+
+import java.util.UUID
+import scala.util.{ Success, Try }
 
 object GameDownloadingProducerTest extends NarrowIntegrationSuite:
+
+  val queue = ZIO.service[GameDownloadingProducer]
 
   def spec =
     suite("GameDownloadingProducer")(
@@ -49,15 +47,15 @@ object GameDownloadingProducerTest extends NarrowIntegrationSuite:
           val user         = UserIdentified(platformType.toPlatform, userName, userId)
           val taskId       = TaskId(UUID.randomUUID())
 
-          val resource1 = uri"http://example.com/1"
-          val resource2 = uri"http://example.com/2"
-          val archives  = Archives(Seq(resource1, resource2))
+          val archiveId1 = ArchiveId("http://example.com/1")
+          val archiveId2 = ArchiveId("http://example.com/2")
+          val archives   = Seq(archiveId1, archiveId2)
 
           val expectedCommand1 = DownloadGameCommand(
             userName = userName.value,
             userId = userId.value,
             platform = Platform.CHESS_DOT_COM,
-            resource = resource1,
+            archiveId = archiveId1.value,
             taskId = taskId.value
           )
 
@@ -65,14 +63,11 @@ object GameDownloadingProducerTest extends NarrowIntegrationSuite:
             userName = userName.value,
             userId = userId.value,
             platform = Platform.CHESS_DOT_COM,
-            resource = resource2,
+            archiveId = archiveId2.value,
             taskId = taskId.value
           )
 
           val expectedResult = Set(expectedCommand1, expectedCommand2)
-
-          val firingCommands =
-            GameDownloadingProducer.publish(user, archives, taskId)
 
           val readingFromQueue =
             for
@@ -81,12 +76,13 @@ object GameDownloadingProducerTest extends NarrowIntegrationSuite:
               actualCommands = actualCommandsOrErrors.collect { case Right(command) => command }
             yield actualCommands
           for
-            _            <- firingCommands
-            actualResult <- readingFromQueue
-            result       <- assertTrue(actualResult == expectedResult)
+            gameDownloadingProducer <- queue
+            _                       <- gameDownloadingProducer.publish(user, archives, taskId)
+            actualResult            <- readingFromQueue
+            result                  <- assertTrue(actualResult == expectedResult)
           yield result
         }
       )
     ).provideLayer(
-      (configLayer >+> (dynamodbLayer ++ sqsLayer) >+> DownloadGameCommand.Queue.layer) >+> GameDownloadingProducer.Impl.layer
+      (configLayer >+> sqsLayer >+> DownloadGameCommand.Queue.layer) >+> GameDownloadingProducer.Impl.layer
     ) @@ TestAspect.sequential

@@ -1,10 +1,11 @@
 package chessfinder
 package core
 
-import chess.format.pgn.*
+import core.β.Ext.*
+
 import chess.Replay
-import Reader.Result
-import β.Ext.*
+import chess.format.pgn.*
+import chess.format.pgn.Reader.Result
 
 object PgnReader:
   def read(pgnStr: PgnStr): β[Replay] =

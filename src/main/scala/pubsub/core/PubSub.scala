@@ -1,20 +1,20 @@
 package chessfinder
 package pubsub.core
 
-import zio.sqs.*
+import io.circe.{ parser, Codec, Decoder }
+import software.amazon.awssdk.regions.Region
 import zio.*
-import zio.stream.*
 import zio.aws.sqs.*
 import zio.aws.sqs.model.{ Message, MessageAttributeValue }
-import zio.sqs.producer.{ Producer, ProducerEvent, ProducerSettings }
-import zio.sqs.serialization.Serializer
-import io.circe.{ Codec, Decoder }
-import io.circe.parser
-import software.amazon.awssdk.regions.Region
-import java.net.URI
-import zio.Config
 import zio.config.*
 import zio.config.magnolia.deriveConfig
+import zio.sqs.*
+import zio.sqs.producer.{ Producer, ProducerEvent, ProducerSettings }
+import zio.sqs.serialization.Serializer
+import zio.stream.*
+import zio.aws.sqs.model.DeleteMessageRequest
+
+import java.net.URI
 
 trait Subscriber[T: Codec](
     queueUrl: String,
@@ -29,6 +29,9 @@ trait Subscriber[T: Codec](
           .flatMap(Decoder[T].decodeJson)
       )
       .provideLayer(ZLayer.succeed(sqs))
+
+  def acknowledge(receiptHandle: String): Task[Unit] =
+    sqs.deleteMessage(DeleteMessageRequest(queueUrl, receiptHandle)).mapError(_.toThrowable)
 
 object Subscriber:
   val DefaultSettings: SqsStreamSettings = SqsStreamSettings(stopWhenQueueEmpty = true)

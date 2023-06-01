@@ -10,14 +10,6 @@ Resources:
       Timeout: 29
       MemorySize: 1024
       Events:
-        AnyApiNewborn:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: ANY
-            Path: /api/newborn
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
         GetApiAsyncTask:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
@@ -26,11 +18,11 @@ Resources:
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
-        AnyApiNewbornGame:
+        GetApiAsyncBoard:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
-            Method: ANY
-            Path: /api/newborn/game
+            Method: GET
+            Path: /api/async/board
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi

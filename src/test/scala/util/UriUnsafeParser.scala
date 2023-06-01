@@ -2,6 +2,7 @@ package chessfinder
 package util
 
 import sttp.model.Uri
+
 import scala.util.Try
 
 // user uri"uri here" string interpolator

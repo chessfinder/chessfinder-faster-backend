@@ -1,30 +1,27 @@
 package chessfinder
 package testkit
 
-import com.github.tomakehurst.wiremock.client.WireMock
+import persistence.*
+import persistence.core.*
+import pubsub.core.*
 
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.typesafe.config.ConfigFactory
-import chessfinder.persistence.core.*
-import chessfinder.persistence.*
-import zio.dynamodb.*
-import zio.{ Clock, IO, TaskLayer, ULayer, Unsafe, ZIO, ZLayer }
-import scala.util.Try
-import scala.concurrent.Await
-import scala.concurrent.duration.*
+import com.typesafe.config.{ Config, ConfigFactory }
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.services.sqs.model.QueueAttributeName as JQueueAttributeName
+import zio.aws.core.config.AwsConfig
 import zio.aws.dynamodb.DynamoDb
 import zio.aws.netty
-import zio.aws.core.config.AwsConfig
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
-import com.typesafe.config.{ Config, ConfigFactory }
-import zio.Runtime
-import zio.config.typesafe.TypesafeConfigProvider
-import zio.Cause
-import zio.sqs.{ SqsStream, SqsStreamSettings, Utils }
 import zio.aws.sqs.Sqs
 import zio.aws.sqs.model.QueueAttributeName
-import pubsub.core.*
-import software.amazon.awssdk.services.sqs.model.QueueAttributeName as JQueueAttributeName
+import zio.config.typesafe.TypesafeConfigProvider
+import zio.dynamodb.*
+import zio.sqs.{ SqsStream, SqsStreamSettings, Utils }
+import zio.{ Cause, Clock, IO, Runtime, TaskLayer, ULayer, Unsafe, ZIO, ZLayer }
+
+import scala.concurrent.Await
+import scala.concurrent.duration.*
+import scala.util.Try
 
 open class InitIntegrationEnv:
 
@@ -58,18 +55,18 @@ open class InitIntegrationEnv:
       val io: IO[Throwable, Unit] =
         val dependentIo =
           for
-            _ <- createSortedSetTableWithSingleKey(UserRecord.Table).catchNonFatalOrDie(e =>
-              ZIO.logErrorCause(e.getMessage, Cause.fail(e))
-            )
-            _ <- createSortedSetTableWithSingleKey(GameRecord.Table).catchNonFatalOrDie(e =>
-              ZIO.logErrorCause(e.getMessage, Cause.fail(e))
-            )
-            _ <- createUniqueTableWithSingleKey(TaskRecord.Table).catchNonFatalOrDie(e =>
-              ZIO.logErrorCause(e.getMessage, Cause.fail(e))
-            )
+            _ <- createSortedSetTable(UserRecord.Table).ignore
+            _ <- createSortedSetTable(GameRecord.Table).ignore
+            _ <- createUniqueTable(TaskRecord.Table).ignore
+            _ <- createSortedSetTable(ArchiveRecord.Table).ignore
+            _ <- createUniqueTable(SearchResultRecord.Table).ignore
 
             _ <- Utils.createQueue(
               "download-games.fifo",
+              Map(QueueAttributeName.wrap(JQueueAttributeName.FIFO_QUEUE) -> "true")
+            )
+            _ <- Utils.createQueue(
+              "search-board.fifo",
               Map(QueueAttributeName.wrap(JQueueAttributeName.FIFO_QUEUE) -> "true")
             )
           yield ()
@@ -84,7 +81,7 @@ open class InitIntegrationEnv:
       )
     }
 
-  private def createUniqueTableWithSingleKey(
+  private def createUniqueTable(
       table: DynamoTable.Unique[?, ?]
   ): ZIO[DynamoDBExecutor, Throwable, Unit] =
     DynamoDBQuery
@@ -95,7 +92,7 @@ open class InitIntegrationEnv:
       )(AttributeDefinition.attrDefnString(table.partitionKeyName))
       .execute
 
-  private def createSortedSetTableWithSingleKey(
+  private def createSortedSetTable(
       table: DynamoTable.SortedSeq[?, ?, ?]
   ): ZIO[DynamoDBExecutor, Throwable, Unit] =
     DynamoDBQuery
@@ -120,5 +117,5 @@ object InitIntegrationEnv:
 
     override lazy val run =
       super.run
-      scala.concurrent.Future(Main.main(Array.empty[String]))(scala.concurrent.ExecutionContext.global)
+      // scala.concurrent.Future(Main.main(Array.empty[String]))(scala.concurrent.ExecutionContext.global)
       Thread.sleep(3000)

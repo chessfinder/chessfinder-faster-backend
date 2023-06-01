@@ -2,13 +2,15 @@ package chessfinder
 package client.chess_com.dto
 
 import sttp.model.Uri
-import io.circe.{ Decoder, Encoder }
-import io.circe.generic.semiauto.*
 import util.UriCodec.given
+
+import io.circe.generic.semiauto.*
+import io.circe.{ Decoder, Encoder }
 
 final case class Game(
     url: Uri,
-    pgn: String
+    pgn: String,
+    end_time: Long
 )
 
 object Game:

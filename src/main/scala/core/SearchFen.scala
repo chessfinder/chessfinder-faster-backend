@@ -1,11 +1,12 @@
 package chessfinder
 package core
 
+import core.β.Ext.*
+
 import cats.implicits.*
 import cats.kernel.Monoid
-import ornicar.scalalib.zeros.given_Zero_Option
-import core.β.Ext.*
 import chess.Pos
+import ornicar.scalalib.zeros.given_Zero_Option
 
 opaque type SearchFen = String
 

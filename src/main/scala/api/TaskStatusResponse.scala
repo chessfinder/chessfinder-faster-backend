@@ -1,15 +1,17 @@
 package chessfinder
 package api
 
-import io.circe.generic.semiauto.deriveCodec
-import io.circe.Codec
-import sttp.tapir.Schema
-import sttp.model.Uri
-import util.UriCodec.given
-import search.entity.{ DownloadStatus, SearchResult }
-import zio.json.*
-import java.util.UUID
 import persistence.TaskRecord
+import search.entity.{ DownloadStatus, SearchResult }
+import sttp.model.Uri
+import sttp.tapir.Schema
+import util.UriCodec.given
+
+import io.circe.Codec
+import io.circe.generic.semiauto.deriveCodec
+import zio.json.*
+
+import java.util.UUID
 
 final case class TaskStatusResponse(
     taskId: UUID,

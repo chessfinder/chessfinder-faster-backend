@@ -1,48 +1,42 @@
 package chessfinder
 package search.repo
 
-import zio.test.*
-import zio.*
-import client.chess_com.ChessDotComClient
-import chessfinder.testkit.wiremock.ClientBackdoor
-import sttp.model.Uri
-import client.chess_com.dto.*
 import client.*
 import client.ClientError.*
-import search.entity.UserName
-import scala.util.Success
-import zio.http.Client
-import sttp.model.Uri.UriContext
-import com.typesafe.config.ConfigFactory
-import scala.util.Try
-import zio.ZLayer
-import search.entity.*
-import testkit.parser.JsonReader
-import chessfinder.client.ClientError.ArchiveNotFound
-import testkit.NarrowIntegrationSuite
-import zio.aws.netty
-import zio.aws.core.config.AwsConfig
+import client.chess_com.ChessDotComClient
+import client.chess_com.dto.*
+import persistence.{ GameRecord, PlatformType, UserRecord }
 import persistence.core.DefaultDynamoDBExecutor
-import zio.dynamodb.*
-import chessfinder.persistence.PlatformType
-import chessfinder.persistence.UserRecord
-import persistence.GameRecord
-import util.UriParser
+import search.entity.*
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
+import testkit.NarrowIntegrationSuite
+import testkit.parser.JsonReader
+import testkit.wiremock.ClientBackdoor
+import util.{ RandomReadableString, UriParser }
+
 import chess.format.pgn.PgnStr
+import com.typesafe.config.ConfigFactory
 import io.circe.*
-import chessfinder.util.RandomReadableString
+import zio.*
+import zio.aws.core.config.AwsConfig
+import zio.aws.netty
+import zio.dynamodb.*
+import zio.http.Client
+import zio.test.*
+
+import scala.util.{ Success, Try }
 
 object GameRepoTest extends NarrowIntegrationSuite:
+
+  val repo = ZIO.service[GameRepo]
 
   def spec =
     suite("GameRepo")(
       suite("list")(
         test("should get all games from the database") {
 
-          val userName     = UserName(RandomReadableString())
-          val platformType = PlatformType.CHESS_DOT_COM
-          val userId       = UserId(RandomReadableString())
-          val user         = User(platformType.toPlatform, userName)
+          val userId = UserId(RandomReadableString())
 
           val game1 = GameRecord(
             userId,
@@ -71,15 +65,12 @@ object GameRepoTest extends NarrowIntegrationSuite:
             )
           )
 
-          val fillData =
-            GameRecord.Table.putMany(game1, game2, game3)
-
           val expectedResult = Set(game1.toGame, game2.toGame, game3.toGame)
-          val fetchedDate    = GameRepo.list(user.identified(userId))
 
           for
-            _            <- fillData
-            actualResult <- fetchedDate
+            gameRepo     <- repo
+            _            <- GameRecord.Table.putMany(game1, game2, game3)
+            actualResult <- gameRepo.list(userId)
             result1      <- assertTrue(actualResult.toSet == expectedResult)
           yield result1
         }
@@ -89,10 +80,7 @@ object GameRepoTest extends NarrowIntegrationSuite:
           "should put all game into database even if there are more than 25 games in the query (this ia a limitation of the dynamodb, we should overcome that using streams under the hood)"
         ) {
 
-          val userName     = UserName(RandomReadableString())
-          val platformType = PlatformType.CHESS_DOT_COM
-          val userId       = UserId(RandomReadableString())
-          val user         = User(platformType.toPlatform, userName)
+          val userId = UserId(RandomReadableString())
 
           val games = ZIO.attempt {
             val gamesAsJson = JsonReader.parseResource("samples/2022-11.json")
@@ -101,8 +89,9 @@ object GameRepoTest extends NarrowIntegrationSuite:
           }
 
           for
+            gameRepo       <- repo
             expectedResult <- games
-            _              <- GameRepo.save(userId, expectedResult.toSeq)
+            _              <- gameRepo.save(userId, expectedResult.toSeq)
             actualResult   <- GameRecord.Table.list[GameRecord](userId).map(_.map(_.toGame).toSet)
             result1        <- assertTrue(actualResult.toSet == expectedResult)
           yield result1

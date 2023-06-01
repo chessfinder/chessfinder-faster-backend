@@ -1,85 +1,50 @@
 package chessfinder
 
-import zio.ZIOApp
-import zio.ZIOAppDefault
-
-import sttp.tapir.ztapir.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import zio.http.{ HttpApp, Request, Response }
-import zio.*
-import zio.http.{ App as _, * }
-import chessfinder.search.GameFinder
+import client.chess_com.ChessDotComClient
 import sttp.apispec.openapi.Server as OAServer
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.swagger.*
-import sttp.tapir.redoc.*
-import sttp.tapir.redoc.RedocUIOptions
 import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.redoc.*
 import sttp.tapir.server.*
-import chessfinder.search.BoardValidator
-import chessfinder.search.GameFetcher
-import chessfinder.search.Searcher
-import chessfinder.search.TaskStatusChecker
-import chessfinder.search.GameDownloader
-import chessfinder.search.ArchiveDownloader
-import chessfinder.client.chess_com.ChessDotComClient
-import sttp.tapir.serverless.aws.lambda.LambdaHandler
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
+import sttp.tapir.swagger.*
+import sttp.tapir.ztapir.*
 
 import cats.effect.unsafe.implicits.global
-import com.amazonaws.services.lambda.runtime.Context
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
-import java.io.{ InputStream, OutputStream }
 import cats.implicits.*
-import sttp.tapir.serverless.aws.lambda.zio.ZLambdaHandler
-import zio.Task
-import zio.{ Task, ZIO }
-import cats.effect.unsafe.implicits.global
-import com.amazonaws.services.lambda.runtime.Context
 import io.circe.generic.auto.*
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
-import java.io.{ InputStream, OutputStream }
-import sttp.tapir.serverless.aws.lambda.zio.ZLambdaHandler
-import sttp.tapir.ztapir.ZServerEndpoint
-import sttp.tapir.ztapir.RIOMonadError
-import zio.{ Runtime, Unsafe }
-import chessfinder.api.{ AsyncController, SyncController }
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler
-import zio.logging.*
-import chessfinder.client.ZLoggingAspect
-import zio.logging.backend.SLF4J
-import chessfinder.api.ApiVersion
-import chessfinder.search.repo.{ GameRepo, TaskRepo, UserRepo }
-import zio.aws.netty
-import zio.aws.core.config.AwsConfig
+import zio.http.{ App as _, * }
+import chessfinder.api.Controller
+import client.ZLoggingAspect
+import client.chess_com.dto.Archives
 import persistence.core.DefaultDynamoDBExecutor
-import zio.dynamodb.*
-import util.EndpointCombiner
-import zio.config.typesafe.TypesafeConfigProvider
-import sttp.tapir.serverless.aws.lambda.zio.AwsZServerOptions
-import search.queue.GameDownloadingProducer
 import pubsub.DownloadGameCommand
+import pubsub.core.Subscriber
+import search.*
+import search.entity.*
+import search.queue.*
+import search.repo.{ ArchiveRepo, GameRepo, TaskRepo, UserRepo }
+import sttp.tapir.serverless.aws.lambda.zio.{ AwsZServerOptions, ZLambdaHandler }
+import util.EndpointCombiner
 
-import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.RequestHandler
+import com.amazonaws.services.lambda.runtime.{ Context, RequestHandler, RequestStreamHandler }
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
-
-import search.*
-import queue.*
-import zio.ZIO
-import zio.sqs.producer.Producer
-import zio.sqs.producer.ProducerEvent
-import zio.Cause
-import search.entity.*
-import chessfinder.client.chess_com.dto.Archives
-import pubsub.DownloadGameCommand
-import zio.ZLayer
-import pubsub.core.Subscriber
+import io.circe.{ parser, Decoder }
+import zio.aws.core.config.AwsConfig
+import zio.aws.netty
+import zio.config.typesafe.TypesafeConfigProvider
+import zio.dynamodb.*
+import zio.http.{ HttpApp, Request, Response }
+import zio.logging.*
+import zio.logging.backend.SLF4J
+import zio.sqs.producer.{ Producer, ProducerEvent }
 import zio.stream.ZSink
-import io.circe.Decoder
-import io.circe.parser
+import zio.{ Cause, Runtime, Task, Unsafe, ZIO, ZIOApp, ZIOAppDefault, ZLayer, * }
+import zio.aws.sqs.Sqs
+import zio.aws.sqs.model.DeleteMessageRequest
+import java.io.{ InputStream, OutputStream }
 import scala.jdk.CollectionConverters.*
 
 object DownloadGameCommandHandler extends BaseMain with RequestHandler[SQSEvent, Unit]:
@@ -89,38 +54,52 @@ object DownloadGameCommandHandler extends BaseMain with RequestHandler[SQSEvent,
   private def process(input: SQSEvent, context: Context) =
     for
       messages <- ZIO.succeed(input.getRecords().asScala)
-      _        <- ZIO.logInfo(s"Recieved Messages ${messages.length}")
+      _        <- ZIO.logInfo(s"Recieved ${messages.length} DownloadGameCommand")
       _ <- ZIO.collectAll(
         messages.map(message =>
           processSingle(message, context) @@ aspect.MessageId.log(message.getMessageId())
         )
       )
-      _ <- ZIO.logInfo(s"Messages ${messages.length} are processed")
+      _ <- ZIO.logInfo(s"DownloadGameCommand in total ${messages.length} have been processed")
     yield ()
 
   private def processSingle(message: SQSMessage, context: Context) =
     val maybeCommand =
       Option(message.getBody)
         .toRight(
-          new RuntimeException(s"Body is missing in Event ${Option(message.getMessageId()).getOrElse("???")}")
+          new RuntimeException(
+            s"Body is missing in DownloadGameCommand ${Option(message.getMessageId()).getOrElse("???")}"
+          )
         )
         .flatMap(parser.parse)
         .flatMap(Decoder[DownloadGameCommand].decodeJson)
 
-    maybeCommand match
+    val processing = maybeCommand match
       case Right(command) =>
         val user =
           UserIdentified(command.platform.toPlatform, UserName(command.userName), UserId(command.userId))
-        val archives = Archives(Seq(command.resource))
-        val taskId   = TaskId(command.taskId)
-        GameDownloader
-          .download(user, archives, taskId)
+        val archiveId = ArchiveId(command.archiveId)
+        val taskId    = TaskId(command.taskId)
+        ZIO
+          .serviceWithZIO[GameDownloader](_.download(user, archiveId, taskId))
           .tapBoth(
-            err => ZIO.logError(s"$err for archive ${command.resource}"),
-            _ => ZIO.logInfo(s"Command ${command.resource} has succeessfully processed")
+            err => ZIO.logError(s"DownloadGameCommand has failed with $err for archive ${command.archiveId}"),
+            _ => ZIO.logInfo(s"DownloadGameCommand ${command.archiveId} has successfully processed")
           )
           .ignore
       case Left(err) => ZIO.logError(s"${err.getMessage} for archive ???")
+
+    val deleting = ZIO
+      .serviceWithZIO[Subscriber[DownloadGameCommand]](
+        _.acknowledge(Option(message.getReceiptHandle()).getOrElse(""))
+      )
+      .tapBoth(
+        err => ZIO.logError(s"DownloadGameCommand was not acknowledged"),
+        _ => ZIO.logInfo(s"DownloadGameCommand was acknowledged")
+      )
+      .ignore
+
+    processing *> deleting
 
   override def handleRequest(input: SQSEvent, context: Context): Unit =
     Unsafe.unsafe { implicit unsafe =>
@@ -131,12 +110,14 @@ object DownloadGameCommandHandler extends BaseMain with RequestHandler[SQSEvent,
             .provide(
               clientLayer,
               ChessDotComClient.Impl.layer,
-              UserRepo.Impl.layer,
               GameRepo.Impl.layer,
+              ArchiveRepo.Impl.layer,
               TaskRepo.Impl.layer,
               GameDownloader.Impl.layer,
               dynamodbLayer,
-              ZLayer.succeed(zio.Random.RandomLive)
+              sqsLayer,
+              DownloadGameCommand.Queue.layer,
+              ZLayer.succeed(zio.Clock.ClockLive)
             ) @@
             aspect.BuildInfo.log @@
             aspect.CorrelationId.log(context.getAwsRequestId())

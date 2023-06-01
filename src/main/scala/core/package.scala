@@ -3,6 +3,7 @@ package core
 
 import core.ProbabilisticPiece
 import core.ProbabilisticPiece.{ CertainPiece, PartialInformation }
+
 import chess.{ PieceMap, Pos }
 
 type ProbabilisticPieceMap = Map[Pos, ProbabilisticPiece]

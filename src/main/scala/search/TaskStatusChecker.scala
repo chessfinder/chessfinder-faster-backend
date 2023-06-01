@@ -1,40 +1,30 @@
 package chessfinder
 package search
 
-import search.entity.*
-import zio.ZLayer
-import zio.{ UIO, ZIO }
-import chessfinder.client.chess_com.ChessDotComClient
-import chessfinder.client.ClientError
-import search.BrokenLogic
-import sttp.model.Uri
-import chessfinder.client.chess_com.dto.Games
-import chessfinder.client.chess_com.dto.Archives
-import annotation.tailrec
-import chess.format.pgn.PgnStr
-import chessfinder.persistence.GameRecord
-import chessfinder.persistence.UserRecord
-import chessfinder.persistence.PlatformType
-import chessfinder.client.ClientError.ProfileNotFound
-import zio.dynamodb.*
-import search.repo.*
-import api.ApiVersion
-import izumi.reflect.Tag
-import chessfinder.api.TaskResponse
-import chessfinder.api.TaskStatusResponse
+import api.{ TaskResponse, TaskStatusResponse }
 import aspect.Span
-import zio.ZIOAspect
+import client.ClientError
+import client.ClientError.ProfileNotFound
+import client.chess_com.ChessDotComClient
+import client.chess_com.dto.{ Archives, Games }
+import persistence.{ GameRecord, PlatformType, UserRecord }
+import search.BrokenLogic
+import search.entity.*
+import search.repo.*
+import sttp.model.Uri
+
+import chess.format.pgn.PgnStr
+import izumi.reflect.Tag
+import zio.dynamodb.*
+import zio.{ UIO, ZIO, ZIOAspect, ZLayer }
+
+import scala.annotation.tailrec
 
 trait TaskStatusChecker:
 
   def check(taskId: TaskId): φ[TaskStatusResponse]
 
 object TaskStatusChecker:
-
-  import zio.logging.fileAsyncJsonLogger
-
-  def check(taskId: TaskId): ψ[TaskStatusChecker, TaskStatusResponse] =
-    ZIO.serviceWithZIO[TaskStatusChecker](_.check(taskId)) @@ Span.log
 
   class Impl(taskRepo: TaskRepo) extends TaskStatusChecker:
 

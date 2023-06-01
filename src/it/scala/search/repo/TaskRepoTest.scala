@@ -1,40 +1,37 @@
 package chessfinder
 package search.repo
 
-import zio.test.*
-import zio.*
-import client.chess_com.ChessDotComClient
-import chessfinder.testkit.wiremock.ClientBackdoor
-import sttp.model.Uri
-import client.chess_com.dto.*
 import client.*
 import client.ClientError.*
-import search.entity.UserName
-import scala.util.Success
-import zio.http.Client
-import sttp.model.Uri.UriContext
-import com.typesafe.config.ConfigFactory
-import scala.util.Try
-import zio.ZLayer
-import search.entity.*
-import testkit.parser.JsonReader
-import chessfinder.client.ClientError.ArchiveNotFound
-import testkit.NarrowIntegrationSuite
-import zio.aws.netty
-import zio.aws.core.config.AwsConfig
+import client.chess_com.ChessDotComClient
+import client.chess_com.dto.*
+import persistence.{ GameRecord, PlatformType, TaskRecord, UserRecord }
 import persistence.core.DefaultDynamoDBExecutor
-import zio.dynamodb.*
-import chessfinder.persistence.PlatformType
-import chessfinder.persistence.UserRecord
-import persistence.GameRecord
+import search.BrokenLogic
+import search.entity.*
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
+import testkit.NarrowIntegrationSuite
+import testkit.parser.JsonReader
+import testkit.wiremock.ClientBackdoor
 import util.UriParser
+
 import chess.format.pgn.PgnStr
+import com.typesafe.config.ConfigFactory
 import io.circe.*
+import zio.*
+import zio.aws.core.config.AwsConfig
+import zio.aws.netty
+import zio.dynamodb.*
+import zio.http.Client
+import zio.test.*
+
 import java.util.UUID
-import chessfinder.persistence.TaskRecord
-import chessfinder.search.BrokenLogic
+import scala.util.{ Success, Try }
 
 object TaskRepoTest extends NarrowIntegrationSuite:
+
+  val repo = ZIO.service[TaskRepo]
   def spec =
     suite("TaskRepo")(
       suite("initiate")(
@@ -43,10 +40,12 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val expectedResult = TaskRecord(taskId, 15)
 
           for
-            _            <- TaskRepo.initiate(taskId, 15)
-            actualResult <- TaskRecord.Table.get[TaskRecord](taskId)
-            result       <- assertTrue(actualResult == Right(expectedResult))
-          yield result
+            taskRepo       <- repo
+            returnedResult <- taskRepo.initiate(taskId, 15)
+            actualResult   <- TaskRecord.Table.get[TaskRecord](taskId)
+            result1        <- assertTrue(actualResult == Right(expectedResult))
+            result2        <- assertTrue(actualResult.map(ar => ar.toStatus) == Right(returnedResult))
+          yield result1 && result2
         }
       ),
       suite("get")(
@@ -56,8 +55,9 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val task           = TaskRecord(taskId, 1, 2, 3)
           val expectedResult = task.toStatus
           for
+            taskRepo     <- repo
             _            <- TaskRecord.Table.put(task)
-            actualResult <- TaskRepo.get(taskId)
+            actualResult <- taskRepo.get(taskId)
             result       <- assertTrue(actualResult == expectedResult)
           yield result
         },
@@ -67,7 +67,8 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val expectedResult = BrokenLogic.TaskNotFound(taskId)
 
           for
-            actualResult <- TaskRepo.get(taskId).either
+            taskRepo     <- repo
+            actualResult <- taskRepo.get(taskId).either
             result       <- assertTrue(actualResult == Left(expectedResult))
           yield result
         }
@@ -80,8 +81,9 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val expectedResult = TaskRecord(taskId, failed = 1, succeed = 3, pending = 2)
 
           for
+            taskRepo     <- repo
             _            <- TaskRecord.Table.put(initialTask)
-            _            <- TaskRepo.successIncrement(taskId)
+            _            <- taskRepo.successIncrement(taskId)
             actualResult <- TaskRecord.Table.get[TaskRecord](taskId)
             result       <- assertTrue(actualResult == Right(expectedResult))
           yield result
@@ -92,8 +94,9 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val task           = TaskRecord(taskId, succeed = 1, failed = 2, done = 3, pending = 7, total = 1)
           val extectedResult = BrokenLogic.TaskProgressOverflown(taskId)
           for
+            taskRepo     <- repo
             _            <- TaskRecord.Table.put(task)
-            actualResult <- TaskRepo.successIncrement(taskId).either
+            actualResult <- taskRepo.successIncrement(taskId).either
             result       <- assertTrue(actualResult == Left(extectedResult))
           yield result
         },
@@ -103,7 +106,8 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val expectedResult = BrokenLogic.TaskNotFound(taskId)
 
           for
-            actualResult <- TaskRepo.successIncrement(taskId).either
+            taskRepo     <- repo
+            actualResult <- taskRepo.successIncrement(taskId).either
             result       <- assertTrue(actualResult == Left(expectedResult))
           yield result
         }
@@ -116,8 +120,9 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val expectedResult = TaskRecord(taskId, failed = 2, succeed = 2, pending = 2)
 
           for
+            taskRepo     <- repo
             _            <- TaskRecord.Table.put(initialTask)
-            _            <- TaskRepo.failureIncrement(taskId)
+            _            <- taskRepo.failureIncrement(taskId)
             actualResult <- TaskRecord.Table.get[TaskRecord](taskId)
             result       <- assertTrue(actualResult == Right(expectedResult))
           yield result
@@ -128,8 +133,9 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val task           = TaskRecord(taskId, succeed = 1, failed = 2, done = 3, pending = 7, total = 1)
           val extectedResult = BrokenLogic.TaskProgressOverflown(taskId)
           for
+            taskRepo     <- repo
             _            <- TaskRecord.Table.put(task)
-            actualResult <- TaskRepo.failureIncrement(taskId).either
+            actualResult <- taskRepo.failureIncrement(taskId).either
             result       <- assertTrue(actualResult == Left(extectedResult))
           yield result
         },
@@ -139,7 +145,8 @@ object TaskRepoTest extends NarrowIntegrationSuite:
           val expectedResult = BrokenLogic.TaskNotFound(taskId)
 
           for
-            actualResult <- TaskRepo.failureIncrement(taskId).either
+            taskRepo     <- repo
+            actualResult <- taskRepo.failureIncrement(taskId).either
             result       <- assertTrue(actualResult == Left(expectedResult))
           yield result
         }

@@ -1,20 +1,18 @@
 package chessfinder
 package core
 
-import org.scalacheck.Gen
+import core.Arbitraries.given
+import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import search.*
+
 import cats.syntax.all.*
-import munit.FunSuite
-import munit.ScalaCheckSuite
-import org.scalacheck.Prop
-import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
 import chess.{ Piece, Pos }
-import Arbitraries.given
-import chessfinder.search.*
 import munit.Clue.generate
-import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import munit.{ FunSuite, ScalaCheckSuite }
+import org.scalacheck.{ Arbitrary, Gen, Prop }
 
 class ProbabilisticPieceTest extends ScalaCheckSuite:
 

@@ -1,12 +1,13 @@
 package chessfinder
 package core
 
+import core.β.Ext.*
+
 import cats.implicits.*
 import cats.kernel.Monoid
-import ornicar.scalalib.zeros.given_Zero_Option
-import β.Ext.*
 import chess.Pos
 import chess.format.pgn.PgnStr
+import ornicar.scalalib.zeros.given_Zero_Option
 
 object SearchFacade:
 

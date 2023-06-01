@@ -1,12 +1,12 @@
 package chessfinder
 package client.chess_com.dto
 
-import munit.*
-import munit.Clue.generate
-import io.circe.parser
-import io.circe.Decoder
 import sttp.model.Uri
 import sttp.model.Uri.UriContext
+
+import io.circe.{ parser, Decoder }
+import munit.*
+import munit.Clue.generate
 
 class ArchivesTest extends FunSuite:
   test("Archives should be parsed correctly") {

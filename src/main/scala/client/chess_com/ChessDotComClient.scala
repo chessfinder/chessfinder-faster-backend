@@ -1,28 +1,20 @@
 package chessfinder
 package client.chess_com
 
-import chessfinder.search.entity.UserName
-import sttp.model.Uri
-import zio.ZIO
-import zio.ZLayer
-import client.ClientExt
-import client.chess_com.dto.*
-import zio.http.Client
-import zio.http.Request
-import zio.http.URL
-import client.{ κ, μ }
-import client.ClientError.*
-import io.circe.Decoder
-import sttp.model.Uri
-import io.circe.{ Decoder, Encoder }
-import io.circe.generic.semiauto.*
-import util.UriCodec.given
-import zio.Config
-import zio.http.model.Status
-import chessfinder.client.ClientError
-import zio.config.magnolia.deriveConfig
 import aspect.Span
-import zio.Cause
+import client.ClientError.*
+import client.chess_com.dto.*
+import client.{ κ, μ, ClientError, ClientExt }
+import search.entity.UserName
+import sttp.model.Uri
+import util.UriCodec.given
+
+import io.circe.generic.semiauto.*
+import io.circe.{ Decoder, Encoder }
+import zio.{ Cause, Config, ZIO, ZLayer }
+import zio.config.magnolia.deriveConfig
+import zio.http.{ Client, Request, URL }
+import zio.http.model.Status
 
 trait ChessDotComClient:
 

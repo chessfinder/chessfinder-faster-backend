@@ -1,19 +1,14 @@
 package chessfinder
 package search.repo
 
-import chessfinder.search.entity.User
-import chessfinder.persistence.UserRecord
-import search.entity.*
-import zio.{ ZIO, ZLayer }
-import zio.dynamodb.DynamoDBExecutor
-import persistence.PlatformType
-import search.*
-import chessfinder.persistence.TaskRecord
-import chessfinder.api.TaskStatusResponse
-import chessfinder.api.TaskResponse
-import zio.dynamodb.DynamoDBError
-import zio.Cause
+import api.{ TaskResponse, TaskStatusResponse }
 import aspect.Span
+import persistence.{ PlatformType, TaskRecord, UserRecord }
+import search.*
+import search.entity.*
+
+import zio.dynamodb.{ DynamoDBError, DynamoDBExecutor }
+import zio.{ Cause, ZIO, ZLayer }
 
 trait TaskRepo:
   def get(taskId: TaskId): φ[TaskStatusResponse]
@@ -22,21 +17,9 @@ trait TaskRepo:
 
   def failureIncrement(taskId: TaskId): φ[Unit]
 
-  def initiate(taskId: TaskId, total: Int): φ[Unit]
+  def initiate(taskId: TaskId, total: Int): φ[TaskStatusResponse]
 
 object TaskRepo:
-
-  def get(taskId: TaskId): ψ[TaskRepo, TaskStatusResponse] =
-    ψ.serviceWithZIO[TaskRepo](_.get(taskId))
-
-  def successIncrement(taskId: TaskId): ψ[TaskRepo, Unit] =
-    ψ.serviceWithZIO[TaskRepo](_.successIncrement(taskId))
-
-  def failureIncrement(taskId: TaskId): ψ[TaskRepo, Unit] =
-    ψ.serviceWithZIO[TaskRepo](_.failureIncrement(taskId))
-
-  def initiate(taskId: TaskId, total: Int): ψ[TaskRepo, Unit] =
-    ψ.serviceWithZIO[TaskRepo](_.initiate(taskId, total))
 
   class Impl(executor: DynamoDBExecutor) extends TaskRepo:
     private val layer = ZLayer.succeed(executor)
@@ -49,7 +32,7 @@ object TaskRepo:
         for
           task <- getTaskRecord(taskId)
           _ <-
-            if task.succeed < task.total
+            if task.done < task.total
             then putTaskRecord(task.incrementSuccess)
             else ZIO.fail(BrokenLogic.TaskProgressOverflown(taskId))
         yield ()
@@ -60,14 +43,15 @@ object TaskRepo:
         for
           task <- getTaskRecord(taskId)
           _ <-
-            if task.succeed < task.total
+            if task.done < task.total
             then putTaskRecord(task.incrementFailure)
             else ZIO.fail(BrokenLogic.TaskProgressOverflown(taskId))
         yield ()
       eff @@ Span.log
 
-    override def initiate(taskId: TaskId, total: Int): φ[Unit] =
-      putTaskRecord(TaskRecord(taskId, total)) @@ Span.log
+    override def initiate(taskId: TaskId, total: Int): φ[TaskStatusResponse] =
+      val taskRecord = TaskRecord(taskId, total)
+      putTaskRecord(taskRecord).map(_ => taskRecord.toStatus)
 
     private def getTaskRecord(taskId: TaskId): φ[TaskRecord] =
       val eff = TaskRecord.Table

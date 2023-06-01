@@ -50,6 +50,34 @@ Resources:
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 
+  ArchivesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: archives
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: archive_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: archive_id
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  SearchesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: searches
+      AttributeDefinitions:
+        - AttributeName: search_request_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: search_request_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
 Outputs:
   UsersTableName:
     Description: "Users Table Name"
@@ -60,3 +88,9 @@ Outputs:
   GamesTableName:
     Description: "Games Table Name"
     Value: !Ref GamesTable
+  ArchivesTableName:
+    Description: "Archives Table Name"
+    Value: !Ref ArchivesTable
+  SearchesTableName:
+    Description: "Searches Table Name"
+    Value: !Ref SearchesTable

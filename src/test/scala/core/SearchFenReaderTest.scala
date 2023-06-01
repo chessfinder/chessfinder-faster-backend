@@ -1,23 +1,19 @@
 package chessfinder
 package core
 
+import core.Arbitraries.given
+import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import core.SearchFen
+import search.*
+import util.{ βUnsafeExt, DescriptionHelper }
+
 import cats.syntax.all.*
-import munit.FunSuite
-import munit.ScalaCheckSuite
-import org.scalacheck.Prop
-import org.scalacheck.Arbitrary
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
-
-import core.Arbitraries.given
-import munit.ScalaCheckSuite
-import chessfinder.search.*
 import munit.Clue.generate
-import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
-import util.DescriptionHelper
-import util.{ βUnsafeExt, DescriptionHelper }
-import core.SearchFen
+import munit.{ FunSuite, ScalaCheckSuite }
+import org.scalacheck.{ Arbitrary, Prop }
 
 class SearchFenTest extends FunSuite with DescriptionHelper:
 

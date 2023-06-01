@@ -1,33 +1,27 @@
 package chessfinder
 package search
 
-import search.entity.*
-import zio.ZLayer
-import zio.{ UIO, ZIO }
-import chessfinder.client.chess_com.ChessDotComClient
-import chessfinder.client.ClientError
-import search.BrokenLogic
-import sttp.model.Uri
-import chessfinder.client.chess_com.dto.Games
-import chessfinder.client.chess_com.dto.Archives
-import annotation.tailrec
-import chess.format.pgn.PgnStr
-import chessfinder.persistence.GameRecord
-import chessfinder.persistence.UserRecord
-import chessfinder.persistence.PlatformType
-import chessfinder.client.ClientError.ProfileNotFound
-import zio.dynamodb.*
-import search.repo.*
-import api.ApiVersion
-import izumi.reflect.Tag
-import chessfinder.api.TaskResponse
-import chessfinder.search.BrokenLogic.ServiceOverloaded
-import zio.Random
-import chessfinder.api.TaskStatusResponse
-import chessfinder.search.BrokenLogic.NoGameAvaliable
+import api.{ TaskResponse, TaskStatusResponse }
 import aspect.Span
+import client.ClientError
+import client.ClientError.ProfileNotFound
+import client.chess_com.ChessDotComClient
+import client.chess_com.dto.{ Archives, Games }
+import persistence.{ GameRecord, PlatformType, UserRecord }
+import pubsub.DownloadGameCommand
+import search.BrokenLogic
+import search.BrokenLogic.{ NoGameAvailable, ServiceOverloaded }
+import search.entity.*
 import search.queue.GameDownloadingProducer
-import chessfinder.pubsub.DownloadGameCommand
+import search.repo.*
+import sttp.model.Uri
+
+import chess.format.pgn.PgnStr
+import izumi.reflect.Tag
+import zio.dynamodb.*
+import zio.{ Random, UIO, ZIO, ZLayer }
+
+import scala.annotation.tailrec
 
 trait ArchiveDownloader:
 
@@ -35,12 +29,10 @@ trait ArchiveDownloader:
 
 object ArchiveDownloader:
 
-  def cache(user: User): ψ[ArchiveDownloader, TaskId] =
-    ZIO.serviceWithZIO[ArchiveDownloader](_.cache(user))
-
   class Impl(
       client: ChessDotComClient,
       userRepo: UserRepo,
+      archiveRepo: ArchiveRepo,
       taskRepo: TaskRepo,
       gameDownloadingCommandProducer: GameDownloadingProducer,
       random: Random
@@ -61,16 +53,30 @@ object ArchiveDownloader:
           case ClientError.ProfileNotFound(userName) => BrokenLogic.ProfileNotFound(user)
           case _                                     => BrokenLogic.ServiceOverloaded
         }
-        .filterOrFail(_.archives.nonEmpty)(NoGameAvaliable(user))
+        .filterOrFail(_.archives.nonEmpty)(NoGameAvailable(user))
 
       for
         userIdentified <- gettingProfile
         _              <- userRepo.save(userIdentified)
-        archives       <- gettingArchives
-        taskId         <- random.nextUUID.map(uuid => TaskId(uuid))
-        _              <- taskRepo.initiate(taskId, archives.archives.length)
-        commands = archives.archives.map(archive => DownloadGameCommand(userIdentified, archive, taskId))
-        _ <- gameDownloadingCommandProducer.publish(userIdentified, archives, taskId)
+        allArchives    <- gettingArchives
+
+        cachedArchiveResults <- archiveRepo.getAll(userIdentified.userId)
+        cachedArchives = cachedArchiveResults.map(_.resource).toSet
+        fullyDownloadedArchives = cachedArchiveResults
+          .filter(_.status == ArchiveStatus.FullyDownloaded)
+          .map(_.resource)
+          .toSet
+        shouldBeDownloadedArchives = allArchives.archives.filterNot(resource =>
+          fullyDownloadedArchives.contains(resource)
+        )
+        missingArchives = allArchives.archives.filterNot(resource => cachedArchives.contains(resource))
+        _      <- archiveRepo.initiate(userIdentified.userId, missingArchives)
+        taskId <- random.nextUUID.map(uuid => TaskId(uuid))
+        _      <- taskRepo.initiate(taskId, shouldBeDownloadedArchives.length)
+        shouldBeDownloadedArchivesIds = shouldBeDownloadedArchives.map(resource =>
+          ArchiveId(resource.toString)
+        )
+        _ <- gameDownloadingCommandProducer.publish(userIdentified, shouldBeDownloadedArchivesIds, taskId)
       yield taskId
 
   @Deprecated
@@ -80,7 +86,8 @@ object ArchiveDownloader:
         client                          <- ZIO.service[ChessDotComClient]
         userRepo                        <- ZIO.service[UserRepo]
         taskRepo                        <- ZIO.service[TaskRepo]
+        archiveRepo                     <- ZIO.service[ArchiveRepo]
         gameDownloadingCommandPublisher <- ZIO.service[GameDownloadingProducer]
         random                          <- ZIO.service[Random]
-      yield Impl(client, userRepo, taskRepo, gameDownloadingCommandPublisher, random)
+      yield Impl(client, userRepo, archiveRepo, taskRepo, gameDownloadingCommandPublisher, random)
     }

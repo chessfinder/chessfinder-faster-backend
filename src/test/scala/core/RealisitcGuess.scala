@@ -1,9 +1,9 @@
 package chessfinder
 package core
 
-import org.scalacheck.{ Arbitrary, Gen }
-import chess.bitboard.{ Bitboard, Board }
 import chess.Color
+import chess.bitboard.{ Bitboard, Board }
+import org.scalacheck.{ Arbitrary, Gen }
 
 case class RealisitcGuess(probabilisticBoard: ProbabilisticBoard)
 object RealisitcGuess:

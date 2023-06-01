@@ -1,31 +1,26 @@
 package chessfinder
 package search.queue
 
-import search.*
-import queue.*
-import zio.ZIO
-import zio.sqs.producer.Producer
-import zio.sqs.producer.ProducerEvent
-import zio.Cause
-import search.entity.*
-import chessfinder.client.chess_com.dto.Archives
-import pubsub.core.Publisher
+import client.chess_com.dto.Archives
 import pubsub.DownloadGameCommand
-import zio.ZLayer
+import pubsub.core.Publisher
+import search.*
+import search.entity.*
+import search.queue.*
+
+import zio.{ Cause, ZIO, ZLayer }
+import zio.sqs.producer.{ Producer, ProducerEvent }
 
 trait GameDownloadingProducer:
 
-  def publish(user: UserIdentified, archives: Archives, taskId: TaskId): φ[Unit]
+  def publish(user: UserIdentified, archives: Seq[ArchiveId], taskId: TaskId): φ[Unit]
 
 object GameDownloadingProducer:
 
-  def publish(user: UserIdentified, archives: Archives, taskId: TaskId): ψ[GameDownloadingProducer, Unit] =
-    ZIO.serviceWithZIO[GameDownloadingProducer](_.publish(user, archives, taskId))
-
   class Impl(publisher: Publisher[DownloadGameCommand]) extends GameDownloadingProducer:
 
-    override def publish(user: UserIdentified, archives: Archives, taskId: TaskId): φ[Unit] =
-      val commands = archives.archives.map(archive => DownloadGameCommand(user, archive, taskId))
+    override def publish(user: UserIdentified, archives: Seq[ArchiveId], taskId: TaskId): φ[Unit] =
+      val commands = archives.map(archive => DownloadGameCommand(user, archive, taskId))
       ZIO.scoped {
         publisher
           .publish(commands.map(_.command))

@@ -1,39 +1,36 @@
 package chessfinder
 package search.repo
 
-import zio.test.*
-import zio.*
-import client.chess_com.ChessDotComClient
-import chessfinder.testkit.wiremock.ClientBackdoor
-import sttp.model.Uri
-import client.chess_com.dto.*
 import client.*
 import client.ClientError.*
-import search.entity.UserName
-import scala.util.Success
-import zio.http.Client
-import sttp.model.Uri.UriContext
-import com.typesafe.config.ConfigFactory
-import scala.util.Try
-import zio.ZLayer
-import search.entity.*
-import testkit.parser.JsonReader
-import testkit.NarrowIntegrationSuite
-import zio.aws.netty
-import zio.aws.core.config.AwsConfig
+import client.chess_com.ChessDotComClient
+import client.chess_com.dto.*
+import persistence.{ GameRecord, PlatformType, UserRecord }
 import persistence.core.DefaultDynamoDBExecutor
-import zio.dynamodb.*
-import chessfinder.persistence.PlatformType
-import chessfinder.persistence.UserRecord
-import persistence.GameRecord
-import util.UriParser
+import search.BrokenLogic
+import search.entity.*
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
+import testkit.NarrowIntegrationSuite
+import testkit.parser.JsonReader
+import testkit.wiremock.ClientBackdoor
+import util.{ RandomReadableString, UriParser }
+
 import chess.format.pgn.PgnStr
+import com.typesafe.config.ConfigFactory
 import io.circe.*
-import chessfinder.util.RandomReadableString
-import chessfinder.search.BrokenLogic
+import zio.*
+import zio.aws.core.config.AwsConfig
+import zio.aws.netty
+import zio.dynamodb.*
+import zio.http.Client
+import zio.test.*
+
+import scala.util.{ Success, Try }
 
 object UserRepoTest extends NarrowIntegrationSuite:
 
+  val repo = ZIO.service[UserRepo]
   def spec =
     suite("UserRepo")(
       suite("save")(
@@ -47,7 +44,8 @@ object UserRepoTest extends NarrowIntegrationSuite:
             UserRecord(platform = PlatformType.CHESS_DOT_COM, user_name = userName, user_id = userId)
 
           for
-            _            <- UserRepo.save(userIdentified)
+            userRepo     <- repo
+            _            <- userRepo.save(userIdentified)
             actualResult <- UserRecord.Table.get[UserRecord](userName, PlatformType.CHESS_DOT_COM)
             result       <- assertTrue(actualResult == Right(expectedResult))
           yield result
@@ -64,8 +62,9 @@ object UserRepoTest extends NarrowIntegrationSuite:
           val expectedResult = UserIdentified(ChessPlatform.ChessDotCom, userName, userId)
 
           for
+            userRepo     <- repo
             _            <- UserRecord.Table.put(record)
-            actualResult <- UserRepo.get(user)
+            actualResult <- userRepo.get(user)
             result       <- assertTrue(actualResult == expectedResult)
           yield result
         },
@@ -76,7 +75,8 @@ object UserRepoTest extends NarrowIntegrationSuite:
           val expectedResult = BrokenLogic.ProfileIsNotCached(user)
 
           for
-            actualResult <- UserRepo.get(user).either
+            userRepo     <- repo
+            actualResult <- userRepo.get(user).either
             result       <- assertTrue(actualResult == Left(expectedResult))
           yield result
         }

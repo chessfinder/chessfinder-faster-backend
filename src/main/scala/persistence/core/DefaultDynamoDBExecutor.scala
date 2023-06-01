@@ -1,12 +1,12 @@
 package chessfinder
 package persistence.core
 
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import zio.*
+import zio.aws.core.config.AwsConfig
+import zio.aws.core.httpclient.HttpClient
 import zio.aws.dynamodb.DynamoDb
 import zio.aws.netty
-import zio.aws.core.httpclient.HttpClient
-import zio.aws.core.config.AwsConfig
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import zio.dynamodb.*
 
 object DefaultDynamoDBExecutor:

@@ -1,14 +1,12 @@
 package chessfinder
 package client
 
-import io.circe.{ Decoder, Encoder }
-
-import io.circe.parser
-import zio.Task
-import zio.http.ZClient.ClientLive
+import io.circe.{ parser, Decoder, Encoder }
+import zio.{ Task, ZIO }
 import zio.http.Body
+import zio.http.ZClient.ClientLive
+
 import java.nio.charset.StandardCharsets.UTF_8
-import zio.ZIO
 
 object ClientExt:
   extension [T](dto: T)(using Encoder[T])

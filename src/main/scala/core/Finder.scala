@@ -1,14 +1,13 @@
 package chessfinder
 package core
 
+import core.β.Ext.*
+
 import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }
-
-import chess.{ Drop, Game, Move }
-import chess.{ MoveOrDrop, Replay, Situation }
-import chess.variant.Variant
 import chess.format.Uci
-import β.Ext.*
+import chess.variant.Variant
+import chess.*
 
 object Finder:
 

@@ -1,20 +1,18 @@
 package chessfinder
 package client.chess_com
 
-import munit.*
-import munit.Clue.generate
-import io.circe.parser
-import io.circe.Decoder
+import client.chess_com.ChessDotComClient
 import sttp.model.Uri
 import sttp.model.Uri.UriContext
 import testkit.parser.JsonReader
-import zio.ConfigProvider
+import util.ConfigExtension.*
+
+import io.circe.{ parser, Decoder }
+import munit.*
+import munit.Clue.generate
+import zio.*
 import zio.config.*
 import zio.config.typesafe.*
-import client.chess_com.ChessDotComClient
-import munit.*
-import zio.*
-import util.ConfigExtension.*
 
 class ChessDotComClientConfigurationTest extends ZSuite:
   testZ("Profile should be parsed correctly") {

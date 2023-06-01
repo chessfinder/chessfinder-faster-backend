@@ -1,18 +1,16 @@
 package chessfinder
 package api
 
-import munit.*
-import munit.Clue.generate
-import io.circe.parser
-import io.circe.Decoder
+import api.{ Platform, SearchRequest }
 import sttp.model.Uri
 import sttp.model.Uri.UriContext
-import chessfinder.api.FindRequest
-import chessfinder.api.Platform
-import zio.json.JsonDecoder
-import api.Platform
 
-class FindRequestTest extends FunSuite:
+import io.circe.{ parser, Decoder }
+import munit.*
+import munit.Clue.generate
+import zio.json.JsonDecoder
+
+class SearchRequestTest extends FunSuite:
   test("FindRequest should be parsed correctly") {
     val json = parser
       .parse(
@@ -25,13 +23,13 @@ class FindRequestTest extends FunSuite:
       )
       .toTry
       .get
-    val expectedResult = FindRequest(
+    val expectedResult = SearchRequest(
       user = "tigran-c-137",
       platform = Platform.`chess.com`,
       board = "a stupid thing"
     )
 
-    val actualResult = Decoder[FindRequest].decodeJson(json).toTry.get
+    val actualResult = Decoder[SearchRequest].decodeJson(json).toTry.get
     assert(expectedResult == actualResult)
   }
 
@@ -48,12 +46,12 @@ class FindRequestTest extends FunSuite:
       .toTry
       .get
       .noSpaces
-    val expectedResult = FindRequest(
+    val expectedResult = SearchRequest(
       user = "tigran-c-137",
       platform = Platform.`chess.com`,
       board = "a stupid thing"
     )
 
-    val actualResult = JsonDecoder[FindRequest].decodeJson(json).toOption.get
+    val actualResult = JsonDecoder[SearchRequest].decodeJson(json).toOption.get
     assert(expectedResult == actualResult)
   }

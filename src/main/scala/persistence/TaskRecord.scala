@@ -1,11 +1,11 @@
 package chessfinder
 package persistence
 
-import persistence.core.DynamoTable
-import persistence.core.DynamoTypeMappers
-import zio.schema.{ DeriveSchema, Schema }
+import api.TaskStatusResponse
+import persistence.core.{ DynamoTable, DynamoTypeMappers }
 import search.entity.TaskId
-import chessfinder.api.TaskStatusResponse
+
+import zio.schema.{ DeriveSchema, Schema }
 
 case class TaskRecord(
     task_id: TaskId,

@@ -1,32 +1,22 @@
 package chessfinder
 package core
 
-import munit.FunSuite
-import munit.ScalaCheckSuite
-import org.scalacheck.Prop
-import org.scalacheck.Arbitrary
-import Arbitraries.given
-import munit.ScalaCheckSuite
-import munit.Clue.generate
+import core.Arbitraries.given
+import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
+import core.{ β, SearchFen, * }
+import core.β.Ext.*
+import util.{ βUnsafeExt, DescriptionHelper }
 
-import chess.bitboard.Board
-import chess.bitboard.Bitboard.*
-
-import chess.format.Fen
-import chess.format.pgn.Reader
-import chess.format.pgn.PgnStr
-import chess.format.pgn.Reader.Result.Complete
-import chess.format.pgn.Reader.Result.Incomplete
 import chess.ErrorStr.value
 import chess.Replay
-
-import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
-import core.β.Ext.*
-import core.β
-import util.{ βUnsafeExt, DescriptionHelper }
-import core.*
-
-import core.SearchFen
+import chess.bitboard.Bitboard.*
+import chess.bitboard.Board
+import chess.format.Fen
+import chess.format.pgn.{ PgnStr, Reader }
+import chess.format.pgn.Reader.Result.{ Complete, Incomplete }
+import munit.Clue.generate
+import munit.{ FunSuite, ScalaCheckSuite }
+import org.scalacheck.{ Arbitrary, Prop }
 class FinderTest extends FunSuite with βUnsafeExt with DescriptionHelper:
 
   test("""

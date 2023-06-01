@@ -2,10 +2,11 @@ package chessfinder
 package persistence.core
 
 import software.amazon.awssdk.regions.Region
-import java.net.URI
 import zio.Config
 import zio.config.*
 import zio.config.magnolia.deriveConfig
+
+import java.net.URI
 
 case class DynamoDbConfiguration(
     region: String,

@@ -1,9 +1,10 @@
 package chessfinder
 package client
 
-import chessfinder.search.entity.UserName
-import zio.{ IO, ZIO }
+import search.entity.UserName
 import sttp.model.Uri
+
+import zio.{ IO, ZIO }
 
 trait ClientError(val msg: String)
 

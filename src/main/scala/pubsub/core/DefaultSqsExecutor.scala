@@ -1,20 +1,21 @@
 package chessfinder
 package pubsub.core
 
-import zio.aws.core.config.CommonAwsConfig
-import zio.aws.sqs.Sqs
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
+import software.amazon.awssdk.auth.credentials.{
+  AwsBasicCredentials,
+  DefaultCredentialsProvider,
+  StaticCredentialsProvider
+}
 import software.amazon.awssdk.regions.Region
+import zio.*
+import zio.aws.core.config.{ AwsConfig, CommonAwsConfig }
+import zio.aws.core.httpclient.HttpClient
+import zio.aws.dynamodb.DynamoDb
+import zio.aws.netty
+import zio.aws.sqs.Sqs
 import zio.sqs.producer.{ Producer, ProducerEvent }
 import zio.sqs.serialization.Serializer
 import zio.sqs.{ SqsStream, SqsStreamSettings, Utils }
-import zio.*
-import zio.*
-import zio.aws.dynamodb.DynamoDb
-import zio.aws.netty
-import zio.aws.core.httpclient.HttpClient
-import zio.aws.core.config.AwsConfig
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 
 object DefaultSqsExecutor:
 

@@ -1,8 +1,8 @@
 package chessfinder
 package core
 
-import org.scalacheck.{ Arbitrary, Gen }
 import chess.bitboard.{ Bitboard, Board }
+import org.scalacheck.{ Arbitrary, Gen }
 
 object Arbitraries:
 

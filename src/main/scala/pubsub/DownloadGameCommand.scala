@@ -1,30 +1,29 @@
 package chessfinder
 package pubsub
 
-import search.entity.*
 import persistence.PlatformType
+import pubsub.core.PubSub
+import search.entity.*
 import sttp.model.Uri
+
+import com.typesafe.config.ConfigFactory
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
-import zio.sqs.producer.ProducerEvent
-import zio.sqs.serialization.Serializer
-import zio.aws.sqs.model.MessageAttributeValue
-import java.util.UUID
-import pubsub.core.PubSub
-import zio.Config
-import zio.config.*
-import zio.config.magnolia.deriveConfig
-import zio.ZLayer
-import zio.ZIO
 import zio.*
 import zio.aws.sqs.*
-import com.typesafe.config.ConfigFactory
+import zio.aws.sqs.model.MessageAttributeValue
+import zio.config.*
+import zio.config.magnolia.deriveConfig
+import zio.sqs.producer.ProducerEvent
+import zio.sqs.serialization.Serializer
+
+import java.util.UUID
 
 final case class DownloadGameCommand(
     userName: String,
     userId: String,
     platform: Platform,
-    resource: Uri,
+    archiveId: String,
     taskId: UUID
 ):
   def command: ProducerEvent[DownloadGameCommand] =
@@ -32,7 +31,7 @@ final case class DownloadGameCommand(
       data = this,
       attributes = Map.empty[String, MessageAttributeValue],
       groupId = Some(userId),
-      deduplicationId = Some(resource.toString),
+      deduplicationId = Some(archiveId),
       delay = None
     )
 
@@ -40,12 +39,12 @@ object DownloadGameCommand:
   import chessfinder.util.UriCodec.given
   given Codec[DownloadGameCommand] = deriveCodec[DownloadGameCommand]
 
-  def apply(user: UserIdentified, archive: Uri, taskId: TaskId): DownloadGameCommand =
+  def apply(user: UserIdentified, archiveId: ArchiveId, taskId: TaskId): DownloadGameCommand =
     DownloadGameCommand(
       user.userName.value,
       user.userId.value,
       Platform.fromPlatform(user.platform),
-      archive,
+      archiveId.value,
       taskId.value
     )
 
