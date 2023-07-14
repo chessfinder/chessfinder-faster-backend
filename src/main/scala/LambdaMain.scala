@@ -13,7 +13,7 @@ import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.redoc.*
 import sttp.tapir.server.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.serverless.aws.lambda.zio.{ AwsZServerOptions, ZLambdaHandler }
+import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
 import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
 import sttp.tapir.swagger.*
 import sttp.tapir.ztapir.*
@@ -37,21 +37,22 @@ object LambdaMain extends BaseMain with RequestStreamHandler:
 
   override protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())
 
-  private val handler =
+  private def handler[R](endpoints: List[ZServerEndpoint[R, Any]]) =
+    given RIOMonadError[R] = RIOMonadError[R]
     def options[R] =
-      AwsZServerOptions.noEncoding[R](
-        AwsZServerOptions
+      AwsZioServerOptions.noEncoding[R](
+        AwsZioServerOptions
           .customiseInterceptors[R]
           .serverLog(serverLogger)
           .options
       )
-    ZLambdaHandler.withMonadError(
-      controller.rest,
+    ZioLambdaHandler(
+      endpoints,
       options
     )
 
   def process(input: InputStream, output: OutputStream) =
-    handler
+    handler(controller.rest)
       .process[AwsRequest](input, output)
       .provide(
         clientLayer,

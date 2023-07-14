@@ -32,7 +32,6 @@ import sttp.tapir.server.*
 import sttp.tapir.swagger.*
 
 import com.typesafe.config.ConfigFactory
-import zio.http.service.{ ChannelFactory, EventLoopGroup }
 import zio.http.{ Client, * }
 import zio.mock.Expectation
 import zio.test.*

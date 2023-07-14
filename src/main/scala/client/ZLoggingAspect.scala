@@ -3,7 +3,6 @@ package client
 
 import zio.ZIO
 import zio.http.*
-import zio.http.model.*
 
 class ZLoggingAspect[Env]
     extends ZClientAspect[Env, Env, Body, Body, Throwable, Throwable, Response, Response]:

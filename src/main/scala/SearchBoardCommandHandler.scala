@@ -17,7 +17,7 @@ import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.redoc.*
 import sttp.tapir.server.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.serverless.aws.lambda.zio.{ AwsZServerOptions, ZLambdaHandler }
+import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
 import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
 import sttp.tapir.swagger.*
 import sttp.tapir.ztapir.*

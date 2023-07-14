@@ -11,7 +11,7 @@ ThisBuild / idePackagePrefix := Some("chessfinder")
 ThisBuild / organization := "eudemonia"
 // ThisBuild / version           := "0.1"
 ThisBuild / git.useGitDescribe := true
-ThisBuild / scalaVersion       := "3.2.2"
+ThisBuild / scalaVersion       := "3.3.0"
 ThisBuild / semanticdbEnabled  := true // enable SemanticDB
 ThisBuild / testFrameworks ++= List(
   new TestFramework("munit.Framework"),
@@ -112,16 +112,7 @@ lazy val root = (project in file("."))
         oldStrategy(x)
     }
   )
-  .dependsOn(`ztapir-aws-lambda`, `tapir-aws-sam`, testkit % Test)
+  .dependsOn(testkit % Test)
 
 lazy val testkit = project
   .in(file("src_testkit"))
-
-lazy val `ztapir-aws-lambda` = project
-  .in(file("src_ztapir_aws_lambda"))
-
-lazy val `ztapir-aws-lambda-tests` = project
-  .in(file("src_ztapir_aws_lambda_tests"))
-
-lazy val `tapir-aws-sam` = project
-  .in(file("src_tapir_aws_sam"))

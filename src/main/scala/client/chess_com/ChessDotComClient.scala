@@ -13,8 +13,7 @@ import io.circe.generic.semiauto.*
 import io.circe.{ Decoder, Encoder }
 import zio.{ Cause, Config, ZIO, ZLayer }
 import zio.config.magnolia.deriveConfig
-import zio.http.{ Client, Request, URL }
-import zio.http.model.Status
+import zio.http.{ Client, Request, Status, URL }
 
 trait ChessDotComClient:
 
@@ -41,7 +40,7 @@ object ChessDotComClient:
 
     override def profile(userName: UserName): μ[Profile] =
       val urlString = s"${config.baseUrl}/pub/player/${userName.value}"
-      val url       = μ.fromEither(URL.fromString(urlString).left.map(_ => SomethingWentWrong))
+      val url       = μ.fromEither(URL.decode(urlString).left.map(_ => SomethingWentWrong))
       val effect =
         for
           url <- url
@@ -57,7 +56,7 @@ object ChessDotComClient:
 
     override def archives(userName: UserName): μ[Archives] =
       val urlString = s"${config.baseUrl}/pub/player/${userName.value}/games/archives"
-      val url       = μ.fromEither(URL.fromString(urlString).left.map(_ => SomethingWentWrong))
+      val url       = μ.fromEither(URL.decode(urlString).left.map(_ => SomethingWentWrong))
       val effect =
         for
           url <- url
@@ -80,7 +79,7 @@ object ChessDotComClient:
             .toRight(SomethingWentWrong)
           remainigPath = pathSegments.drop(indexToDrop).mkString("/")
           urlString    = s"${config.baseUrl}/${remainigPath}"
-          url <- URL.fromString(urlString)
+          url <- URL.decode(urlString)
         yield url
       val url = μ.fromEither(maybeUrl.left.map(_ => SomethingWentWrong))
       val effect =

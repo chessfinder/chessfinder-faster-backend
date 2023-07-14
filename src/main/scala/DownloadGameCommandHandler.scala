@@ -25,7 +25,7 @@ import search.*
 import search.entity.*
 import search.queue.*
 import search.repo.{ ArchiveRepo, GameRepo, TaskRepo, UserRepo }
-import sttp.tapir.serverless.aws.lambda.zio.{ AwsZServerOptions, ZLambdaHandler }
+import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
 import util.EndpointCombiner
 
 import com.amazonaws.services.lambda.runtime.{ Context, RequestHandler, RequestStreamHandler }
