@@ -10,46 +10,38 @@ services:
     environment:
       WIREMOCK_OPTIONS: "--port=8443,--max-request-journal=1000,--local-response-templating,--root-dir=/home/wiremock/storage"
 
-  dynamodb:
-    image: amazon/dynamodb-local:latest
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
-    container_name: dynamodb
-    restart: always
-    hostname: dynamodb
-    ports:
-      - "${DYNAMO_DB_EXTERNAL_PORT}:8000"
-    volumes:
-      - ${STORAGE}/dynamodb:/home/dynamodblocal/data
+  # dynamodb:
+  #   image: amazon/dynamodb-local:latest
+  #   command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+  #   container_name: dynamodb
+  #   restart: always
+  #   hostname: dynamodb
+  #   ports:
+  #     - "${DYNAMO_DB_EXTERNAL_PORT}:8000"
+  #   volumes:
+  #     - ${STORAGE}/dynamodb:/home/dynamodblocal/data
 
-  dynamodb-admin:
-    image: aaronshaf/dynamodb-admin:latest
-    container_name: dynamodb_admin
-    restart: always
-    hostname: dynamodb-admin
-    ports:
-      - "${DYNAMO_DB_ADMIN_PORT}:8001"
-    environment:
-      DYNAMO_ENDPOINT: http://dynamodb:8000
-      AWS_REGION: ${AWS_REGION}
-    depends_on:
-      - dynamodb
+  # dynamodb-admin:
+  #   image: aaronshaf/dynamodb-admin:latest
+  #   container_name: dynamodb_admin
+  #   restart: always
+  #   hostname: dynamodb-admin
+  #   ports:
+  #     - "${DYNAMO_DB_ADMIN_PORT}:8001"
+  #   environment:
+  #     DYNAMO_ENDPOINT: http://dynamodb:8000
+  #     AWS_REGION: ${AWS_REGION}
+  #   depends_on:
+  #     - dynamodb
 
   localstack:
-    container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
-    image: localstack/localstack
+    container_name: "localstack_main"
+    image: localstack/localstack:latest
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway
-      - "127.0.0.1:4510-4559:4510-4559"  # ext services port range
-      - "127.0.0.1:53:53"                # DNS config
-      - "127.0.0.1:53:53/udp"            # DNS config
-      - "127.0.0.1:443:443"              # LocalStack HTTPS Gateway
     environment:
-      - SERVICES=sqs:4511,secretsmanager:4512
-      - DEBUG=${DEBUG-}
-      - PERSISTENCE=${PERSISTENCE-}
-      - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR-}
-      - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY-}  # only required for Pro
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DEBUG=1
+      - EAGER_SERVICE_LOADING=1
+      - SERVICES=sqs,secretsmanager,dynamodb,lambda,iam
     volumes:
-      - "${STORAGE}/localstack:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"

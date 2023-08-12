@@ -3,7 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
   ChessfinderLambdaRoleArn:
     Type: String
-    Description: Lambda role for basic execution and permissions
 Resources:
   ChessfinderFunction:
     Properties:
@@ -50,8 +49,8 @@ Resources:
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
-      Runtime: java11
-      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.2.2\chessfinder-lambda.jar
+      Runtime: java17
+      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.3.0\chessfinder-lambda.jar
       Handler: chessfinder.LambdaMain::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function

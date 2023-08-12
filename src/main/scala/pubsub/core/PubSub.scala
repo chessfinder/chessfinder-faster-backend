@@ -73,5 +73,8 @@ object PubSub:
   def serializer[T: Codec]: Serializer[T] =
     Serializer.serializeString.contramap[T](command => Codec[T].apply(command).noSpaces)
 
-  def layer[T: Codec](queueUrl: String): ZIO[Sqs, Nothing, PubSub[T]] =
-    ZIO.service[Sqs].map(sqs => PubSub(queueUrl, sqs))
+  def layer[T: Codec](queueName: String): ZIO[Sqs, Throwable, PubSub[T]] =
+    for
+      queueUrl <- Utils.getQueueUrl(queueName)
+      sqs      <- ZIO.service[Sqs]
+    yield PubSub(queueUrl, sqs)

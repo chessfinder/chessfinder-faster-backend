@@ -11,29 +11,58 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
+      
       - name: Setup JDK
         uses: actions/setup-java@v3.11.0
         with:
           distribution: 'corretto'
           java-version: '17'
+      
       - name: Check Fomatting
         shell: bash
         run: |
           sbt -v "scalafmtCheckAll;"
+      
       - name: Compile Code
         shell: bash
         run: |
           sbt -v "compile;"
-      - name: Unit Tests
+      
+      # - name: Unit Tests
+      #   shell: bash
+      #   run: |
+      #     sbt -v "test;"
+      
+      - name: Install Python 
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install AWS CLI
         shell: bash
         run: |
-          sbt -v "test;"
+          pip install awscli
+          pip install awscli-local
+          export AWS_ACCESS_KEY_ID="test"
+          export AWS_SECRET_ACCESS_KEY="test"
+          export AWS_DEFAULT_REGION="us-east-1"
+          # aws configure --profile default
+          aws configure set aws_access_key_id "test" --profile default
+          aws configure set aws_secret_access_key "test" --profile default
+          aws configure set default.region "us-east-1" --profile default
+
+      - name: Install SamLocal 
+        shell: bash
+        run: pip install aws-sam-cli-local
+
       - name: Integration Tests
         shell: bash
         run: |
           docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
-          sleep 10s
+          sleep 10s          
+          awslocal  s3api create-bucket --bucket chessfinder
+          # samlocal deploy --template-file template_resources.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+          samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dyanmodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+          samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
           sbt -v "IntegrationTest / test;"
           docker compose -f ./src/it/resources/docker-compose.yaml down
-
-

@@ -18,9 +18,16 @@ Resources:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/queue.yaml
+
+  Async:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/async.yaml
       Parameters:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-
+        DownloadGamesQueueArn: !Ref SQS.Outputs.DownloadGamesQueueARN
+        SearchBoardQueueArn: !Ref SQS.Outputs.SearchBoardQueueARN
+  
   Api:
     Type: AWS::Serverless::Application
     Properties:
@@ -28,12 +35,7 @@ Resources:
       Parameters:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
 
-
 Outputs:
-  OrderApiEndpoint:
+  ChessfinderApiEndpoint:
     Description: "Chessfinder API Gateway Endpoint URL"
     Value: !GetAtt Api.Outputs.ChessfinderUrl
-
-  RoleForChessfinderLambdaArn:
-    Description: "Chessfinder Lambda Role"
-    Value: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn

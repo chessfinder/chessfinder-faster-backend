@@ -74,6 +74,10 @@ lazy val root = (project in file("."))
     resolvers ++= Seq(lilaMaven, sonashots)
   )
   .settings(
+    IntegrationTest / fork := true,
+    IntegrationTest / javaOptions += "-Dconfig.file=src/it/resources/local.conf"
+  )
+  .settings(
     GraalVMNativeImage / mainClass := Some("chessfinder.LambdaMain"),
     GraalVMNativeImage / containerBuildImage := GraalVMNativeImagePlugin
       .generateContainerBuildImage(

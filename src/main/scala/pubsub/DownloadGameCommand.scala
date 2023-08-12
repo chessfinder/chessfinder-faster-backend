@@ -49,7 +49,7 @@ object DownloadGameCommand:
     )
 
   object Queue:
-    case class Configuration(url: String)
+    case class Configuration(name: String)
     object Configuration:
       given config: Config[Configuration] =
         deriveConfig[Configuration].nested("sqs-config", "queues", "download-games")
@@ -57,6 +57,6 @@ object DownloadGameCommand:
     val layer: ZLayer[Sqs, Throwable, PubSub[DownloadGameCommand]] = ZLayer.fromZIO {
       for
         config <- ZIO.config[Configuration](Configuration.config)
-        queue  <- PubSub.layer[DownloadGameCommand](config.url)
+        queue  <- PubSub.layer[DownloadGameCommand](config.name)
       yield queue
     }

@@ -39,7 +39,7 @@ object SearchBoardCommand:
   given Codec[SearchBoardCommand] = deriveCodec[SearchBoardCommand]
 
   object Queue:
-    case class Configuration(url: String)
+    case class Configuration(name: String)
     object Configuration:
       given config: Config[Configuration] =
         deriveConfig[Configuration].nested("sqs-config", "queues", "search-board")
@@ -47,6 +47,6 @@ object SearchBoardCommand:
     val layer: ZLayer[Sqs, Throwable, PubSub[SearchBoardCommand]] = ZLayer.fromZIO {
       for
         config <- ZIO.config[Configuration](Configuration.config)
-        queue  <- PubSub.layer[SearchBoardCommand](config.url)
+        queue  <- PubSub.layer[SearchBoardCommand](config.name)
       yield queue
     }
