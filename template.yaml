@@ -25,8 +25,8 @@ Resources:
       Location: .infrastructure/async.yaml
       Parameters:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-        DownloadGamesQueueArn: !Ref SQS.Outputs.DownloadGamesQueueARN
-        SearchBoardQueueArn: !Ref SQS.Outputs.SearchBoardQueueARN
+        DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueARN
+        SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueARN
   
   Api:
     Type: AWS::Serverless::Application
