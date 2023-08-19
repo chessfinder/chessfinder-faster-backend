@@ -76,5 +76,6 @@ object PubSub:
   def layer[T: Codec](queueName: String): ZIO[Sqs, Throwable, PubSub[T]] =
     for
       queueUrl <- Utils.getQueueUrl(queueName)
+      _        <- ZIO.log(s"Queue ${queueName} is available under the url ${queueUrl}")
       sqs      <- ZIO.service[Sqs]
     yield PubSub(queueUrl, sqs)

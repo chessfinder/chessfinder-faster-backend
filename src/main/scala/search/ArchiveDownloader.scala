@@ -57,9 +57,11 @@ object ArchiveDownloader:
 
       for
         userIdentified <- gettingProfile
+        _              <- ZIO.log("Trying to save the user")
         _              <- userRepo.save(userIdentified)
         allArchives    <- gettingArchives
 
+        _                    <- ZIO.log("Trying to get archives")
         cachedArchiveResults <- archiveRepo.getAll(userIdentified.userId)
         cachedArchives = cachedArchiveResults.map(_.resource).toSet
         fullyDownloadedArchives = cachedArchiveResults
@@ -70,16 +72,18 @@ object ArchiveDownloader:
           fullyDownloadedArchives.contains(resource)
         )
         missingArchives = allArchives.archives.filterNot(resource => cachedArchives.contains(resource))
+        _      <- ZIO.log("Trying to write archives")
         _      <- archiveRepo.initiate(userIdentified.userId, missingArchives)
         taskId <- random.nextUUID.map(uuid => TaskId(uuid))
+        _      <- ZIO.log("Trying to create task")
         _      <- taskRepo.initiate(taskId, shouldBeDownloadedArchives.length)
         shouldBeDownloadedArchivesIds = shouldBeDownloadedArchives.map(resource =>
           ArchiveId(resource.toString)
         )
+        _ <- ZIO.log("Trying to send event")
         _ <- gameDownloadingCommandProducer.publish(userIdentified, shouldBeDownloadedArchivesIds, taskId)
       yield taskId
 
-  @Deprecated
   object Impl:
     val layer = ZLayer {
       for
