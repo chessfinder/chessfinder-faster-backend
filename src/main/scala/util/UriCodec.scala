@@ -1,11 +1,10 @@
 package chessfinder
 package util
 
+import io.circe.{ Codec, Decoder, Encoder }
 import sttp.model.Uri
 import sttp.model.Uri.UriContext
 import sttp.tapir.Schema
-
-import io.circe.{ Codec, Decoder, Encoder }
 import zio.Config
 import zio.config.magnolia.{ deriveConfigFromConfig, DeriveConfig }
 import zio.json.*

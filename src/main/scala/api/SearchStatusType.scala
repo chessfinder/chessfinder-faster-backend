@@ -2,10 +2,10 @@ package chessfinder
 package api
 
 import search.entity.{ ChessPlatform, SearchStatus }
-import sttp.tapir.Schema
 
 import io.circe.generic.semiauto.deriveCodec
 import io.circe.{ Codec, Decoder, Encoder }
+import sttp.tapir.Schema
 import zio.json.{ DeriveJsonDecoder, JsonDecoder }
 
 import scala.util.Try

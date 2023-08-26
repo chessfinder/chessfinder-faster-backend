@@ -8,18 +8,17 @@ import core.{ ProbabilisticBoard, SearchFen }
 import search.BrokenLogic.*
 import search.GameDownloader
 import search.entity.*
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
 import util.UriParser
 
 import chess.format.pgn.PgnStr
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 import zio.ZIO
 import zio.mock.{ Expectation, MockClock, MockRandom, MockReporter }
 import zio.test.*
 
 import java.time.*
 import java.util.UUID
-import sttp.model.Uri.UriContext
 
 object GameDownloaderTest extends ZIOSpecDefault with Mocks:
 

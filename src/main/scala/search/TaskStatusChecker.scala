@@ -11,10 +11,10 @@ import persistence.{ GameRecord, PlatformType, UserRecord }
 import search.BrokenLogic
 import search.entity.*
 import search.repo.*
-import sttp.model.Uri
 
 import chess.format.pgn.PgnStr
 import izumi.reflect.Tag
+import sttp.model.Uri
 import zio.dynamodb.*
 import zio.{ UIO, ZIO, ZIOAspect, ZLayer }
 

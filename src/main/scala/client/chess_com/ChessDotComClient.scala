@@ -6,14 +6,14 @@ import client.ClientError.*
 import client.chess_com.dto.*
 import client.{ κ, μ, ClientError, ClientExt }
 import search.entity.UserName
-import sttp.model.Uri
 import util.UriCodec.given
 
 import io.circe.generic.semiauto.*
 import io.circe.{ Decoder, Encoder }
-import zio.{ Cause, Config, ZIO, ZLayer }
+import sttp.model.Uri
 import zio.config.magnolia.deriveConfig
 import zio.http.{ Client, Request, Status, URL }
+import zio.{ Cause, Config, ZIO, ZLayer }
 
 trait ChessDotComClient:
 
@@ -52,7 +52,7 @@ object ChessDotComClient:
             case Status.NotFound => μ.succeed(Left(ProfileNotFound(userName)))
             case _               => μ.succeed(Left(SomethingWentWrong))
         yield profile
-      effect.foldZIO(_ => μ.fail(SomethingWentWrong), μ.fromEither)
+      effect.foldZIO(err => ZIO.log(err.toString()) *> μ.fail(SomethingWentWrong), μ.fromEither)
 
     override def archives(userName: UserName): μ[Archives] =
       val urlString = s"${config.baseUrl}/pub/player/${userName.value}/games/archives"

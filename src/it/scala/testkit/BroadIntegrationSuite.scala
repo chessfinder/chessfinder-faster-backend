@@ -2,9 +2,9 @@ package chessfinder
 package testkit
 
 import munit.FunSuite
-import zio.{ Runtime, ZLayer }
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.test.{ testEnvironment, TestEnvironment, ZIOSpecDefault }
+import zio.{ Runtime, ZLayer }
 
 abstract class BroadIntegrationSuite extends ZIOSpecDefault:
 

@@ -4,14 +4,14 @@ package api
 import api.TaskResponse
 import aspect.Span
 import core.SearchFen
-import search.entity.*
 import search.*
+import search.entity.*
+import util.EndpointCombiner
+
 import sttp.tapir.json.circe.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.ztapir.*
 import sttp.tapir.{ stringBody, Endpoint }
-import util.EndpointCombiner
-
 import zio.*
 
 import java.util.UUID

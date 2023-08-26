@@ -24,7 +24,7 @@ object DefaultSqsExecutor:
       ZLayer
         .fromZIO(ZIO.config[SqsConfiguration](SqsConfiguration.config))
 
-    val cutomSqsLayer = sqsConfig.flatMap { sqsConfigEnv =>
+    val customSqsLayer = sqsConfig.flatMap { sqsConfigEnv =>
       val sqsConfig: SqsConfiguration = sqsConfigEnv.get[SqsConfiguration]
       Sqs.customized { builder =>
         builder
@@ -35,6 +35,6 @@ object DefaultSqsExecutor:
     }
 
     val sqsExecutorLayer: ZLayer[HttpClient & AwsConfig, Throwable, Sqs] =
-      (ZLayer.service[HttpClient] ++ ZLayer.succeed(Clock)) >>> ZLayer.service[AwsConfig] >>> cutomSqsLayer
+      (ZLayer.service[HttpClient] ++ ZLayer.succeed(Clock)) >>> ZLayer.service[AwsConfig] >>> customSqsLayer
 
     sqsExecutorLayer

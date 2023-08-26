@@ -7,8 +7,7 @@ import search.entity.*
 import search.repo.{ GameRepo, SearchResultRepo }
 
 import izumi.reflect.Tag
-import zio.{ ZIO, ZLayer }
-import zio.Clock
+import zio.{ Clock, ZIO, ZLayer }
 
 trait BoardFinder:
 

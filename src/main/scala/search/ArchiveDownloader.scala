@@ -1,27 +1,17 @@
 package chessfinder
 package search
 
-import api.{ TaskResponse, TaskStatusResponse }
-import aspect.Span
+import api.TaskStatusResponse
 import client.ClientError
 import client.ClientError.ProfileNotFound
 import client.chess_com.ChessDotComClient
-import client.chess_com.dto.{ Archives, Games }
-import persistence.{ GameRecord, PlatformType, UserRecord }
-import pubsub.DownloadGameCommand
-import search.BrokenLogic
 import search.BrokenLogic.{ NoGameAvailable, ServiceOverloaded }
 import search.entity.*
 import search.queue.GameDownloadingProducer
 import search.repo.*
-import sttp.model.Uri
 
-import chess.format.pgn.PgnStr
 import izumi.reflect.Tag
-import zio.dynamodb.*
-import zio.{ Random, UIO, ZIO, ZLayer }
-
-import scala.annotation.tailrec
+import zio.{ Random, ZIO, ZLayer }
 
 trait ArchiveDownloader:
 
@@ -41,6 +31,7 @@ object ArchiveDownloader:
     def cache(user: User): φ[TaskId] =
       val gettingProfile = client
         .profile(user.userName)
+        .tapError(err => ZIO.log(err.toString()))
         .mapError {
           case ClientError.ProfileNotFound(userName) => BrokenLogic.ProfileNotFound(user)
           case _                                     => BrokenLogic.ServiceOverloaded

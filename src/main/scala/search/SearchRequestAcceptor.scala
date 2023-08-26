@@ -3,11 +3,11 @@ package search
 
 import aspect.Span
 import core.{ ProbabilisticBoard, SearchFen }
+import search.BrokenLogic.NoGameAvailable
 import search.entity.*
+import search.queue.BoardSearchingProducer
+import search.repo.{ ArchiveRepo, SearchResultRepo, UserRepo }
 
-import chessfinder.search.BrokenLogic.NoGameAvailable
-import chessfinder.search.queue.BoardSearchingProducer
-import chessfinder.search.repo.{ ArchiveRepo, SearchResultRepo, UserRepo }
 import izumi.reflect.Tag
 import zio.{ Clock, Random, ZIO, ZLayer }
 

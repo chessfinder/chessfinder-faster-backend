@@ -9,6 +9,9 @@
       "**/target": true
     },
 		"metals.showImplicitArguments": false,
-		"metals.showImplicitConversionsAndClasses": false
+    "metals.showImplicitConversionsAndClasses": false,
+    "cSpell.words": [
+      "chessfinder"
+    ]
 	}
 }

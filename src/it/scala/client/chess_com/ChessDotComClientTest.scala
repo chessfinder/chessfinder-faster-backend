@@ -6,14 +6,14 @@ import client.ClientError.*
 import client.chess_com.ChessDotComClient
 import client.chess_com.dto.*
 import search.entity.UserName
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
 import testkit.NarrowIntegrationSuite
 import testkit.parser.JsonReader
 import testkit.wiremock.ClientBackdoor
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.typesafe.config.ConfigFactory
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 import zio.*
 import zio.http.Client
 import zio.test.*

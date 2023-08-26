@@ -5,9 +5,9 @@ import core.β.Ext.*
 
 import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }
+import chess.*
 import chess.format.Uci
 import chess.variant.Variant
-import chess.*
 
 object Finder:
 

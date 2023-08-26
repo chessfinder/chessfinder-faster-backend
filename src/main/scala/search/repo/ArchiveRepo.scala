@@ -6,8 +6,8 @@ import aspect.Span
 import persistence.{ ArchiveRecord, PlatformType, UserRecord }
 import search.*
 import search.entity.*
-import sttp.model.Uri
 
+import sttp.model.Uri
 import zio.dynamodb.{ DynamoDBError, DynamoDBExecutor }
 import zio.{ Cause, ZIO, ZLayer }
 

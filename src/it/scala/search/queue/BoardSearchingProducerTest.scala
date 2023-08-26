@@ -8,12 +8,9 @@ import client.chess_com.dto.*
 import core.SearchFen
 import persistence.GameRecord
 import persistence.core.DefaultDynamoDBExecutor
-import pubsub.{ Platform, SearchBoardCommand }
 import pubsub.core.PubSub
+import pubsub.{ Platform, SearchBoardCommand }
 import search.entity.*
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
-import sttp.model.UriInterpolator.*
 import testkit.NarrowIntegrationSuite
 import testkit.parser.JsonReader
 import testkit.wiremock.ClientBackdoor
@@ -22,6 +19,9 @@ import util.{ RandomReadableString, UriParser }
 import chess.format.pgn.PgnStr
 import com.typesafe.config.ConfigFactory
 import io.circe.*
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
+import sttp.model.UriInterpolator.*
 import zio.*
 import zio.aws.core.config.AwsConfig
 import zio.aws.netty

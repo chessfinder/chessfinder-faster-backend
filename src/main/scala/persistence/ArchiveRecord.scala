@@ -4,8 +4,8 @@ package persistence
 import api.TaskStatusResponse
 import persistence.core.{ DynamoTable, DynamoTypeMappers }
 import search.entity.*
-import sttp.model.Uri
 
+import sttp.model.Uri
 import zio.schema.{ DeriveSchema, Schema }
 
 import java.time.Instant

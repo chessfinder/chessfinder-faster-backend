@@ -3,9 +3,9 @@ package persistence
 
 import persistence.core.{ DynamoTable, DynamoTypeMappers }
 import search.entity.*
-import sttp.model.Uri
 
 import chess.format.pgn.PgnStr
+import sttp.model.Uri
 import zio.schema.annotation.recordName
 import zio.schema.{ DeriveSchema, Schema }
 

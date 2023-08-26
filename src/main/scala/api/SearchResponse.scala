@@ -2,11 +2,11 @@ package chessfinder
 package api
 
 import search.entity.{ DownloadStatus, SearchResult, SearchStatus }
-import sttp.model.Uri
-import sttp.tapir.Schema
 
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
+import sttp.model.Uri
+import sttp.tapir.Schema
 import zio.json.*
 
 import java.util.UUID

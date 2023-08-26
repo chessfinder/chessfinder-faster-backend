@@ -4,11 +4,11 @@ package pubsub
 import persistence.PlatformType
 import pubsub.core.PubSub
 import search.entity.*
-import sttp.model.Uri
 
 import com.typesafe.config.ConfigFactory
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
+import sttp.model.Uri
 import zio.*
 import zio.aws.sqs.*
 import zio.aws.sqs.model.MessageAttributeValue

@@ -6,9 +6,9 @@ import core.{ ProbabilisticBoard, SearchFen }
 import search.BoardFinder
 import search.BrokenLogic.*
 import search.entity.*
-import sttp.model.Uri.UriContext
 
 import chess.format.pgn.PgnStr
+import sttp.model.Uri.UriContext
 import zio.ZIO
 import zio.mock.{ Expectation, MockClock }
 import zio.test.*

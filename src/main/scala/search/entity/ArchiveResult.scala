@@ -3,9 +3,9 @@ package search.entity
 
 import search.entity.MatchedGames
 import search.{ φ, BrokenLogic }
-import sttp.model.Uri
 
 import ornicar.scalalib.newtypes
+import sttp.model.Uri
 import zio.ZIO
 
 import java.time.{ Instant, YearMonth, ZoneOffset }

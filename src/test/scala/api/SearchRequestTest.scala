@@ -2,12 +2,12 @@ package chessfinder
 package api
 
 import api.{ Platform, SearchRequest }
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
 
 import io.circe.{ parser, Decoder }
 import munit.*
 import munit.Clue.generate
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 import zio.json.JsonDecoder
 
 class SearchRequestTest extends FunSuite:

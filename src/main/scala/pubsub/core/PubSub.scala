@@ -5,14 +5,13 @@ import io.circe.{ parser, Codec, Decoder }
 import software.amazon.awssdk.regions.Region
 import zio.*
 import zio.aws.sqs.*
-import zio.aws.sqs.model.{ Message, MessageAttributeValue }
+import zio.aws.sqs.model.{ DeleteMessageRequest, Message, MessageAttributeValue }
 import zio.config.*
 import zio.config.magnolia.deriveConfig
 import zio.sqs.*
 import zio.sqs.producer.{ Producer, ProducerEvent, ProducerSettings }
 import zio.sqs.serialization.Serializer
 import zio.stream.*
-import zio.aws.sqs.model.DeleteMessageRequest
 
 import java.net.URI
 

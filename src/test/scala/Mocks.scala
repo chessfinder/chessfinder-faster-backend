@@ -10,9 +10,9 @@ import search.*
 import search.entity.*
 import search.queue.{ BoardSearchingProducer, GameDownloadingProducer }
 import search.repo.*
-import sttp.model.Uri
 
 import chess.format.pgn.PgnStr
+import sttp.model.Uri
 import zio.*
 import zio.mock.*
 

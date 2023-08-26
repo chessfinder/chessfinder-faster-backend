@@ -3,9 +3,9 @@ package persistence.core
 
 import persistence.{ PlatformType, SearchStatusType }
 import search.entity.*
-import sttp.model.Uri
 
 import chess.format.pgn.PgnStr
+import sttp.model.Uri
 import zio.dynamodb.{ AttributeValue, ToAttributeValue }
 import zio.schema.{ DeriveSchema, Schema }
 

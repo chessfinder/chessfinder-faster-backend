@@ -2,13 +2,13 @@ package chessfinder
 package api
 
 import search.BrokenLogic
-import sttp.model.StatusCode
-import sttp.tapir.EndpointOutput.OneOfVariant
-import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.*
 
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
+import sttp.model.StatusCode
+import sttp.tapir.*
+import sttp.tapir.EndpointOutput.OneOfVariant
+import sttp.tapir.json.circe.jsonBody
 
 case class ApiError(code: String, msg: String)
 

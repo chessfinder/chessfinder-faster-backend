@@ -2,9 +2,9 @@ package chessfinder
 package client
 
 import io.circe.{ parser, Decoder, Encoder }
-import zio.{ Task, ZIO }
 import zio.http.Body
 import zio.http.ZClient.ClientLive
+import zio.{ Task, ZIO }
 
 import java.nio.charset.StandardCharsets.UTF_8
 

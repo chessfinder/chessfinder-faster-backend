@@ -4,23 +4,14 @@ import api.Controller
 import client.ZLoggingAspect
 import client.chess_com.ChessDotComClient
 import client.chess_com.dto.Archives
+import core.SearchFen
 import persistence.core.DefaultDynamoDBExecutor
 import pubsub.SearchBoardCommand
 import pubsub.core.Subscriber
 import search.*
 import search.entity.*
 import search.queue.*
-import search.repo.{ GameRepo, TaskRepo, UserRepo }
-import sttp.apispec.openapi.Server as OAServer
-import sttp.apispec.openapi.circe.yaml.*
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.redoc.*
-import sttp.tapir.server.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
-import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
-import sttp.tapir.swagger.*
-import sttp.tapir.ztapir.*
+import search.repo.{ GameRepo, SearchResultRepo, TaskRepo, UserRepo }
 import util.EndpointCombiner
 
 import cats.effect.unsafe.implicits.global
@@ -30,6 +21,16 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
 import com.amazonaws.services.lambda.runtime.{ Context, RequestHandler, RequestStreamHandler }
 import io.circe.generic.auto.*
 import io.circe.{ parser, Decoder }
+import sttp.apispec.openapi.Server as OAServer
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.redoc.*
+import sttp.tapir.server.*
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
+import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
+import sttp.tapir.swagger.*
+import sttp.tapir.ztapir.*
 import zio.aws.core.config.AwsConfig
 import zio.aws.netty
 import zio.config.typesafe.TypesafeConfigProvider
@@ -39,10 +40,9 @@ import zio.logging.*
 import zio.sqs.producer.{ Producer, ProducerEvent }
 import zio.stream.ZSink
 import zio.{ Cause, Runtime, Task, Unsafe, ZIO, ZIOApp, ZIOAppDefault, ZLayer, * }
-import core.SearchFen
+
 import java.io.{ InputStream, OutputStream }
 import scala.jdk.CollectionConverters.*
-import search.repo.SearchResultRepo
 
 object SearchBoardCommandHandler extends BaseMain with RequestHandler[SQSEvent, Unit]:
 

@@ -1,12 +1,13 @@
 package chessfinder
 
 import api.Controller
+
+import alleycats.std.option
 import sttp.tapir.serverless.aws.sam.*
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{ Files, Paths }
 import scala.concurrent.duration.{ Duration, DurationInt, FiniteDuration }
-import alleycats.std.option
 
 object SamTemplate extends App:
 

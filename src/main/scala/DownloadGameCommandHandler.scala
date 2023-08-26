@@ -1,22 +1,8 @@
 package chessfinder
 
-import client.chess_com.ChessDotComClient
-import sttp.apispec.openapi.Server as OAServer
-import sttp.apispec.openapi.circe.yaml.*
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.redoc.*
-import sttp.tapir.server.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
-import sttp.tapir.swagger.*
-import sttp.tapir.ztapir.*
-
-import cats.effect.unsafe.implicits.global
-import cats.implicits.*
-import io.circe.generic.auto.*
-import zio.http.{ App as _, * }
-import chessfinder.api.Controller
+import api.Controller
 import client.ZLoggingAspect
+import client.chess_com.ChessDotComClient
 import client.chess_com.dto.Archives
 import persistence.core.DefaultDynamoDBExecutor
 import pubsub.DownloadGameCommand
@@ -25,25 +11,38 @@ import search.*
 import search.entity.*
 import search.queue.*
 import search.repo.{ ArchiveRepo, GameRepo, TaskRepo, UserRepo }
-import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
 import util.EndpointCombiner
 
-import com.amazonaws.services.lambda.runtime.{ Context, RequestHandler, RequestStreamHandler }
+import cats.effect.unsafe.implicits.global
+import cats.implicits.*
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
+import com.amazonaws.services.lambda.runtime.{ Context, RequestHandler, RequestStreamHandler }
+import io.circe.generic.auto.*
 import io.circe.{ parser, Decoder }
+import sttp.apispec.openapi.Server as OAServer
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.redoc.*
+import sttp.tapir.server.*
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
+import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
+import sttp.tapir.swagger.*
+import sttp.tapir.ztapir.*
 import zio.aws.core.config.AwsConfig
 import zio.aws.netty
+import zio.aws.sqs.Sqs
+import zio.aws.sqs.model.DeleteMessageRequest
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.dynamodb.*
-import zio.http.{ HttpApp, Request, Response }
+import zio.http.{ App as _, HttpApp, Request, Response, * }
 import zio.logging.*
 import zio.logging.backend.SLF4J
 import zio.sqs.producer.{ Producer, ProducerEvent }
 import zio.stream.ZSink
 import zio.{ Cause, Runtime, Task, Unsafe, ZIO, ZIOApp, ZIOAppDefault, ZLayer, * }
-import zio.aws.sqs.Sqs
-import zio.aws.sqs.model.DeleteMessageRequest
+
 import java.io.{ InputStream, OutputStream }
 import scala.jdk.CollectionConverters.*
 

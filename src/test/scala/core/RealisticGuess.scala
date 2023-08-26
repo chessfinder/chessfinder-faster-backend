@@ -1,13 +1,12 @@
 package chessfinder
 package core
 
-import chess.Color
 import chess.bitboard.{ Bitboard, Board }
-import org.scalacheck.{ Arbitrary, Gen }
+import org.scalacheck.Gen
 
-case class RealisitcGuess(probabilisticBoard: ProbabilisticBoard)
-object RealisitcGuess:
-  def gen(board: Board): Gen[RealisitcGuess] = {
+case class RealisticGuess(probabilisticBoard: ProbabilisticBoard)
+object RealisticGuess:
+  def gen(board: Board): Gen[RealisticGuess] = {
     for {
       pawns   <- Gen.long.map(n => board.pawns & n)
       knights <- Gen.long.map(n => board.knights & n)
@@ -38,5 +37,5 @@ object RealisitcGuess:
         certainlyOccupiedByUnknown = certainlyOccupiedByUnknown,
         maybeOccupied = maybeOccupied
       )
-    } yield RealisitcGuess(probabilisticBoard)
+    } yield RealisticGuess(probabilisticBoard)
   }

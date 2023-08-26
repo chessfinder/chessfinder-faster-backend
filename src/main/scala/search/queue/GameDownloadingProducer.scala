@@ -8,8 +8,8 @@ import search.*
 import search.entity.*
 import search.queue.*
 
-import zio.{ Cause, ZIO, ZLayer }
 import zio.sqs.producer.{ Producer, ProducerEvent }
+import zio.{ Cause, ZIO, ZLayer }
 
 trait GameDownloadingProducer:
 

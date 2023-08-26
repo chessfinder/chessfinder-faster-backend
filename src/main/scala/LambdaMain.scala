@@ -7,22 +7,22 @@ import pubsub.{ DownloadGameCommand, SearchBoardCommand }
 import search.*
 import search.queue.{ BoardSearchingProducer, GameDownloadingProducer }
 import search.repo.*
-import sttp.apispec.openapi.Server as OAServer
-import sttp.apispec.openapi.circe.yaml.*
-import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
-import sttp.tapir.redoc.*
-import sttp.tapir.server.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
-import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
-import sttp.tapir.swagger.*
-import sttp.tapir.ztapir.*
 import util.EndpointCombiner
 
 import cats.effect.unsafe.implicits.global
 import cats.implicits.*
 import com.amazonaws.services.lambda.runtime.{ Context, RequestStreamHandler }
 import io.circe.generic.auto.*
+import sttp.apispec.openapi.Server as OAServer
+import sttp.apispec.openapi.circe.yaml.*
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
+import sttp.tapir.redoc.*
+import sttp.tapir.server.*
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import sttp.tapir.serverless.aws.lambda.{ AwsRequest, LambdaHandler }
+import sttp.tapir.serverless.aws.ziolambda.{ AwsZioServerOptions, ZioLambdaHandler }
+import sttp.tapir.swagger.*
+import sttp.tapir.ztapir.*
 import zio.aws.core.config.AwsConfig
 import zio.aws.netty
 import zio.config.typesafe.TypesafeConfigProvider

@@ -2,10 +2,10 @@ package chessfinder
 package search.entity
 
 import core.β
-import sttp.model.Uri
 
-import chess.format.pgn.{ PgnStr, Reader }
 import chess.format.pgn.Reader.Result
+import chess.format.pgn.{ PgnStr, Reader }
+import sttp.model.Uri
 
 case class HistoricalGame(resource: Uri, pgn: PgnStr):
   val id: GameId = GameId(resource.toString)

@@ -2,9 +2,9 @@ package chessfinder
 package search.entity
 
 import search.entity.MatchedGames
-import sttp.model.Uri
 
 import ornicar.scalalib.newtypes
+import sttp.model.Uri
 
 import java.time.Instant
 

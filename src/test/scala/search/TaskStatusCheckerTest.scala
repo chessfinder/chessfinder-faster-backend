@@ -9,11 +9,11 @@ import persistence.TaskRecord
 import search.BrokenLogic.*
 import search.TaskStatusChecker
 import search.entity.*
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
 import util.UriParser
 
 import chess.format.pgn.PgnStr
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 import zio.ZIO
 import zio.mock.{ Expectation, MockRandom, MockReporter }
 import zio.test.*

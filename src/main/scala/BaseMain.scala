@@ -1,17 +1,16 @@
 package chessfinder
 
-import sttp.tapir.ztapir.*
-
-import zio.{ ZIOApp, ZIOAppDefault, * }
-import chessfinder.api.Controller
+import api.Controller
 import client.ZLoggingAspect
 import client.chess_com.ChessDotComClient
 import persistence.GameRecord
 import persistence.core.DefaultDynamoDBExecutor
 import pubsub.core.DefaultSqsExecutor
 import search.*
-import zio.http.Client
 import search.repo.{ GameRepo, TaskRepo, UserRepo }
+import util.EndpointCombiner
+
+import com.typesafe.config.ConfigFactory
 import sttp.apispec.openapi.Server as OAServer
 import sttp.apispec.openapi.circe.yaml.*
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
@@ -20,16 +19,15 @@ import sttp.tapir.server.*
 import sttp.tapir.server.interceptor.log.DefaultServerLog
 import sttp.tapir.server.ziohttp.*
 import sttp.tapir.swagger.*
-import util.EndpointCombiner
-
-import com.typesafe.config.ConfigFactory
+import sttp.tapir.ztapir.*
 import zio.aws.core.config.AwsConfig
 import zio.aws.netty
 import zio.aws.sqs.Sqs
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.dynamodb.*
-import zio.http.{ HttpApp, Request, Response }
+import zio.http.{ Client, HttpApp, Request, Response }
 import zio.logging.*
+import zio.{ ZIOApp, ZIOAppDefault, * }
 
 trait ConfigModule:
   // protected val configLayer = Runtime.setConfigProvider(TypesafeConfigProvider.fromResourcePath())

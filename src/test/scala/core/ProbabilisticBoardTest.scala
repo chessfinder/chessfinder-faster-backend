@@ -6,10 +6,10 @@ import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupi
 import search.*
 
 import cats.syntax.all.*
+import chess.*
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
-import chess.*
 import munit.Clue.generate
 import munit.{ FunSuite, ScalaCheckSuite }
 import org.scalacheck.{ Arbitrary, Prop }
@@ -26,7 +26,7 @@ class ProbabilisticBoardTest extends ScalaCheckSuite:
 
     val props = boards.map { (board: Board) =>
       given Board = board
-      Prop.forAll { (guess: RealisitcGuess) =>
+      Prop.forAll { (guess: RealisticGuess) =>
         guess.probabilisticBoard.includes(board)
       }
     }

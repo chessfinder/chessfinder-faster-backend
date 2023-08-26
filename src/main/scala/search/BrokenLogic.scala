@@ -2,8 +2,8 @@ package chessfinder
 package search
 
 import search.entity.*
-import sttp.model.Uri
 
+import sttp.model.Uri
 import zio.{ IO, ZIO }
 
 sealed trait BrokenLogic(val msg: String)

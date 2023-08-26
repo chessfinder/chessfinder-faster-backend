@@ -12,10 +12,10 @@ import search.BrokenLogic
 import search.BrokenLogic.{ NoGameAvailable, ServiceOverloaded }
 import search.entity.*
 import search.repo.*
-import sttp.model.Uri
 
 import chess.format.pgn.PgnStr
 import izumi.reflect.Tag
+import sttp.model.Uri
 import zio.dynamodb.*
 import zio.{ Clock, Random, UIO, ZIO, ZLayer }
 

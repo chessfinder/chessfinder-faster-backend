@@ -2,14 +2,14 @@ package chessfinder
 package client.chess_com
 
 import client.chess_com.ChessDotComClient
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
 import testkit.parser.JsonReader
 import util.ConfigExtension.*
 
 import io.circe.{ parser, Decoder }
 import munit.*
 import munit.Clue.generate
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 import zio.*
 import zio.config.*
 import zio.config.typesafe.*

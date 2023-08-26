@@ -8,8 +8,6 @@ import client.chess_com.dto.*
 import persistence.*
 import persistence.core.DefaultDynamoDBExecutor
 import search.entity.*
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
 import testkit.NarrowIntegrationSuite
 import testkit.parser.JsonReader
 import testkit.wiremock.ClientBackdoor
@@ -19,6 +17,8 @@ import cats.effect.kernel.syntax.resource
 import chess.format.pgn.PgnStr
 import com.typesafe.config.ConfigFactory
 import io.circe.*
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 import zio.*
 import zio.aws.core.config.AwsConfig
 import zio.aws.netty

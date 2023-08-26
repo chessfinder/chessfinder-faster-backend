@@ -12,8 +12,8 @@ import chess.Replay
 import chess.bitboard.Bitboard.*
 import chess.bitboard.Board
 import chess.format.Fen
-import chess.format.pgn.{ PgnStr, Reader }
 import chess.format.pgn.Reader.Result.{ Complete, Incomplete }
+import chess.format.pgn.{ PgnStr, Reader }
 import munit.Clue.generate
 import munit.{ FunSuite, ScalaCheckSuite }
 import org.scalacheck.{ Arbitrary, Prop }

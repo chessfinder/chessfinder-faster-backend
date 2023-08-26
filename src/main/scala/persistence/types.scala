@@ -3,7 +3,6 @@ package persistence
 
 import search.entity.{ ChessPlatform, SearchStatus }
 
-import java.util.UUID
 import scala.util.Try
 
 enum PlatformType:

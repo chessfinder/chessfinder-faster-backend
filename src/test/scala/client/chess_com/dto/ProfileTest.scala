@@ -1,12 +1,11 @@
 package chessfinder
 package client.chess_com.dto
 
-import sttp.model.Uri
-import sttp.model.Uri.UriContext
-
 import io.circe.{ parser, Decoder }
 import munit.*
 import munit.Clue.generate
+import sttp.model.Uri
+import sttp.model.Uri.UriContext
 
 class ProfileTest extends FunSuite:
   test("Profile should be parsed correctly") {
