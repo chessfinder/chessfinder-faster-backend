@@ -1,9 +1,10 @@
 package chessfinder
 package persistence
 
-import api.TaskStatusResponse
 import persistence.core.{ DynamoTable, DynamoTypeMappers }
-import search.entity.{ MatchedGame, SearchRequestId, SearchResult, SearchStatus }
+import chessfinder.SearchRequestId
+import chessfinder.download.details.DownloadStatusResponse
+import chessfinder.search.{ MatchedGame, SearchResult, SearchStatus }
 
 import sttp.model.Uri
 import zio.schema.{ DeriveSchema, Schema }

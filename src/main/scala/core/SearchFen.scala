@@ -1,17 +1,14 @@
 package chessfinder
 package core
 
-import core.β.Ext.*
+import core.Walidated.Ext.*
 
-import cats.implicits.*
-import cats.kernel.Monoid
 import chess.Pos
-import ornicar.scalalib.zeros.given_Zero_Option
 
 opaque type SearchFen = String
 
 object SearchFen extends OpaqueString[SearchFen]:
-  def read(fen: SearchFen): β[ProbabilisticBoard] =
+  def read(fen: SearchFen): Walidated[ProbabilisticBoard] =
     val positionOrError =
       val word = fen.value.trim().takeWhile(' ' !=)
       if

@@ -3,7 +3,7 @@ package testkit
 
 import persistence.core.DefaultDynamoDBExecutor
 import pubsub.core.*
-import search.entity.*
+import search.*
 import testkit.NarrowIntegrationSuite
 
 import munit.FunSuite

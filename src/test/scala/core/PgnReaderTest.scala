@@ -3,7 +3,7 @@ package core
 
 import core.Arbitraries.given
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
-import util.{ βUnsafeExt, DescriptionHelper }
+import util.{ DescriptionHelper, WalidatedUnsafeExt }
 
 import chess.ErrorStr.value
 import chess.Replay
@@ -16,7 +16,7 @@ import munit.Clue.generate
 import munit.{ FunSuite, ScalaCheckSuite }
 import org.scalacheck.{ Arbitrary, Prop }
 
-class PgnReaderTest extends FunSuite with βUnsafeExt with DescriptionHelper:
+class PgnReaderTest extends FunSuite with WalidatedUnsafeExt with DescriptionHelper:
 
   test("""
   PgnReader for the game

@@ -2,9 +2,10 @@ package chessfinder
 package persistence.core
 
 import persistence.{ PlatformType, SearchStatusType }
-import search.entity.*
+import search.*
 
 import chess.format.pgn.PgnStr
+import chessfinder.download.ArchiveStatus
 import sttp.model.Uri
 import zio.dynamodb.{ AttributeValue, ToAttributeValue }
 import zio.schema.{ DeriveSchema, Schema }

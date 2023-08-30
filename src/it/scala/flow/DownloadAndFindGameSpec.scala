@@ -6,7 +6,7 @@
 // import client.ClientError.*
 // import client.ClientExt.*
 // import client.chess_com.ChessDotComClient
-// import client.chess_com.dto.*
+// import client.chess_com.*
 // import search.entity.UserName
 // import sttp.model.Uri
 // import sttp.model.Uri.UriContext

@@ -1,7 +1,7 @@
 package chessfinder
 package core
 
-import core.β.Ext.*
+import core.Walidated.Ext.*
 
 import cats.data.Validated
 import cats.data.Validated.{ invalid, valid }

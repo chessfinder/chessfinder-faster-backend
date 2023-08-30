@@ -1,12 +1,7 @@
 package chessfinder
 package util
 
-import sttp.tapir.json.circe.*
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.ztapir.*
-import sttp.tapir.{ stringBody, Endpoint }
-
-import scala.concurrent.Future
 
 object EndpointCombiner:
 

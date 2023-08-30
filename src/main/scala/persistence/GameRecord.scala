@@ -2,7 +2,7 @@ package chessfinder
 package persistence
 
 import persistence.core.{ DynamoTable, DynamoTypeMappers }
-import search.entity.*
+import search.*
 
 import chess.format.pgn.PgnStr
 import sttp.model.Uri

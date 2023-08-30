@@ -3,9 +3,9 @@ package core
 
 import core.Arbitraries.given
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
-import core.{ β, SearchFen, * }
-import core.β.Ext.*
-import util.{ βUnsafeExt, DescriptionHelper }
+import core.{ SearchFen, Walidated, * }
+import core.Walidated.Ext.*
+import util.{ DescriptionHelper, WalidatedUnsafeExt }
 
 import chess.ErrorStr.value
 import chess.Replay
@@ -17,7 +17,7 @@ import chess.format.pgn.{ PgnStr, Reader }
 import munit.Clue.generate
 import munit.{ FunSuite, ScalaCheckSuite }
 import org.scalacheck.{ Arbitrary, Prop }
-class FinderTest extends FunSuite with βUnsafeExt with DescriptionHelper:
+class FinderTest extends FunSuite with WalidatedUnsafeExt with DescriptionHelper:
 
   test("""
   Finder for the board

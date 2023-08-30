@@ -6,10 +6,10 @@
 // import client.ClientError.*
 // import client.ClientExt.*
 // import client.chess_com.ChessDotComClient
-// import client.chess_com.dto.*
+// import client.chess_com.*
 // import persistence.{GameRecord, UserRecord}
 // import persistence.core.DefaultDynamoDBExecutor
-// import search.entity.*
+// import search.*
 // import sttp.model.Uri
 // import sttp.model.Uri.UriContext
 // import testkit.BroadIntegrationSuite

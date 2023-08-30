@@ -1,11 +1,9 @@
 package chessfinder
 package search
 
-import client.chess_com.dto.*
+import BrokenComputation.*
 import core.{ ProbabilisticBoard, SearchFen }
-import search.BoardFinder
-import search.BrokenLogic.*
-import search.entity.*
+import search.*
 
 import chess.format.pgn.PgnStr
 import sttp.model.Uri.UriContext
@@ -53,19 +51,19 @@ object BoardFinderTest extends ZIOSpecDefault with Mocks:
         val historicalGame2 = HistoricalGame(uri"https://example.com2", PgnStr("2"))
         val historicalGame3 = HistoricalGame(uri"https://example.com3", PgnStr("3"))
 
-        val `getting user's games from database` = GameRepoMock.ListGames(
+        val `getting user's games from database` = GameFetcherMock.ListGames(
           assertion = Assertion.equalTo(userId),
           result = Expectation.value(Seq(historicalGame1, historicalGame2, historicalGame3))
         )
 
         val `looking through the games` =
-          SearcherMock.Find(
+          SearchFacadeAdapterMock.Find(
             assertion = Assertion.equalTo((historicalGame1.pgn, searchBoard)),
             result = Expectation.value(true)
-          ) ++ SearcherMock.Find(
+          ) ++ SearchFacadeAdapterMock.Find(
             assertion = Assertion.equalTo((historicalGame2.pgn, searchBoard)),
             result = Expectation.value(false)
-          ) ++ SearcherMock.Find(
+          ) ++ SearchFacadeAdapterMock.Find(
             assertion = Assertion.equalTo((historicalGame3.pgn, searchBoard)),
             result = Expectation.value(true)
           )

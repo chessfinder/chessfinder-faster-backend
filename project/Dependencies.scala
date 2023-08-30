@@ -34,40 +34,28 @@ object Dependencies {
     )
   }
 
-  lazy val `circe-config`: Seq[ModuleID] = {
-    val version = "0.10.0"
-    Seq(
-      "io.circe" %% "circe-config" % version
-    )
-  }
-
   lazy val tapir = {
     val version          = "1.6.1"
     val circeYamlVersion = "0.5.3"
     Seq(
-      "com.softwaremill.sttp.tapir" %% "tapir-core"            % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-json-circe"      % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-cats"            % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-enumeratum"      % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui"      % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-redoc"           % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs"    % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda"      % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda-zio"      % version,
-      "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % version,
-      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml" % circeYamlVersion
+      "com.softwaremill.sttp.tapir"   %% "tapir-core"            % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-json-circe"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-cats"            % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-zio-http-server" % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-enumeratum"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-swagger-ui"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-redoc"           % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-openapi-docs"    % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-aws-lambda"      % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-aws-lambda-zio"  % version,
+      "com.softwaremill.sttp.tapir"   %% "tapir-aws-sam"         % version,
+      "com.softwaremill.sttp.apispec" %% "openapi-circe-yaml"    % circeYamlVersion
     )
   }
 
   lazy val tagging = {
     val version = "2.3.4"
     Seq("com.softwaremill.common" %% "tagging" % version)
-  }
-
-  lazy val `typesafe-config` = {
-    val version = "1.4.2"
-    Seq("com.typesafe" % "config" % version)
   }
 
   lazy val zio = {
@@ -183,16 +171,11 @@ object Dependencies {
   }
 
   lazy val `zio-sqs` = {
-    val version = "0.5.0+15-3ad474c0-SNAPSHOT"
+    val version = "0.6.0"
     Seq(
       "dev.zio" %% "zio-sqs" % version
     )
   }
-
-  // lazy val ornicar = {
-  //   val version = "9.1.2"
-  //   Seq("com.github.ornicar" %% "scalalib" % version)
-  // }
 
   val prod: Seq[ModuleID] =
     zio ++
@@ -200,8 +183,6 @@ object Dependencies {
       scalachess ++
       `zio-http` ++
       circe ++
-      // `circe-config` ++
-      // `typesafe-config` ++
       `zio-config` ++
       `zio-lambda` ++
       `zio-logging` ++

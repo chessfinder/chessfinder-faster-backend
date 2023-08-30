@@ -1,12 +1,9 @@
 package chessfinder
 package api
 
-import search.entity.ChessPlatform
-
-import io.circe.generic.semiauto.deriveCodec
 import io.circe.{ Codec, Decoder, Encoder }
 import sttp.tapir.Schema
-import zio.json.{ DeriveJsonDecoder, JsonDecoder }
+import zio.json.JsonDecoder
 
 import scala.util.Try
 

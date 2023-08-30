@@ -4,11 +4,11 @@ package client.chess_com
 import client.*
 import client.ClientError.*
 import client.chess_com.ChessDotComClient
-import client.chess_com.dto.*
-import search.entity.UserName
+
 import testkit.NarrowIntegrationSuite
 import testkit.parser.JsonReader
 import testkit.wiremock.ClientBackdoor
+import chessfinder.UserName
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.typesafe.config.ConfigFactory
@@ -88,9 +88,7 @@ object ChessDotComClientTest extends NarrowIntegrationSuite:
             )
             .stub()
 
-          val expectedResult: μ[Profile] = μ.fail(ProfileNotFound(userName))
-
-          val actualResult: μ[Profile] = (for {
+          val actualResult: Call[Profile] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
           } yield actualResult).provide(env)
@@ -111,9 +109,9 @@ object ChessDotComClientTest extends NarrowIntegrationSuite:
             .returnsJson("💣💣💣💣")
             .stub()
 
-          val expectedResult: μ[Profile] = μ.fail(SomethingWentWrong)
+          val expectedResult: Call[Profile] = ZIO.fail(SomethingWentWrong)
 
-          val actualResult: μ[Profile] = (for {
+          val actualResult: Call[Profile] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.profile(userName))
           } yield actualResult).provide(env)
@@ -185,9 +183,9 @@ object ChessDotComClientTest extends NarrowIntegrationSuite:
             )
             .stub()
 
-          val expectedResult: μ[Archives] = μ.fail(ProfileNotFound(userName))
+          val expectedResult: Call[Archives] = ZIO.fail(ProfileNotFound(userName))
 
-          val actualResult: μ[Archives] = (for {
+          val actualResult: Call[Archives] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.archives(userName))
           } yield actualResult).provide(env)
@@ -208,9 +206,9 @@ object ChessDotComClientTest extends NarrowIntegrationSuite:
             .returnsJson("💣💣💣💣")
             .stub()
 
-          val expectedResult: μ[Archives] = μ.fail(SomethingWentWrong)
+          val expectedResult: Call[Archives] = ZIO.fail(SomethingWentWrong)
 
-          val actualResult: μ[Archives] = (for {
+          val actualResult: Call[Archives] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.archives(userName))
           } yield actualResult).provide(env)
@@ -265,9 +263,9 @@ object ChessDotComClientTest extends NarrowIntegrationSuite:
             .returnsJson("💣💣💣💣")
             .stub()
 
-          val expectedResult: μ[Games] = μ.fail(SomethingWentWrong)
+          val expectedResult: Call[Games] = ZIO.fail(SomethingWentWrong)
 
-          val actualResult: μ[Games] = (for {
+          val actualResult: Call[Games] = (for {
             _            <- stub.orDie
             actualResult <- ZIO.serviceWithZIO[ChessDotComClient](_.games(resource))
           } yield actualResult).provide(env)

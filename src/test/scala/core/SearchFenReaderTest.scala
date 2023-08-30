@@ -5,7 +5,7 @@ import core.Arbitraries.given
 import core.ProbabilisticPiece.{ CertainPiece, CertainlyOccupied, ProbablyOccupied }
 import core.SearchFen
 import search.*
-import util.{ βUnsafeExt, DescriptionHelper }
+import util.{ DescriptionHelper, WalidatedUnsafeExt }
 
 import cats.syntax.all.*
 import chess.bitboard.Bitboard.*

@@ -2,13 +2,13 @@ package chessfinder
 package persistence
 
 import persistence.core.{ DynamoTable, DynamoTypeMappers }
-import search.entity.{ UserId, UserIdentified, UserName }
 
+import chessfinder.{ UserId, UserIdentified, UserName }
 import zio.schema.{ DeriveSchema, Schema }
 
 case class UserRecord(user_name: UserName, platform: PlatformType, user_id: UserId):
   def toUser: UserIdentified =
-    UserIdentified(
+    chessfinder.UserIdentified(
       platform = platform.toPlatform,
       userName = user_name,
       userId = user_id

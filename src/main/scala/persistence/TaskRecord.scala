@@ -1,9 +1,9 @@
 package chessfinder
 package persistence
 
-import api.TaskStatusResponse
 import persistence.core.{ DynamoTable, DynamoTypeMappers }
-import search.entity.TaskId
+import chessfinder.TaskId
+import chessfinder.download.details.DownloadStatusResponse
 
 import zio.schema.{ DeriveSchema, Schema }
 
@@ -30,8 +30,8 @@ case class TaskRecord(
       pending = pending - 1
     )
 
-  def toStatus: TaskStatusResponse =
-    TaskStatusResponse(
+  def toStatus: DownloadStatusResponse =
+    DownloadStatusResponse(
       taskId = task_id.value,
       succeed = succeed,
       failed = failed,

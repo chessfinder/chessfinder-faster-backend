@@ -51,7 +51,7 @@ Resources:
           Type: HttpApi
       Runtime: java17
       CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.3.0\chessfinder-lambda.jar
-      Handler: chessfinder.LambdaMain::handleRequest
+      Handler: chessfinder.api.Lambda::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
   ChessfinderHttpApi:

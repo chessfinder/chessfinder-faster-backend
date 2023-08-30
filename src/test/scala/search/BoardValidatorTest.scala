@@ -2,7 +2,7 @@ package chessfinder
 package search
 
 import core.{ ProbabilisticBoard, SearchFen }
-import search.BrokenLogic.*
+import BrokenComputation.*
 
 import zio.ZIO
 import zio.test.*

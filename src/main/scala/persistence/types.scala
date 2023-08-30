@@ -1,7 +1,8 @@
 package chessfinder
 package persistence
 
-import search.entity.{ ChessPlatform, SearchStatus }
+import chessfinder.ChessPlatform
+import chessfinder.search.SearchStatus
 
 import scala.util.Try
 
@@ -23,11 +24,6 @@ object PlatformType:
 
 enum SearchStatusType:
   case IN_PROGRESS, SEARCHED_ALL, SEARCHED_PARTIALLY
-
-  def toSearchStatus: SearchStatus = this match
-    case IN_PROGRESS        => SearchStatus.InProgress
-    case SEARCHED_ALL       => SearchStatus.SearchedAll
-    case SEARCHED_PARTIALLY => SearchStatus.SearchedPartially
 
 object SearchStatusType:
 

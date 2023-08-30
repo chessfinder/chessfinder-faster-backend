@@ -1,21 +1,16 @@
 package chessfinder
 package pubsub
 
-import persistence.PlatformType
 import pubsub.core.PubSub
-import search.entity.*
 
-import com.typesafe.config.ConfigFactory
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
-import sttp.model.Uri
 import zio.*
 import zio.aws.sqs.*
 import zio.aws.sqs.model.MessageAttributeValue
 import zio.config.*
 import zio.config.magnolia.deriveConfig
 import zio.sqs.producer.ProducerEvent
-import zio.sqs.serialization.Serializer
 
 import java.util.UUID
 
@@ -36,7 +31,6 @@ final case class DownloadGameCommand(
     )
 
 object DownloadGameCommand:
-  import chessfinder.util.UriCodec.given
   given Codec[DownloadGameCommand] = deriveCodec[DownloadGameCommand]
 
   def apply(user: UserIdentified, archiveId: ArchiveId, taskId: TaskId): DownloadGameCommand =

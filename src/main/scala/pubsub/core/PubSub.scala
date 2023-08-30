@@ -2,18 +2,14 @@ package chessfinder
 package pubsub.core
 
 import io.circe.{ parser, Codec, Decoder }
-import software.amazon.awssdk.regions.Region
 import zio.*
 import zio.aws.sqs.*
-import zio.aws.sqs.model.{ DeleteMessageRequest, Message, MessageAttributeValue }
+import zio.aws.sqs.model.{ DeleteMessageRequest, MessageAttributeValue }
 import zio.config.*
-import zio.config.magnolia.deriveConfig
 import zio.sqs.*
 import zio.sqs.producer.{ Producer, ProducerEvent, ProducerSettings }
 import zio.sqs.serialization.Serializer
 import zio.stream.*
-
-import java.net.URI
 
 trait Subscriber[T: Codec](
     queueUrl: String,

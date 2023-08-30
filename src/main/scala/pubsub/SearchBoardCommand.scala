@@ -2,6 +2,7 @@ package chessfinder
 package pubsub
 
 import pubsub.core.PubSub
+
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
 import zio.*
