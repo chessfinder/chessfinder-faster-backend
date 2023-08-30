@@ -16,6 +16,9 @@ object ClientExt:
     def to[T](using Decoder[T]): Task[T] =
       for {
         str  <- body.asString(UTF_8)
+//        _ <- ZIO.logInfo(str)
         json <- ZIO.fromEither(parser.parse(str))
+//        _ <- ZIO.logInfo(json.noSpaces)
         dto  <- ZIO.fromEither(Decoder[T].decodeJson(json))
+//        _ <- ZIO.logInfo(dto.toString)
       } yield dto

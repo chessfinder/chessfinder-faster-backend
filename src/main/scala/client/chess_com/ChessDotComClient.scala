@@ -84,15 +84,23 @@ object ChessDotComClient:
             )
           profile <- response.status match
             case Status.Ok =>
-              response.body
+              val preParsing = ZIO.logInfo("Got 200. Preparing to parse the body...")
+              val parsing = response.body
                 .to[Games]
-                .map(Right.apply)
                 .tapError(err =>
                   ZIO.logErrorCause(
                     s"Parsing the archive ${archiveLocation} has resulted an error ${err.getMessage()}",
                     Cause.fail(err)
                   )
                 )
+              def parsedSuccessfully(games: Games) = ZIO.logInfo(s"Parsed in total ${games.games.length} games")
+              for {
+                _ <- preParsing
+                _ <- ZIO.logInfo(s"${response.body.getClass.toString}")
+                games <- parsing
+                _ <- parsedSuccessfully(games)
+              } yield Right(games)
+
             case status =>
               val logging = for
                 bodyAsString <- response.body.asString.orElseSucceed("Request body is not a string")

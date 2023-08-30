@@ -14,14 +14,14 @@ Parameters:
 Resources:
   DownloadGamesFunction:
     Properties:
-      MemorySize: 1024
+      MemorySize: 3000
       Events:
         DownloadGamesCommand:
           Properties:
             Queue: !Ref 'DownloadGamesQueueArn'
-            BatchSize: 10
+            BatchSize: 1
           Type: SQS
-      Timeout: 900
+      Timeout: 180
       Runtime: java17
       Handler: chessfinder.download.Lambda::handleRequest
       CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
@@ -30,7 +30,7 @@ Resources:
 
   SearchBoardFunction:
     Properties:
-      MemorySize: 1024
+      MemorySize: 3000
       Events:
         SearchBoardCommand:
           Properties:

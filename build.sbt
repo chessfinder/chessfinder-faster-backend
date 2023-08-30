@@ -8,7 +8,7 @@ enablePlugins(GitVersioning)
 // ThisBuild / enablePlugins(GitVersioning)
 
 ThisBuild / idePackagePrefix := Some("chessfinder")
-ThisBuild / organization := "eudemonia"
+ThisBuild / organization     := "eudemonia"
 // ThisBuild / version           := "0.1"
 ThisBuild / git.useGitDescribe := true
 ThisBuild / scalaVersion       := "3.3.0"
@@ -34,7 +34,8 @@ lazy val DeepIntegrationTest = IntegrationTest.extend(Test)
 lazy val DeepIntegrationSettings: Seq[Def.Setting[_]] =
   inConfig(DeepIntegrationTest)(Defaults.testSettings) ++
     Seq(
-      DeepIntegrationTest / fork              := false,
+      DeepIntegrationTest / fork := true,
+      DeepIntegrationTest / javaOptions ++= Seq("-Xms1g", "-Xmx4g"),
       DeepIntegrationTest / parallelExecution := false,
       DeepIntegrationTest / scalaSource       := baseDirectory.value / "src/it/scala"
     )
@@ -44,9 +45,9 @@ lazy val root = (project in file("."))
   .settings(DeepIntegrationSettings)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoKeys    := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "chessfinder",
-    buildInfoObject  := "ChessfinderBuildInfo",
+    buildInfoObject  := "ChessfinderBuildInfo"
   )
   // .settings(version := "v11.3.3")
   .settings(git.useGitDescribe := true)

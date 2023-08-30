@@ -5,16 +5,17 @@ Resources:
   DownloadGames: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: "DownloadGames.fifo"
-      FifoQueue: true
-      VisibilityTimeout: 900
+      QueueName: "DownloadGames"
+      VisibilityTimeout: 180
+      MessageRetentionPeriod: 120
 
   SearchBoard: 
     Type: AWS::SQS::Queue
     Properties: 
       QueueName: "SearchBoard.fifo"
       FifoQueue: true
-      VisibilityTimeout: 900
+      VisibilityTimeout: 180
+      MessageRetentionPeriod: 120
 
 Outputs:
   DownloadGamesQueueURL: 

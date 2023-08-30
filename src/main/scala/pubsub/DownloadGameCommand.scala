@@ -25,8 +25,8 @@ final case class DownloadGameCommand(
     ProducerEvent(
       data = this,
       attributes = Map.empty[String, MessageAttributeValue],
-      groupId = Some(userId),
-      deduplicationId = Some(archiveId),
+      groupId = None,
+      deduplicationId = None,
       delay = None
     )
 

@@ -9,48 +9,48 @@ Resources:
       Timeout: 29
       MemorySize: 1024
       Events:
-        GetApiAsyncTask:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/async/task
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        GetApiAsyncBoard:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/async/board
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        PostApiAsyncGame:
+        PostApiStructuredBoard:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: POST
-            Path: /api/async/game
+            Path: /api/structured/board
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
-        PostApiAsyncBoard:
+        PostApiStructuredGame:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: POST
-            Path: /api/async/board
+            Path: /api/structured/game
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
-        GetApiAsync:
+        GetApiStructuredGame:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: GET
-            Path: /api/async
+            Path: /api/structured/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiStructured:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/structured
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiStructuredBoard:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/structured/board
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
       Runtime: java17
-      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.3.0\chessfinder-lambda.jar
+      CodeUri: /mnt/c/Users/tohanyan/IdeaProjects/chessfinder/chess-finder-backend/target/scala-3.3.0/chessfinder-lambda.jar
       Handler: chessfinder.api.Lambda::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
