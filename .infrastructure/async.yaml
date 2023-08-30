@@ -23,7 +23,7 @@ Resources:
           Type: SQS
       Timeout: 900
       Runtime: java17
-      Handler: chessfinder.dpwnload.Lambda::handleRequest
+      Handler: chessfinder.download.Lambda::handleRequest
       CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
