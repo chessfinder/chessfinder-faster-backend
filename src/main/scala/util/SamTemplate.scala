@@ -13,7 +13,7 @@ import scala.concurrent.duration.{ Duration, DurationInt, FiniteDuration }
 object SamTemplate extends App:
 
   val organization = "eudemonia"
-  val controller   = Controller("async")
+  val controller   = Controller("structured")
   val endpoints    = controller.endpoints
 
   val jarPath = Paths.get("target/scala-3.3.0/chessfinder-lambda.jar").toAbsolutePath.toString
