@@ -47,7 +47,7 @@ jobs:
       - name: Packaging Code
         shell: bash
         run: |
-          sbt -v "assembly; runMain chessfinder.SamTemplate;"
+          sbt -v "assembly; runMain chessfinder.util.SamTemplate;"
           cat template.yaml
       
       - name: Configure AWS CLI
