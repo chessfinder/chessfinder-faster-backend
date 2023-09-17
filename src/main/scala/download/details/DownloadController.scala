@@ -28,7 +28,9 @@ class DownloadController(val version: String) extends ZTapir:
       .in("game")
       .in(query[UUID]("downloadRequestId"))
       .out(jsonBody[DownloadStatusResponse])
-      .errorOut(jsonBody[ApiError])
+      .errorOut(
+        jsonBody[ApiError]
+      ) // fixme those errors should go with 422, other errors caused by missing params have 400 and are just a text not json, the client should be able to distinguish using status code. 422s are always json and mean some business error.
 
   lazy val endpoints: List[Endpoint[?, ?, ?, ?, ?]] =
     List(

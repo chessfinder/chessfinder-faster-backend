@@ -1,0 +1,8 @@
+go 1.21.0
+
+use (
+	./src_go/api
+	./src_go/download/check_status
+	./src_go/download/initiate
+	./src_go/search/check_status
+)

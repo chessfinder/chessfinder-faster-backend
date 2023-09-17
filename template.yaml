@@ -25,8 +25,8 @@ Resources:
       Location: .infrastructure/async.yaml
       Parameters:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-        DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueARN
-        SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueARN
+        DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
+        SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
   
   Api:
     Type: AWS::Serverless::Application
@@ -34,8 +34,18 @@ Resources:
       Location: .infrastructure/api.yaml
       Parameters:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+        DownloadGamesQueueUrl: !GetAtt SQS.Outputs.DownloadGamesQueueUrl
+        SearchBoardQueueUrl: !GetAtt SQS.Outputs.SearchBoardQueueUrl
+        DownloadRequestTableName: !GetAtt DynamoDB.Outputs.TasksTableName
+        UsersTableName: !GetAtt DynamoDB.Outputs.UsersTableName
+        ArchivesTableName: !GetAtt DynamoDB.Outputs.ArchivesTableName
+        SearchResultTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
+        ChessDotComUrl: "https://api.chess.com"
 
 Outputs:
   ChessfinderApiEndpoint:
     Description: "Chessfinder API Gateway Endpoint URL"
     Value: !GetAtt Api.Outputs.ChessfinderUrl
+  ChessfinderFasterApiEndpoint:
+    Description: "Chessfinder faster API Gateway Endpoint URL"
+    Value: !GetAtt FasterApi.Outputs.ChessfinderUrl

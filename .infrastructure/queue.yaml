@@ -17,16 +17,16 @@ Resources:
       VisibilityTimeout: 900
 
 Outputs:
-  DownloadGamesQueueURL: 
+  DownloadGamesQueueUrl: 
     Description: "URL of DownloadGamesQueue"
     Value: !Ref DownloadGames
-  DownloadGamesQueueARN: 
+  DownloadGamesQueueArn: 
     Description: "ARN of DownloadGamesQueue"
     Value: !GetAtt DownloadGames.Arn
   
-  SearchBoardQueueURL: 
+  SearchBoardQueueUrl: 
     Description: "URL of SearchBoardQueue"
     Value: !Ref SearchBoard
-  SearchBoardQueueARN: 
+  SearchBoardQueueArn: 
     Description: "ARN of SearchBoardQueue"
     Value: !GetAtt SearchBoard.Arn
