@@ -24,6 +24,9 @@ func (businessError BusinessError) ToResponseEvent() (responseEvent events.APIGa
 
 	responseEvent.Body = string(responseBody)
 	responseEvent.StatusCode = 422
+	responseEvent.Headers = map[string]string{
+		"Content-Type": "application/json",
+	}
 	return
 }
 
@@ -38,6 +41,9 @@ type ValidationError struct {
 func (invalid ValidationError) ToResponseEvent() (responseEvent events.APIGatewayV2HTTPResponse) {
 	responseEvent.Body = string(invalid.Msg)
 	responseEvent.StatusCode = 400
+	responseEvent.Headers = map[string]string{
+		"Content-Type": "application/json",
+	}
 	return
 }
 

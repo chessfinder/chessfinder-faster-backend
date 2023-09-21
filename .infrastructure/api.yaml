@@ -115,7 +115,7 @@ Resources:
           Type: HttpApi
       Architectures: ["arm64"]
       Runtime: "provided.al2"
-      CodeUri: ./src_go/download/initiate/initiate.zip
+      CodeUri: ../src_go/download/initiate/initiate.zip
       Handler: bootstrap
       Environment:
         Variables:

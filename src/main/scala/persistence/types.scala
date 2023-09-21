@@ -21,16 +21,3 @@ object PlatformType:
 
   def fromString(str: String): Either[String, PlatformType] =
     Try(PlatformType.valueOf(str)).toEither.left.map(_.getMessage())
-
-enum SearchStatusType:
-  case IN_PROGRESS, SEARCHED_ALL, SEARCHED_PARTIALLY
-
-object SearchStatusType:
-
-  def fromSearchStatus(s: SearchStatus) = s match
-    case SearchStatus.InProgress        => SearchStatusType.IN_PROGRESS
-    case SearchStatus.SearchedAll       => SearchStatusType.SEARCHED_ALL
-    case SearchStatus.SearchedPartially => SearchStatusType.SEARCHED_PARTIALLY
-
-  def fromString(str: String): Either[String, SearchStatusType] =
-    Try(SearchStatusType.valueOf(str)).toEither.left.map(_.getMessage())

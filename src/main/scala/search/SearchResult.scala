@@ -7,7 +7,7 @@ import sttp.model.Uri
 import java.time.Instant
 
 final case class SearchResult(
-    id: SearchRequestId,
+    searchRequestId: SearchRequestId,
     startSearchAt: Instant,
     lastExaminedAt: Instant,
     examined: Int,
@@ -42,7 +42,7 @@ object SearchResult:
       total: Int
   ): SearchResult =
     SearchResult(
-      id = id,
+      searchRequestId = id,
       startSearchAt = startSearchAt,
       lastExaminedAt = startSearchAt,
       examined = 0,

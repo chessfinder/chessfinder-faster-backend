@@ -24,7 +24,7 @@ case class SearchResultRecord(
 
   def toSearchResult: SearchResult =
     SearchResult(
-      id = search_request_id,
+      searchRequestId = search_request_id,
       startSearchAt = start_search_at,
       lastExaminedAt = last_examined_at,
       examined = examined,
@@ -47,7 +47,7 @@ object SearchResultRecord:
 
   def fromSearchResult(result: SearchResult): SearchResultRecord =
     SearchResultRecord(
-      search_request_id = result.id,
+      search_request_id = result.searchRequestId,
       start_search_at = result.startSearchAt,
       last_examined_at = result.lastExaminedAt,
       examined = result.examined,

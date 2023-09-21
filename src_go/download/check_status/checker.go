@@ -98,6 +98,9 @@ func (checker *DownloadStatusChecker) checkWithFastFail(event *events.APIGateway
 	responseEvent = events.APIGatewayV2HTTPResponse{
 		Body:       string(responseBody),
 		StatusCode: 200,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 	return
 }
