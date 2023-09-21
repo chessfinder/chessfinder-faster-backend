@@ -21,4 +21,4 @@ object SearchResponse:
 
   given JsonEncoder[SearchResponse] = DeriveJsonEncoder.gen[SearchResponse]
 
-  def fromSearchResult(result: SearchResult): SearchResponse = SearchResponse(result.id.value)
+  def fromSearchResult(result: SearchResult): SearchResponse = SearchResponse(result.searchRequestId.value)

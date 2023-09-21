@@ -29,7 +29,7 @@ object SearchStatusResponse:
 
   def fromSearchResult(result: SearchResult): SearchStatusResponse =
     SearchStatusResponse(
-      id = result.id.value,
+      id = result.searchRequestId.value,
       startSearchAt = result.startSearchAt,
       lastExaminedAt = result.lastExaminedAt,
       examined = result.examined,

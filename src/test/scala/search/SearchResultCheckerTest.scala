@@ -22,7 +22,7 @@ object SearchResultCheckerTest extends ZIOSpecDefault with Mocks:
         val searchRequestId = SearchRequestId(UUID.randomUUID())
 
         val searchResult = SearchResult(
-          id = searchRequestId,
+          searchRequestId = searchRequestId,
           startSearchAt = Instant.now(),
           lastExaminedAt = Instant.now(),
           examined = 7,

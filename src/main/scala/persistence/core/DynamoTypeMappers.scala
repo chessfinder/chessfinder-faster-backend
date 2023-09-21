@@ -1,7 +1,7 @@
 package chessfinder
 package persistence.core
 
-import persistence.{ PlatformType, SearchStatusType }
+import persistence.PlatformType
 import search.*
 
 import chess.format.pgn.PgnStr
@@ -22,10 +22,11 @@ object DynamoTypeMappers:
   given Schema[SearchRequestId] = Schema[UUID].transform(s => SearchRequestId(s), _.value)
   // given Schema[PlatformType] = DeriveSchema.gen[PlatformType]
   given Schema[PlatformType] = Schema[String].transformOrFail(PlatformType.fromString, p => Right(p.toString))
-  given Schema[SearchStatusType] =
-    Schema[String].transformOrFail(SearchStatusType.fromString, p => Right(p.toString))
+
   given Schema[ArchiveStatus] = Schema[String].transformOrFail(ArchiveStatus.fromRepr, p => Right(p.repr))
-  given Schema[PgnStr]        = Schema[String].transform(s => PgnStr(s), _.value)
-  given Schema[Uri]           = Schema[String].transformOrFail(s => Uri.parse(s), u => Right(u.toString))
+  given Schema[SearchStatus]  = Schema[String].transformOrFail(SearchStatus.fromRepr, p => Right(p.repr))
+
+  given Schema[PgnStr] = Schema[String].transform(s => PgnStr(s), _.value)
+  given Schema[Uri]    = Schema[String].transformOrFail(s => Uri.parse(s), u => Right(u.toString))
 
   given [A](using Schema[A]): ToAttributeValue[A] = (v: A) => AttributeValue.encode[A](v)

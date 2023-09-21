@@ -35,7 +35,7 @@ object SearchRequestRegister:
         now             <- clock.instant
         searchRequestId <- random.nextUUID
         searchResult    <- searchResultRepo.initiate(SearchRequestId(searchRequestId), now, totalGames)
-        _               <- boardSearchingProducer.publish(userIdentified, board, searchResult.id)
+        _               <- boardSearchingProducer.publish(userIdentified, board, searchResult.searchRequestId)
       yield searchResult
 
   object Impl:
