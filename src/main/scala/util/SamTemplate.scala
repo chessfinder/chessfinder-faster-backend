@@ -37,4 +37,4 @@ object SamTemplate extends App:
       }
 
   val yaml = AwsSamInterpreter(samOptions).toSamTemplate(endpoints).toYaml
-  Files.write(Paths.get(".infrastructure/api.yaml"), yaml.getBytes(UTF_8))
+  Files.write(Paths.get(".infrastructure/slower_api.yaml"), yaml.getBytes(UTF_8))

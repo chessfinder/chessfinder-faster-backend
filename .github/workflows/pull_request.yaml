@@ -12,27 +12,47 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
       
-      - name: Setup JDK
+      - name: SCALA - Setup JDK
         uses: actions/setup-java@v3.11.0
         with:
           distribution: 'corretto'
           java-version: '17'
       
-      - name: Check Fomatting
+      - name: SCALA - Check Fomatting
         shell: bash
         run: |
           sbt -v "scalafmtCheckAll;"
-      
-      - name: Compile Code
+      - name: SCALA - Compile Code
         shell: bash
         run: |
           sbt -v "compile;"
+      - name: SCALA - Unit Tests
+        shell: bash
+        run: |
+          sbt -v "test;"
       
-      # - name: Unit Tests
-      #   shell: bash
-      #   run: |
-      #     sbt -v "test;"
-      
+      - name: GO - Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.0'
+
+      - name: GO - Install dependencies
+        run: |
+          cd src_go/download/check_status
+          go get .
+          go mod tidy
+          cd ../../../
+
+          cd src_go/download/initiate
+          go get .
+          go mod tidy
+          cd ../../../
+
+          cd src_go/search/check_status
+          go get .
+          go mod tidy
+          cd ../../../          
+  
       - name: Install Python 
         uses: actions/setup-python@v4
         with:
@@ -50,12 +70,12 @@ jobs:
           aws configure set aws_access_key_id "test" --profile default
           aws configure set aws_secret_access_key "test" --profile default
           aws configure set default.region "us-east-1" --profile default
-
+      
       - name: Install SamLocal 
         shell: bash
         run: pip install aws-sam-cli-local
-
-      - name: Integration Tests
+      
+      - name: SCALA - Integration Tests
         shell: bash
         run: |
           docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
@@ -65,4 +85,18 @@ jobs:
           samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dyanmodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
           samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
           sbt -v "IntegrationTest / test;"
+          docker compose -f ./src/it/resources/docker-compose.yaml down
+
+      - name: GO - Test
+        shell: bash
+        run: |
+          docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
+          sleep 10s          
+          awslocal  s3api create-bucket --bucket chessfinder
+          # samlocal deploy --template-file template_resources.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+          samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dyanmodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+          samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+          go test ./src_go/download/check_status/... -v
+          go test ./src_go/download/initiate/... -v
+          go test ./src_go/search/check_status/... -v
           docker compose -f ./src/it/resources/docker-compose.yaml down

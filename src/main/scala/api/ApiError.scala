@@ -13,7 +13,12 @@ object ApiError:
 
   def fromBrokenLogic(err: BrokenComputation): ApiError = err match
     case err: BrokenComputation.ProfileNotFound => ApiError("PROFILE_NOT_FOUND", err.msg)
-    case err: BrokenComputation.TaskNotFound    => ApiError("TASK_NOT_FOUND", err.msg)
+    case err: BrokenComputation.TaskNotFound =>
+      ApiError("TASK_NOT_FOUND", err.msg) // FIXME change TASK to something else
     case BrokenComputation.InvalidSearchBoard   => ApiError("INVALID_SEARCH_BOARD", err.msg)
     case err: BrokenComputation.NoGameAvailable => ApiError("NO_GAME_AVAILABLE", err.msg)
-    case err                                    => ApiError("SERVER_OVERLOADED", err.msg)
+    case err =>
+      ApiError(
+        "SERVER_OVERLOADED",
+        err.msg
+      ) // FIXME err.msg is a bug, you are not supposed to reveal the real cause

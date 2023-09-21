@@ -3,61 +3,159 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
   ChessfinderLambdaRoleArn:
     Type: String
+
+  DownloadGamesQueueUrl:
+    Type: String
+
+  SearchBoardQueueUrl:
+    Type: String
+
+  DownloadRequestTableName: 
+    Type: String
+  
+	UsersTableName:
+    Type: String
+
+	ArchivesTableName:
+    Type: String
+  
+  SearchResultTableName:
+    Type: String
+
+  ChessDotComUrl:
+    Type: String
+  
 Resources:
   ChessfinderFunction:
     Properties:
       Timeout: 29
       MemorySize: 1024
       Events:
-        GetApiAsyncTask:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/async/task
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        GetApiAsyncBoard:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/async/board
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        PostApiAsyncGame:
+        PostApiStructuredBoard:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: POST
-            Path: /api/async/game
+            Path: /api/structured/board
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
-        PostApiAsyncBoard:
+        PostApiStructuredGame:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: POST
-            Path: /api/async/board
+            Path: /api/structured/game
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
-        GetApiAsync:
+        GetApiStructuredGame:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: GET
-            Path: /api/async
+            Path: /api/structured/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiStructured:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/structured
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiStructuredBoard:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/structured/board
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
       Runtime: java17
-      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.3.0\chessfinder-lambda.jar
+      CodeUri: /home/raccoon/chessfinder/chessfinder-faster-backend/target/scala-3.3.0/chessfinder-lambda.jar
       Handler: chessfinder.api.Lambda::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
+
+  DownloadStatusFunction:
+    Properties:
+      Timeout: 29
+      MemorySize: 1024
+      Events:
+        GetApiFasterGame:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/faster/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/faster_api.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          DOWNLOAD_REQUEST_TABLE_NAME: !Ref DownloadRequestTableName
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+  
+  InitiateDownloadFunction:
+    Properties:
+      Timeout: 29
+      MemorySize: 1024
+      Events:
+        PostApiFasterGame:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: POST
+            Path: /api/structured/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/faster_api.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          DOWNLOAD_GAMES_QUEUE_URL: !Ref DownloadGamesQueueUrl
+          SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
+          CHESS_DOT_COM_URL: !Ref ChessDotComUrl
+          DOWNLOAD_REQUEST_TABLE_NAME: !Ref DownloadRequestTableName
+          USERS_TABLE_NAME: !Ref UsersTableName
+          ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+
+  SearchStatusFunction:
+    Properties:
+      Timeout: 29
+      MemorySize: 1024
+      Events:
+        GetApiFasterBoard:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: GET
+            Path: /api/faster/board
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/search/check_status/check_status.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          SEARCH_RESULT_TABLE_NAME: !Ref SearchResultTableName
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+
   ChessfinderHttpApi:
     Properties:
       StageName: $default
     Type: AWS::Serverless::HttpApi
+
 Outputs:
   ChessfinderUrl:
     Description: Base URL of your endpoints

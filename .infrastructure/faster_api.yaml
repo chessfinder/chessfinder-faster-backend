@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  ChessfinderLambdaRoleArn:
+    Type: String
+  DownloadGamesQueueUrl:
+    Type: String
+  SearchBoardQueueUrl:
+    Type: String
+Resources:
+  ChessfinderFasterFunction:
+    Properties:
+      Timeout: 29
+      MemorySize: 1024
+      Events:
+        GetApiAsyncTask:
+          Properties:
+            ApiId: !Ref 'ChessfinderFasterHttpApi'
+            Method: GET
+            # FIXME
+            Path: /api/faster/task
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiAsyncBoard:
+          Properties:
+            ApiId: !Ref 'ChessfinderFasterHttpApi'
+            Method: GET
+            # FIXME
+            Path: /api/async/board
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        PostApiAsyncGame:
+          Properties:
+            ApiId: !Ref 'ChessfinderFasterHttpApi'
+            Method: POST
+            Path: /api/async/game
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        PostApiAsyncBoard:
+          Properties:
+            ApiId: !Ref 'ChessfinderFasterHttpApi'
+            Method: POST
+            Path: /api/async/board
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+        GetApiAsync:
+          Properties:
+            ApiId: !Ref 'ChessfinderFasterHttpApi'
+            Method: GET
+            Path: /api/async
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/faster_api.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          DOWNLOAD_GAMES_QUEUE_URL: !Ref DownloadGamesQueueUrl
+          SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
+
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+  ChessfinderFasterHttpApi:
+    Properties:
+      StageName: $default
+    Type: AWS::Serverless::HttpApi
+Outputs:
+  ChessfinderUrl:
+    Description: Base URL of your endpoints
+    Value:
+      Fn::Sub: https://${ChessfinderFasterHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
