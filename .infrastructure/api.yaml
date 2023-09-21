@@ -92,7 +92,7 @@ Resources:
           Type: HttpApi
       Architectures: ["arm64"]
       Runtime: "provided.al2"
-      CodeUri: ../src_go/faster_api.zip
+      CodeUri: ../src_go/search/check_status/check_status.zip
       Handler: bootstrap
       Environment:
         Variables:
@@ -109,13 +109,13 @@ Resources:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: POST
-            Path: /api/structured/game
+            Path: /api/faster/game
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
       Architectures: ["arm64"]
       Runtime: "provided.al2"
-      CodeUri: ../src_go/faster_api.zip
+      CodeUri: ./src_go/download/initiate/initiate.zip
       Handler: bootstrap
       Environment:
         Variables:
