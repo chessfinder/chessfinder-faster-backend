@@ -16,7 +16,7 @@ Parameters:
   UsersTableName:
     Type: String
 
-	ArchivesTableName:
+  ArchivesTableName:
     Type: String
   
   SearchResultTableName:
