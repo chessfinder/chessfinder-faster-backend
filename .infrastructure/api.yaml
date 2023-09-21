@@ -72,7 +72,7 @@ Resources:
             PayloadFormatVersion: '2.0'
           Type: HttpApi
       Runtime: java17
-      CodeUri: /home/raccoon/chessfinder/chessfinder-faster-backend/target/scala-3.3.0/chessfinder-lambda.jar
+      CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
       Handler: chessfinder.api.Lambda::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
