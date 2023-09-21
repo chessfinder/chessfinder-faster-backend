@@ -92,7 +92,7 @@ Resources:
           Type: HttpApi
       Architectures: ["arm64"]
       Runtime: "provided.al2"
-      CodeUri: ../src_go/search/check_status/check_status.zip
+      CodeUri: ../src_go/download/check_status/check_status.zip
       Handler: bootstrap
       Environment:
         Variables:

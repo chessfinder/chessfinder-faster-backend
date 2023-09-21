@@ -12,7 +12,7 @@ import java.time.Instant
 import java.util.UUID
 
 final case class SearchStatusResponse(
-    id: UUID,
+    searchRequestId: UUID,
     startSearchAt: Instant,
     lastExaminedAt: Instant,
     examined: Int,
@@ -29,7 +29,7 @@ object SearchStatusResponse:
 
   def fromSearchResult(result: SearchResult): SearchStatusResponse =
     SearchStatusResponse(
-      id = result.searchRequestId.value,
+      searchRequestId = result.searchRequestId.value,
       startSearchAt = result.startSearchAt,
       lastExaminedAt = result.lastExaminedAt,
       examined = result.examined,
