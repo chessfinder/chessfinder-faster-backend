@@ -46,6 +46,3 @@ Outputs:
   ChessfinderApiEndpoint:
     Description: "Chessfinder API Gateway Endpoint URL"
     Value: !GetAtt Api.Outputs.ChessfinderUrl
-  ChessfinderFasterApiEndpoint:
-    Description: "Chessfinder faster API Gateway Endpoint URL"
-    Value: !GetAtt FasterApi.Outputs.ChessfinderUrl
