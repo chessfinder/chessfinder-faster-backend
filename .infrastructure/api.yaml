@@ -10,10 +10,10 @@ Parameters:
   SearchBoardQueueUrl:
     Type: String
 
-  DownloadRequestTableName: 
+  DownloadRequestTableName:
     Type: String
   
-	UsersTableName:
+  UsersTableName:
     Type: String
 
 	ArchivesTableName:
