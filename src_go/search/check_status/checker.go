@@ -98,6 +98,9 @@ func (checker *SearchResultChecker) checkWithFastFail(event *events.APIGatewayV2
 	responseEvent = events.APIGatewayV2HTTPResponse{
 		Body:       string(responseBody),
 		StatusCode: 200,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 	return
 }

@@ -58,7 +58,7 @@ object SearchResultRepoTest extends NarrowIntegrationSuite:
           )
 
           val expectedResult = SearchResult(
-            id = searchRequestId,
+            searchRequestId = searchRequestId,
             startSearchAt = startSearchAt,
             lastExaminedAt = lastExaminedAt,
             examined = examined,
@@ -125,7 +125,7 @@ object SearchResultRepoTest extends NarrowIntegrationSuite:
           )
 
           val newSearchResult = SearchResult(
-            id = searchRequestId,
+            searchRequestId = searchRequestId,
             startSearchAt = startSearchAt,
             lastExaminedAt = lastExaminedAt,
             examined = examined,

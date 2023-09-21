@@ -73,7 +73,7 @@ object BoardFinderTest extends ZIOSpecDefault with Mocks:
         )
 
         val searchRequest = SearchResult(
-          id = searchRequestId,
+          searchRequestId = searchRequestId,
           startSearchAt = startSearchAt,
           lastExaminedAt = lastExaminedAt,
           examined = 3,

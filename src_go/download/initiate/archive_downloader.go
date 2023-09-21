@@ -141,6 +141,9 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 	responseEvent = events.APIGatewayV2HTTPResponse{
 		StatusCode: 200,
 		Body:       string(jsonBody),
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 
 	return
