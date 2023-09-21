@@ -56,7 +56,7 @@ jobs:
       - name: SCALA - Packaging Code
         shell: bash
         run: |
-          sbt -v "assembly; runMain messagesender.SamTemplate;"
+          sbt -v "assembly;"
 
       - name: GO - Packaging Code
         shell: bash
