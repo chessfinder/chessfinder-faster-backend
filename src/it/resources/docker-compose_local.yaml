@@ -21,20 +21,21 @@ services:
   #   volumes:
   #     - ${STORAGE}/dynamodb:/home/dynamodblocal/data
 
-  # dynamodb-admin:
-  #   image: aaronshaf/dynamodb-admin:latest
-  #   container_name: dynamodb_admin
-  #   restart: always
-  #   hostname: dynamodb-admin
-  #   ports:
-  #     - "${DYNAMO_DB_ADMIN_PORT}:8001"
-  #   environment:
-  #     DYNAMO_ENDPOINT: http://dynamodb:8000
-  #     AWS_REGION: ${AWS_REGION}
-  #   depends_on:
-  #     - dynamodb
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: dynamodb_admin
+    restart: always
+    hostname: dynamodb-admin
+    ports:
+      - "${DYNAMO_DB_ADMIN_PORT}:8001"
+    environment:
+      DYNAMO_ENDPOINT: http://aws:4566
+      AWS_REGION: ${AWS_REGION}
+    depends_on:
+      - localstack
 
   localstack:
+    hostname: aws
     container_name: "localstack_main"
     image: localstack/localstack:latest
     ports:

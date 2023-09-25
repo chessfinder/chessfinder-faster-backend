@@ -4,6 +4,8 @@ import sbt.librarymanagement.ModuleID
 
 object Dependencies {
 
+  lazy val `chessfinder-core-tests`: Seq[ModuleID] = munit ++ scalatest ++ scalaCheck
+
   lazy val wiremock: Seq[ModuleID] = {
     val version = "2.33.2"
     Seq(

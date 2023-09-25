@@ -28,6 +28,7 @@ func NewDownloadStatusRecord(DownloadRequestId string, total int) DownloadStatus
 }
 
 func (record *DownloadStatusRecord) toPutItem(downloadStatusTableName string) *dynamodb.PutItemInput {
+	// FIXME either use json tags from strcut or create attributes by hand like this, but not both
 	return &dynamodb.PutItemInput{
 		Item: map[string]*dynamodb.AttributeValue{
 			"task_id": {

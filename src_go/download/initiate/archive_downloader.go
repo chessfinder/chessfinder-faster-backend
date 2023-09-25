@@ -89,7 +89,7 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 	err = json.Unmarshal([]byte(event.Body), &downloadRequest)
 	if err != nil {
 		logger.Error("impossible to unmarshal the request body!")
-		err = InvalidBody
+		err = api.InvalidBody
 		return
 	}
 
@@ -176,7 +176,7 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 
 	if response.StatusCode != 200 {
 		logger.Error("unexpected status code from chess.com", zap.String("url", url), zap.Int("statusCode", response.StatusCode))
-		err = ServiceOverloaded
+		err = api.ServiceOverloaded
 		return
 	}
 
@@ -233,7 +233,7 @@ func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 	}
 	if response.StatusCode != 200 {
 		logger.Error("unexpected status code from chess.com", zap.String("url", url), zap.Int("statusCode", response.StatusCode))
-		err = ServiceOverloaded
+		err = api.ServiceOverloaded
 		return
 	}
 

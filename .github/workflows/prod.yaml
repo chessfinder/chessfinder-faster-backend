@@ -61,6 +61,10 @@ jobs:
           go mod tidy
           cd ../../../
 
+          cd ./src_go/search/initiate
+          zip initiate.zip bootstrap validation/chess-finder-core_dynamic.h validation/chess-finder-core.h validation/graal_isolate_dynamic.h validation/graal_isolate.h validation/chess-finder-core.so
+          cd ../../../
+
       - name: GO - Build
         shell: bash
         run: |

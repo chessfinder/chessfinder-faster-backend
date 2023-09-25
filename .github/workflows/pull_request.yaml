@@ -51,6 +51,11 @@ jobs:
           cd src_go/search/check_status
           go get .
           go mod tidy
+          cd ../../../   
+
+          cd src_go/search/initiate
+          go get .
+          go mod tidy
           cd ../../../          
   
       - name: Install Python 
@@ -99,4 +104,7 @@ jobs:
           go test ./src_go/download/check_status/... -v
           go test ./src_go/download/initiate/... -v
           go test ./src_go/search/check_status/... -v
+          cd src_go/search/initiate
+          go test ./... -v
+          cd ../../../
           docker compose -f ./src/it/resources/docker-compose.yaml down
