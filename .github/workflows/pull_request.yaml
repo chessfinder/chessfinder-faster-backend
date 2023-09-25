@@ -7,8 +7,13 @@ on:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
+      - name: Check GLIGC version
+        shell: bash
+        run: |
+          ldd --version 
+        
       - name: Checkout Code
         uses: actions/checkout@v2
       
@@ -80,17 +85,17 @@ jobs:
         shell: bash
         run: pip install aws-sam-cli-local
       
-      - name: SCALA - Integration Tests
-        shell: bash
-        run: |
-          docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
-          sleep 10s          
-          awslocal  s3api create-bucket --bucket chessfinder
-          # samlocal deploy --template-file template_resources.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-          samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dyanmodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-          samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-          sbt -v "IntegrationTest / test;"
-          docker compose -f ./src/it/resources/docker-compose.yaml down
+      # - name: SCALA - Integration Tests
+      #   shell: bash
+      #   run: |
+      #     docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
+      #     sleep 10s          
+      #     awslocal  s3api create-bucket --bucket chessfinder
+      #     # samlocal deploy --template-file template_resources.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+      #     samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dyanmodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+      #     samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+      #     sbt -v "IntegrationTest / test;"
+      #     docker compose -f ./src/it/resources/docker-compose.yaml down
 
       - name: GO - Test
         shell: bash

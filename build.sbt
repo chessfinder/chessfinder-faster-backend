@@ -72,7 +72,9 @@ lazy val core = project
     )
   )
   .settings(
-    GraalVMSharedLib / containerBuildImage := Some("ghcr.io/graalvm/native-image-community:17"),
+    // GraalVMSharedLib / containerBuildImage := Some("ghcr.io/graalvm/native-image-community:17-ol8"),
+    GraalVMSharedLib / containerBuildImage := GraalVMNativeImagePlugin.generateContainerBuildImage("goodforgod/amazonlinux-graalvm:23.0.0-java17-amd64").value,
+
     GraalVMSharedLib /
       graalVMNativeImageOptions := Seq(
 //      "--shared",

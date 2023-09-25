@@ -19,14 +19,14 @@ Resources:
     Properties:
       Location: .infrastructure/queue.yaml
 
-  Async:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: .infrastructure/async.yaml
-      Parameters:
-        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-        DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
-        SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
+  # Async:
+  #   Type: AWS::Serverless::Application
+  #   Properties:
+  #     Location: .infrastructure/async.yaml
+  #     Parameters:
+  #       ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+  #       DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
+  #       SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
   
   Api:
     Type: AWS::Serverless::Application
