@@ -1,14 +1,33 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 )
 
 func main() {
+	cmd := exec.Command("ldd", "--version")
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error executing ldd --version:", err)
+		return
+	}
+
+	// Extract the first line from the output
+	firstLine := strings.Split(out.String(), "\n")[0]
+
+	fmt.Println("glibc version:", firstLine)
 
 	userTableName, userTableExists := os.LookupEnv("USERS_TABLE_NAME")
 	if !userTableExists {
