@@ -8,13 +8,16 @@ jobs:
   build:
     name: Compile, Build and Deploy QA
     runs-on: ubuntu-20.04
+
+    container: amazonlinux:2 
+
     steps:
       - name: Check GLIGC version
         shell: bash
         run: |
           ldd --version 
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       
       - name: SCALA - Setup JDK
         uses: actions/setup-java@v3.11.0

@@ -8,38 +8,88 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-20.04
+
+    container: goodforgod/amazonlinux-graalvm:23.0.0-java17-amd64
+
+
     steps:
+      - name: Setup Amazon Linux
+        shell: bash
+        run: |
+          yum update -y
+          yum upgrade -y
+
+      - name: Install SDKMAN
+        shell: bash
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk version 
+
       - name: Check GLIGC version
         shell: bash
         run: |
-          ldd --version 
+          ldd --version
+
+      - name: Install GIT
+        shell: bash
+        run: |
+          yum install git -y
+          git --version
+
+      - name: Install SBT
+        shell: bash
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install sbt
+          sbt sbtVersion
+      
+      - name: Check SBT
+        shell: bash
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sbt sbtVersion
+      
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.0'
+
+      # - name: Install Native Image
+      #   shell: bash
+      #   run: |
+      #     gu install native-image
+      #     native-image --version
         
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       
-      - name: SCALA - Setup JDK
-        uses: actions/setup-java@v3.11.0
-        with:
-          distribution: 'corretto'
-          java-version: '17'
+      # - name: SCALA - Setup JDK
+      # # yum install java-17-amazon-corretto-headless -y
+      #   uses: actions/setup-java@v3.11.0
+      #   with:
+      #     distribution: 'corretto'
+      #     java-version: '17'
       
       - name: SCALA - Check Fomatting
         shell: bash
         run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
           sbt -v "scalafmtCheckAll;"
+      
       - name: SCALA - Compile Code
         shell: bash
         run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
           sbt -v "compile;"
+
       - name: SCALA - Unit Tests
         shell: bash
         run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
           sbt -v "test;"
       
-      - name: GO - Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21.0'
+      
 
       - name: GO - Install dependencies
         run: |
