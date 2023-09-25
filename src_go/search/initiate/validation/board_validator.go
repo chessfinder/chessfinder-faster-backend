@@ -10,6 +10,7 @@ import "C"
 
 import (
 	"fmt"
+	"unsafe"
 )
 
 func ValidateBoard(board string) bool {
@@ -22,6 +23,9 @@ func ValidateBoard(board string) bool {
 	}
 
 	defer C.graal_tear_down_isolate(thread)
-	isValid := C.validate(thread, C.CString(board))
+	cstr := C.CString(board)
+	defer C.free(unsafe.Pointer(cstr))
+	isValid := C.validate(thread, cstr)
+
 	return isValid != 0
 }
