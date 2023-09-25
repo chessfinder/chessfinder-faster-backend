@@ -1,8 +1,11 @@
 import sbt.*
 import sbt.{ Def, _ }
 import sbt.Keys._
+import com.typesafe.sbt.packager.graalvmnativeimage.GraalVMSharedLibPlugin
+import com.typesafe.sbt.packager.graalvmnativeimage.GraalVMSharedLibPlugin.autoImport.GraalVMSharedLib
 
-enablePlugins(GraalVMNativeImagePlugin)
+// enablePlugins(GraalVMNativeImagePlugin)
+enablePlugins(GraalVMSharedLibPlugin)
 enablePlugins(GitPlugin)
 enablePlugins(GitVersioning)
 // ThisBuild / enablePlugins(GitVersioning)
@@ -38,6 +41,57 @@ lazy val DeepIntegrationSettings: Seq[Def.Setting[_]] =
       DeepIntegrationTest / parallelExecution := false,
       DeepIntegrationTest / scalaSource       := baseDirectory.value / "src/it/scala"
     )
+
+
+lazy val core = project
+  .in(file("src_core"))
+  .settings(
+    name := "chess-finder-core",
+    libraryDependencies ++= Dependencies.scalachess ++ Dependencies.`chessfinder-core-tests`,
+    libraryDependencies += "org.graalvm.sdk" % "graal-sdk" % "23.1.0" % "provided",
+    scalacOptions := Seq(
+      "-encoding",
+      "utf-8",
+      // "-rewrite",
+      "-source:future-migration",
+      "-indent",
+      "-explaintypes",
+      "-feature",
+      "-language:postfixOps",
+      "-deprecation",
+      "-Ykind-projector"
+      // "-Xfatal-warnings" // Warnings as errors!
+      // "-Ywarn-unused-import"
+      // "-Wunused:imports",
+      // "-Ywarn-unused"
+    ),
+    resolvers ++= Seq(lilaMaven, sonashots),
+    testFrameworks ++= List(
+      new TestFramework("munit.Framework"),
+      new TestFramework("zio.test.sbt.ZTestFramework")
+    )
+  )
+  .settings(
+    GraalVMSharedLib / containerBuildImage := Some("ghcr.io/graalvm/native-image-community:17"),
+    GraalVMSharedLib /
+      graalVMNativeImageOptions := Seq(
+//      "--shared",
+      "--verbose",
+      "--no-fallback",
+      "--install-exit-handlers",
+      "--enable-http",
+      "--allow-incomplete-classpath",
+      "--report-unsupported-elements-at-runtime",
+      "--initialize-at-run-time=io.netty",
+      "--trace-class-initialization=io.netty.util.AbstracferenceCounted",
+      "-H:+StaticExecutableWithDynamicLibC",
+      "-H:+RemoveSaturatedTypeFlows",
+      "-H:+ReportExceptionStackTraces",
+      "-H:+PrintClassInitialization",
+      "-H:Name=chessfinder-core"
+    )
+  )
+  .enablePlugins(GraalVMSharedLibPlugin)
 
 lazy val root = (project in file("."))
   .configs(DeepIntegrationTest)
@@ -77,30 +131,30 @@ lazy val root = (project in file("."))
     IntegrationTest / fork := true,
     IntegrationTest / javaOptions += "-Dconfig.file=src/it/resources/local.conf"
   )
-  .settings(
-    GraalVMNativeImage / mainClass := Some("chessfinder.LambdaMain"),
-    GraalVMNativeImage / containerBuildImage := GraalVMNativeImagePlugin
-      .generateContainerBuildImage(
-        "hseeberger/scala-sbt:graalvm-ce-21.3.0-java17_1.6.2_3.1.1"
-      )
-      .value,
-    // GraalVMNativeImage / containerBuildImage := Some("ghcr.io/graalvm/graalvm-ce:ol7-java11-22.3.1"),
-    graalVMNativeImageOptions := Seq(
-      "--verbose",
-      "--no-fallback",
-      "--install-exit-handlers",
-      "--enable-http",
-      "--allow-incomplete-classpath",
-      "--report-unsupported-elements-at-runtime",
-      "--initialize-at-run-time=io.netty",
-      "--trace-class-initialization=io.netty.util.AbstracferenceCounted",
-      "-H:+StaticExecutableWithDynamicLibC",
-      "-H:+RemoveSaturatedTypeFlows",
-      "-H:+ReportExceptionStackTraces",
-      "-H:TraceClassInitialization=io.netty.util.AbstracferenceCounted",
-      "-H:+PrintClassInitialization"
-    )
-  )
+  // .settings(
+  //   GraalVMNativeImage / mainClass := Some("chessfinder.LambdaMain"),
+  //   GraalVMNativeImage / containerBuildImage := GraalVMNativeImagePlugin
+  //     .generateContainerBuildImage(
+  //       "hseeberger/scala-sbt:graalvm-ce-21.3.0-java17_1.6.2_3.1.1"
+  //     )
+  //     .value,
+  //   // GraalVMNativeImage / containerBuildImage := Some("ghcr.io/graalvm/graalvm-ce:ol7-java11-22.3.1"),
+  //   graalVMNativeImageOptions := Seq(
+  //     "--verbose",
+  //     "--no-fallback",
+  //     "--install-exit-handlers",
+  //     "--enable-http",
+  //     "--allow-incomplete-classpath",
+  //     "--report-unsupported-elements-at-runtime",
+  //     "--initialize-at-run-time=io.netty",
+  //     "--trace-class-initialization=io.netty.util.AbstracferenceCounted",
+  //     "-H:+StaticExecutableWithDynamicLibC",
+  //     "-H:+RemoveSaturatedTypeFlows",
+  //     "-H:+ReportExceptionStackTraces",
+  //     "-H:TraceClassInitialization=io.netty.util.AbstracferenceCounted",
+  //     "-H:+PrintClassInitialization"
+  //   )
+  // )
   .settings(
     assembly / assemblyJarName := "chessfinder-lambda.jar",
     assembly / assemblyMergeStrategy := {
@@ -117,6 +171,7 @@ lazy val root = (project in file("."))
     }
   )
   .dependsOn(testkit % Test)
+  .dependsOn(core)
 
 lazy val testkit = project
   .in(file("src_testkit"))

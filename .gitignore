@@ -20,6 +20,10 @@ src_go/search/check_status/check_status
 src_go/search/check_status/check_status.zip
 src_go/search/check_status/bootstrap
 
+src_go/search/initiate/initiate
+src_go/search/initiate/initiate.zip
+src_go/search/initiate/bootstrap
+
 src_go/download/check_status/check_status
 src_go/download/check_status/check_status.zip
 src_go/download/check_status/bootstrap

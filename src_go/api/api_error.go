@@ -15,6 +15,11 @@ type BusinessError struct {
 	Msg  string `json:"msg"`
 }
 
+var ServiceOverloaded = BusinessError{
+	Msg:  "Service is overloaded. Please try again later.",
+	Code: "SERVICE_OVERLOADED",
+}
+
 func (businessError BusinessError) ToResponseEvent() (responseEvent events.APIGatewayV2HTTPResponse) {
 	responseBody, err := json.Marshal(businessError)
 	if err != nil {
@@ -36,6 +41,10 @@ func (businessError BusinessError) Error() string {
 
 type ValidationError struct {
 	Msg string
+}
+
+var InvalidBody = ValidationError{
+	Msg: "Invalid body",
 }
 
 func (invalid ValidationError) ToResponseEvent() (responseEvent events.APIGatewayV2HTTPResponse) {

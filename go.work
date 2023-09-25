@@ -5,4 +5,6 @@ use (
 	./src_go/download/check_status
 	./src_go/download/initiate
 	./src_go/search/check_status
+  ./src_go/search/initiate
+  ./src_go/experiment
 )

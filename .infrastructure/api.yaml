@@ -120,7 +120,6 @@ Resources:
       Environment:
         Variables:
           DOWNLOAD_GAMES_QUEUE_URL: !Ref DownloadGamesQueueUrl
-          SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
           CHESS_DOT_COM_URL: !Ref ChessDotComUrl
           DOWNLOAD_REQUEST_TABLE_NAME: !Ref DownloadRequestTableName
           USERS_TABLE_NAME: !Ref UsersTableName
@@ -148,6 +147,32 @@ Resources:
       Environment:
         Variables:
           SEARCH_RESULT_TABLE_NAME: !Ref SearchResultTableName
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function
+
+  InitiateSearchFunction:
+    Properties:
+      Timeout: 29
+      MemorySize: 1024
+      Events:
+        PostApiFasterGame:
+          Properties:
+            ApiId: !Ref 'ChessfinderHttpApi'
+            Method: POST
+            Path: /api/faster/search
+            TimeoutInMillis: 29000
+            PayloadFormatVersion: '2.0'
+          Type: HttpApi
+      Architectures: ["x86_64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/search/initiate/initiate.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref UsersTableName
+          ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
+          SEARCH_RESULT_TABLE_NAME: !Ref SearchResultTableName
+          SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
 

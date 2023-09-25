@@ -11,10 +11,6 @@ type DownloadRequest struct {
 	Platform string `json:"platform"`
 }
 
-var InvalidBody = api.ValidationError{
-	Msg: "Invalid body",
-}
-
 type DownloadResponse struct {
 	TaskId string `json:"taskId"`
 }
@@ -31,9 +27,4 @@ func ProfileNotFound(user DownloadRequest) api.BusinessError {
 		Msg:  fmt.Sprintf("Profile %v not found!", user.User),
 		Code: "PROFILE_NOT_FOUND",
 	}
-}
-
-var ServiceOverloaded = api.BusinessError{
-	Msg:  "Service is overloaded. Please try again later.",
-	Code: "SERVICE_OVERLOADED",
 }
