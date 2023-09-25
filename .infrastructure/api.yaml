@@ -26,56 +26,56 @@ Parameters:
     Type: String
   
 Resources:
-  ChessfinderFunction:
-    Properties:
-      Timeout: 29
-      MemorySize: 1024
-      Events:
-        PostApiStructuredBoard:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: POST
-            Path: /api/structured/board
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        PostApiStructuredGame:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: POST
-            Path: /api/structured/game
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        GetApiStructuredGame:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/structured/game
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        GetApiStructured:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/structured
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-        GetApiStructuredBoard:
-          Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
-            Method: GET
-            Path: /api/structured/board
-            TimeoutInMillis: 29000
-            PayloadFormatVersion: '2.0'
-          Type: HttpApi
-      Runtime: java17
-      CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
-      Handler: chessfinder.api.Lambda::handleRequest
-      Role: !Ref 'ChessfinderLambdaRoleArn'
-    Type: AWS::Serverless::Function
+  # ChessfinderFunction:
+  #   Properties:
+  #     Timeout: 29
+  #     MemorySize: 1024
+  #     Events:
+  #       PostApiStructuredBoard:
+  #         Properties:
+  #           ApiId: !Ref 'ChessfinderHttpApi'
+  #           Method: POST
+  #           Path: /api/structured/board
+  #           TimeoutInMillis: 29000
+  #           PayloadFormatVersion: '2.0'
+  #         Type: HttpApi
+  #       PostApiStructuredGame:
+  #         Properties:
+  #           ApiId: !Ref 'ChessfinderHttpApi'
+  #           Method: POST
+  #           Path: /api/structured/game
+  #           TimeoutInMillis: 29000
+  #           PayloadFormatVersion: '2.0'
+  #         Type: HttpApi
+  #       GetApiStructuredGame:
+  #         Properties:
+  #           ApiId: !Ref 'ChessfinderHttpApi'
+  #           Method: GET
+  #           Path: /api/structured/game
+  #           TimeoutInMillis: 29000
+  #           PayloadFormatVersion: '2.0'
+  #         Type: HttpApi
+  #       GetApiStructured:
+  #         Properties:
+  #           ApiId: !Ref 'ChessfinderHttpApi'
+  #           Method: GET
+  #           Path: /api/structured
+  #           TimeoutInMillis: 29000
+  #           PayloadFormatVersion: '2.0'
+  #         Type: HttpApi
+  #       GetApiStructuredBoard:
+  #         Properties:
+  #           ApiId: !Ref 'ChessfinderHttpApi'
+  #           Method: GET
+  #           Path: /api/structured/board
+  #           TimeoutInMillis: 29000
+  #           PayloadFormatVersion: '2.0'
+  #         Type: HttpApi
+  #     Runtime: java17
+  #     CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
+  #     Handler: chessfinder.api.Lambda::handleRequest
+  #     Role: !Ref 'ChessfinderLambdaRoleArn'
+  #   Type: AWS::Serverless::Function
 
   DownloadStatusFunction:
     Properties:
@@ -159,7 +159,7 @@ Resources:
           Properties:
             ApiId: !Ref 'ChessfinderHttpApi'
             Method: POST
-            Path: /api/faster/search
+            Path: /api/faster/board
             TimeoutInMillis: 29000
             PayloadFormatVersion: '2.0'
           Type: HttpApi
