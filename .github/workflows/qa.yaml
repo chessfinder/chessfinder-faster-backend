@@ -8,30 +8,96 @@ jobs:
   build:
     name: Compile, Build and Deploy QA
     runs-on: ubuntu-20.04
-    steps:
+
+    container: amazonlinux:2
+
+    steps:     
+      - name: Setup Amazon Linux
+        shell: bash
+        run: |
+          yum update -y > /dev/null
+          yum upgrade -y > /dev/null
+          yum install zip -y > /dev/null
+          yum install unzip -y > /dev/null
+          yum install tar -y > /dev/null
+          yum install gzip -y > /dev/null
+          yum install wget -y > /dev/null
+          yum install which -y > /dev/null
+          yum groupinstall "Development Tools" -y > /dev/null
+      
       - name: Check GLIGC version
         shell: bash
         run: |
-          ldd --version 
-      - name: Checkout Code
-        uses: actions/checkout@v2
-      
-      - name: SCALA - Setup JDK
-        uses: actions/setup-java@v3.11.0
-        with:
-          distribution: 'corretto'
-          java-version: '17'
+          ldd --version
 
-      - name: GO - Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21.0'
+      - name: Install Python 3
+        shell: bash
+        run: |
+          yum install python3 -y > /dev/null
+          alternatives --install /usr/bin/python python /usr/bin/python2.7 1
+          alternatives --install /usr/bin/python python /usr/bin/python3 2
+          echo 1 | alternatives --config python
+          ln -sf /usr/bin/pip3 /usr/bin/pip
+
+      - name: Install SDKMAN
+        shell: bash
+        run: curl -s "https://get.sdkman.io" | bash > /dev/null
+
+      - name: Install GIT
+        shell: bash
+        run: |
+          yum install git -y > /dev/null
+          git config --global --add safe.directory '*'
+
+      - name: Install GraalVM JDK
+        shell: bash
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install java 17.0.8-graal > /dev/null
+          echo "JAVA_HOME=$HOME/.sdkman/candidates/java/current" >> $GITHUB_ENV
+          echo "$HOME/.sdkman/candidates/java/current/bin" >> $GITHUB_PATH
+     
+      - name: Install SBT
+        shell: bash
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install sbt 1.8.2 > /dev/null
+          echo "$HOME/.sdkman/candidates/sbt/current/bin" >> $GITHUB_PATH 
+
+      - name: Install SCALA
+        shell: bash
+        run: |
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install scala 3.3.0 > /dev/null
+          echo "$HOME/.sdkman/candidates/scala/current/bin" >> $GITHUB_PATH
+      
+      - name: Install Go
+        shell: bash
+        run: |
+          curl -O https://dl.google.com/go/go1.21.1.linux-amd64.tar.gz
+          tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+          rm go1.21.1.linux-amd64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+        
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: SCALA - Check Fomatting
+        shell: bash
+        run: |
+          sbt -v "core/scalafmtCheckAll;"
       
       - name: SCALA - Compile Code
         shell: bash
         run: |
-          sbt -v "compile;"
+          sbt -v "core/compile;"
       
+      - name: SCALA - Packaging Code
+        shell: bash
+        run: |
+          sbt -v "core/GraalVMSharedLib/packageBin;"
+          cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/initiate/validation/
+
       - name: GO - Install dependencies
         run: |
           cd src_go/download/check_status
@@ -47,12 +113,12 @@ jobs:
           cd src_go/search/check_status
           go get .
           go mod tidy
-          cd ../../../
+          cd ../../../   
 
           cd src_go/search/initiate
           go get .
           go mod tidy
-          cd ../../../
+          cd ../../../   
           
       - name: GO - Build
         shell: bash
@@ -63,11 +129,6 @@ jobs:
           cd ./src_go/search/initiate
           GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
           cd ../../../
-      
-      - name: SCALA - Packaging Code
-        shell: bash
-        run: |
-          sbt -v "assembly;"
 
       - name: GO - Packaging Code
         shell: bash
@@ -86,10 +147,15 @@ jobs:
 
           cd ./src_go/search/initiate
           zip initiate.zip bootstrap validation/chess-finder-core_dynamic.h validation/chess-finder-core.h validation/graal_isolate_dynamic.h validation/graal_isolate.h validation/chess-finder-core.so
-          # zip initiate.zip bootstrap
           cd ../../../
-          
-      - name: setup SAM
+      
+      - name: Make Python 3 default
+        shell: bash
+        run: |
+          echo 2 | alternatives --config python
+          python --version
+      
+      - name: Setup SAM
         uses: aws-actions/setup-sam@v2
         with:
           use-installer: true
