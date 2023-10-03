@@ -31,3 +31,9 @@ src_go/download/check_status/bootstrap
 src_go/download/initiate/initiate
 src_go/download/initiate/initiate.zip
 src_go/download/initiate/bootstrap
+
+src_go/**/chess-finder-core_dynamic.h
+src_go/**/chess-finder-core.h
+src_go/**/chess-finder-core.so
+src_go/**/graal_isolate.h
+src_go/**/graal_isolate_dynamic.h

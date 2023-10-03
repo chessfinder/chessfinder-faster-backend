@@ -36,12 +36,12 @@ object GraalVMSharedLibPlugin extends AutoPlugin {
   override def projectConfigurations: Seq[Configuration] = Seq(GraalVMSharedLib)
 
   override lazy val projectSettings: Seq[Setting[_]] = Seq(
-    target in GraalVMSharedLib := target.value / "graalvm-shared-lib",
+    GraalVMSharedLib / target := target.value / "graalvm-shared-lib",
     graalVMSharedLibOptions := Seq.empty,
     graalVMSharedLibGraalVersion := None,
     graalVMSharedLibCommand := (if (scala.util.Properties.isWin) "native-image.cmd" else "native-image"),
-    resourceDirectory in GraalVMSharedLib := sourceDirectory.value / "graal",
-    mainClass in GraalVMSharedLib := (mainClass in Compile).value
+    GraalVMSharedLib / resourceDirectory := sourceDirectory.value / "graal",
+    GraalVMSharedLib / mainClass:= (Compile / mainClass).value
   ) ++ inConfig(GraalVMSharedLib)(scopedSettings)
 
   private lazy val scopedSettings = Seq[Setting[_]](
@@ -170,7 +170,7 @@ object GraalVMSharedLibPlugin extends AutoPlugin {
     */
   def generateContainerBuildImage(baseImage: String): Def.Initialize[Task[Option[String]]] =
     Def.task {
-      val dockerCommand = (DockerPlugin.autoImport.dockerExecCommand in GraalVMSharedLib).value
+      val dockerCommand = (GraalVMSharedLib / DockerPlugin.autoImport.dockerExecCommand).value
       val streams = Keys.streams.value
 
       val (baseName, tag) = baseImage.split(":", 2) match {

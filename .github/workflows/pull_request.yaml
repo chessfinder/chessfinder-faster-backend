@@ -8,89 +8,70 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-20.04
-
-    container: goodforgod/amazonlinux-graalvm:23.0.0-java17-amd64
-
-
-    steps:
-      - name: Setup Amazon Linux
-        shell: bash
-        run: |
-          yum update -y
-          yum upgrade -y
-
-      - name: Install SDKMAN
-        shell: bash
-        run: |
-          curl -s "https://get.sdkman.io" | bash
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sdk version 
-
+    steps:    
       - name: Check GLIGC version
         shell: bash
         run: |
           ldd --version
 
-      - name: Install GIT
+      - name: Install SDKMAN
+        shell: bash
+        run: curl -s "https://get.sdkman.io" | bash > /dev/null
+
+      - name: Install GraalVM JDK
         shell: bash
         run: |
-          yum install git -y
-          git --version
-
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          sdk install java 17.0.8-graal > /dev/null
+          echo "JAVA_HOME=$HOME/.sdkman/candidates/java/current" >> $GITHUB_ENV
+          echo "$HOME/.sdkman/candidates/java/current/bin" >> $GITHUB_PATH
+     
       - name: Install SBT
         shell: bash
         run: |
           source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sdk install sbt
-          sbt sbtVersion
-      
-      - name: Check SBT
+          sdk install sbt 1.8.2 > /dev/null
+          echo "$HOME/.sdkman/candidates/sbt/current/bin" >> $GITHUB_PATH 
+
+      - name: Install SCALA
         shell: bash
         run: |
           source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sbt sbtVersion
+          sdk install scala 3.3.0 > /dev/null
+          echo "$HOME/.sdkman/candidates/scala/current/bin" >> $GITHUB_PATH
       
       - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21.0'
-
-      # - name: Install Native Image
-      #   shell: bash
-      #   run: |
-      #     gu install native-image
-      #     native-image --version
+        shell: bash
+        run: |
+          curl -O https://dl.google.com/go/go1.21.1.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+          rm go1.21.1.linux-amd64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
         
       - name: Checkout Code
         uses: actions/checkout@v3
-      
-      # - name: SCALA - Setup JDK
-      # # yum install java-17-amazon-corretto-headless -y
-      #   uses: actions/setup-java@v3.11.0
-      #   with:
-      #     distribution: 'corretto'
-      #     java-version: '17'
-      
+
       - name: SCALA - Check Fomatting
         shell: bash
         run: |
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sbt -v "scalafmtCheckAll;"
+          sbt -v "core/scalafmtCheckAll;"
       
       - name: SCALA - Compile Code
         shell: bash
         run: |
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sbt -v "compile;"
+          sbt -v "core/compile;"
 
       - name: SCALA - Unit Tests
         shell: bash
         run: |
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          sbt -v "test;"
+          sbt -v "core/test;"
       
+      - name: SCALA - Packaging Code
+        shell: bash
+        run: |
+          sbt -v "core/GraalVMSharedLib/packageBin;"
+          cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/initiate/validation/
       
-
       - name: GO - Install dependencies
         run: |
           cd src_go/download/check_status
@@ -111,12 +92,7 @@ jobs:
           cd src_go/search/initiate
           go get .
           go mod tidy
-          cd ../../../          
-  
-      - name: Install Python 
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+          cd ../../../     
       
       - name: Install AWS CLI
         shell: bash
@@ -134,18 +110,6 @@ jobs:
       - name: Install SamLocal 
         shell: bash
         run: pip install aws-sam-cli-local
-      
-      # - name: SCALA - Integration Tests
-      #   shell: bash
-      #   run: |
-      #     docker compose -f ./src/it/resources/docker-compose.yaml --env-file ./src/it/resources/.env up -d
-      #     sleep 10s          
-      #     awslocal  s3api create-bucket --bucket chessfinder
-      #     # samlocal deploy --template-file template_resources.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-      #     samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dyanmodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-      #     samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-      #     sbt -v "IntegrationTest / test;"
-      #     docker compose -f ./src/it/resources/docker-compose.yaml down
 
       - name: GO - Test
         shell: bash
