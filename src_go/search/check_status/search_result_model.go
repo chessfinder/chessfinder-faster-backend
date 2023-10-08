@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 )
 
 type SearchStatus string
@@ -16,18 +16,18 @@ const (
 )
 
 type SearchResultResponse struct {
-	SearchRequestId string       `json:"searchRequestId"`
-	StartSearchAt   time.Time    `json:"startSearchAt"`
-	LastExaminedAt  time.Time    `json:"lastExaminedAt"`
-	Examined        int64        `json:"examined"`
-	Total           int64        `json:"total"`
-	Matched         []string     `json:"matched"`
-	Status          SearchStatus `json:"status"`
+	SearchId       string       `json:"searchId"`
+	StartAt        time.Time    `json:"startAt"`
+	LastExaminedAt time.Time    `json:"lastExaminedAt"`
+	Examined       int          `json:"examined"`
+	Total          int          `json:"total"`
+	Matched        []string     `json:"matched"`
+	Status         SearchStatus `json:"status"`
 }
 
-func SearchResultNotFound(searchResultId string) api.BusinessError {
+func SearchNotFound(searchId string) api.BusinessError {
 	return api.BusinessError{
-		Msg:  fmt.Sprintf("Search result %v not found", searchResultId),
+		Msg:  fmt.Sprintf("Search result %v not found", searchId),
 		Code: "SEARCH_RESULT_NOT_FOUND",
 	}
 }

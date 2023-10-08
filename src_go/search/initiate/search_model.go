@@ -3,17 +3,17 @@ package main
 import (
 	"fmt"
 
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 )
 
 type SearchRequest struct {
-	User     string `json:"user"`
+	Username string `json:"username"`
 	Platform string `json:"platform"`
 	Board    string `json:"board"`
 }
 
 type SearchResponse struct {
-	SearchResultId string `json:"searchResultId"`
+	SearchId string `json:"searchId"`
 }
 
 var InvalidSearchBoard = api.BusinessError{
@@ -28,9 +28,9 @@ func ProfileIsNotCached(username string, platform string) api.BusinessError {
 	}
 }
 
-func NoGameAvailable(user UserRecord) api.BusinessError {
+func NoGameAvailable(username string) api.BusinessError {
 	return api.BusinessError{
-		Msg:  fmt.Sprintf("Profile %v does not have any information about their played games!", user.UserName),
+		Msg:  fmt.Sprintf("Profile %v does not have any information about their played games!", username),
 		Code: "NO_GAME_AVAILABLE",
 	}
 }

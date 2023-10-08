@@ -8,6 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,21 +23,17 @@ var awsConfig = aws.Config{
 }
 
 var statusChecker = SearchResultChecker{
-	awsConfig:             &awsConfig,
-	searchResultTableName: "searches",
+	awsConfig:         &awsConfig,
+	searchesTableName: "chessfinder_dynamodb-searches",
 }
 
+var awsSession = session.Must(session.NewSession(statusChecker.awsConfig))
+
+var dynamodbClient = dynamodb.New(awsSession)
+
 func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testing.T) {
-
-	awsSession, err := session.NewSession(statusChecker.awsConfig)
-	if err != nil {
-		assert.FailNow(t, "failed to establish aws session!")
-		return
-	}
-
-	dynamodbClient := dynamodb.New(awsSession)
-
-	searchRequestId := uuid.New().String()
+	var err error
+	searchId := uuid.New().String()
 
 	event := events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
@@ -43,36 +43,39 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 			},
 		},
 		QueryStringParameters: map[string]string{
-			"searchRequestId": searchRequestId,
+			"searchId": searchId,
 		},
 	}
 
-	item := map[string]*dynamodb.AttributeValue{
-		"search_request_id": {S: aws.String(searchRequestId)},
-		"start_search_at":   {S: aws.String("2021-01-01T00:00:00.000Z")},
-		"last_examined_at":  {S: aws.String("2021-02-01T00:11:24.000Z")},
-		"examined":          {N: aws.String("15")},
-		"total":             {N: aws.String("100")},
-		"matched":           {SS: []*string{aws.String("https://www.chess.com/game/live/88704743803"), aws.String("https://www.chess.com/game/live/88624306385")}},
-		"status":            {S: aws.String("SEARCHED_ALL")},
+	startAt, err := db.ZuluDateTimeFromString("2021-01-01T00:00:00.000Z")
+	assert.NoError(t, err)
+	lastExaminedAt, err := db.ZuluDateTimeFromString("2021-02-01T00:11:24.000Z")
+	assert.NoError(t, err)
+
+	searchRecord := searches.SearchRecord{
+		SearchId:       searchId,
+		LastExaminedAt: lastExaminedAt,
+		StartAt:        startAt,
+		Examined:       15,
+		Total:          100,
+		Matched:        []string{"https://www.chess.com/game/live/88704743803", "https://www.chess.com/game/live/88624306385"},
+		Status:         "SEARCHED_ALL",
 	}
 
-	input := &dynamodb.PutItemInput{
+	item, err := dynamodbattribute.MarshalMap(searchRecord)
+	assert.NoError(t, err)
+
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
 		Item:      item,
-		TableName: aws.String(statusChecker.searchResultTableName),
-	}
+		TableName: aws.String(statusChecker.searchesTableName),
+	})
 
-	_, err = dynamodbClient.PutItem(input)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
 	actualResponse, err := statusChecker.Check(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
-	expectedResponseBody := fmt.Sprintf(`{"searchRequestId":"%v","startSearchAt":"2021-01-01T00:00:00Z","lastExaminedAt":"2021-02-01T00:11:24Z","examined":15,"total":100,"matched":["https://www.chess.com/game/live/88624306385","https://www.chess.com/game/live/88704743803"],"status":"SEARCHED_ALL"}`, searchRequestId)
+	expectedResponseBody := fmt.Sprintf(`{"searchId":"%v","startAt":"2021-01-01T00:00:00Z","lastExaminedAt":"2021-02-01T00:11:24Z","examined":15,"total":100,"matched":["https://www.chess.com/game/live/88624306385","https://www.chess.com/game/live/88704743803"],"status":"SEARCHED_ALL"}`, searchId)
 
 	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Expected download status is not met!")
 	assert.Equal(t, 200, actualResponse.StatusCode, "Expected status code is not met!")
@@ -80,7 +83,7 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 
 func Test_search_result_not_found_is_responded_if_there_is_no_search_for_given_id(t *testing.T) {
 
-	searchRequestId := uuid.New().String()
+	searchId := uuid.New().String()
 	event := events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
 			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
@@ -89,16 +92,14 @@ func Test_search_result_not_found_is_responded_if_there_is_no_search_for_given_i
 			},
 		},
 		QueryStringParameters: map[string]string{
-			"searchRequestId": searchRequestId,
+			"searchId": searchId,
 		},
 	}
 
-	actualResponse, err := statusChecker.Check(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	actualResponse, err := api.WithRecover(statusChecker.Check)(&event)
+	assert.NoError(t, err)
 
-	expectedResponseBody := fmt.Sprintf(`{"msg": "Search result %v not found", "code": "SEARCH_RESULT_NOT_FOUND"}`, searchRequestId)
+	expectedResponseBody := fmt.Sprintf(`{"msg": "Search result %v not found", "code": "SEARCH_RESULT_NOT_FOUND"}`, searchId)
 	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Expected error is not met!")
 	assert.Equal(t, 422, actualResponse.StatusCode, "Expected status code is not met!")
 }

@@ -6,13 +6,14 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 )
 
 func main() {
 
-	downloadRequestTableName, downloadStatusTableNameExists := os.LookupEnv("DOWNLOAD_REQUEST_TABLE_NAME")
-	if !downloadStatusTableNameExists {
-		panic(errors.New("DOWNLOAD_REQUEST_TABLE_NAME is missing"))
+	downloadsTableName, downloadsTableNameExists := os.LookupEnv("DOWNLOADS_TABLE_NAME")
+	if !downloadsTableNameExists {
+		panic(errors.New("DOWNLOADS_TABLE_NAME is missing"))
 	}
 
 	archivesTableName, archivesTableNameExists := os.LookupEnv("ARCHIVES_TABLE_NAME")
@@ -41,15 +42,15 @@ func main() {
 	}
 
 	checker := ArchiveDownloader{
-		downloadRequestTableName: downloadRequestTableName,
-		usersTableName:           usersTableName,
-		archivesTableName:        archivesTableName,
-		downloadGamesQueueUrl:    downloadGamesQueueUrl,
-		chessDotComUrl:           chessDotComUrl,
+		downloadsTableName:    downloadsTableName,
+		usersTableName:        usersTableName,
+		archivesTableName:     archivesTableName,
+		downloadGamesQueueUrl: downloadGamesQueueUrl,
+		chessDotComUrl:        chessDotComUrl,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
 	}
 
-	lambda.Start(checker.DownloadArchiveAndDistributeDonwloadGameCommands)
+	lambda.Start(api.WithRecover(checker.DownloadArchiveAndDistributeDonwloadGameCommands))
 }

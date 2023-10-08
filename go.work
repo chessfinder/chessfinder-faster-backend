@@ -1,10 +1,14 @@
 go 1.21.0
 
 use (
-	./src_go/api
+	./src_go/details/api
+	./src_go/details/db
+	./src_go/details/queue
+  ./src_go/details/batcher
 	./src_go/download/check_status
 	./src_go/download/initiate
 	./src_go/search/check_status
   ./src_go/search/initiate
   ./src_go/experiment
+  ./src_go/download/process
 )

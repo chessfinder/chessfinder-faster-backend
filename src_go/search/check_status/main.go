@@ -6,12 +6,13 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 )
 
 func main() {
-	searchResultTableName, searchResultTableNameExists := os.LookupEnv("SEARCH_RESULT_TABLE_NAME")
-	if !searchResultTableNameExists {
-		panic(errors.New("SEARCH_RESULT_TABLE_NAME is missing"))
+	searchesTableName, searchesTableNameExists := os.LookupEnv("SEARCHES_TABLE_NAME")
+	if !searchesTableNameExists {
+		panic(errors.New("SEARCHES_TABLE_NAME is missing"))
 	}
 
 	awsRegion, awsRegionExists := os.LookupEnv("AWS_REGION")
@@ -20,11 +21,11 @@ func main() {
 	}
 
 	checker := SearchResultChecker{
-		searchResultTableName: searchResultTableName,
+		searchesTableName: searchesTableName,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
 	}
 
-	lambda.Start(checker.Check)
+	lambda.Start(api.WithRecover(checker.Check))
 }
