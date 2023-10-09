@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -11,17 +9,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type SearchResultChecker struct {
-	awsConfig             *aws.Config
-	searchResultTableName string
+	awsConfig         *aws.Config
+	searchesTableName string
 }
 
-func (checker *SearchResultChecker) checkWithFastFail(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
+func (checker *SearchResultChecker) Check(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 
 	config := zap.NewProductionConfig()
 	config.OutputPaths = []string{"stdout"}
@@ -40,8 +39,7 @@ func (checker *SearchResultChecker) checkWithFastFail(event *events.APIGatewayV2
 
 	awsSession, err := session.NewSession(checker.awsConfig)
 	if err != nil {
-		logger.Error("impossible to create an AWS session!")
-		return
+		logger.Panic("impossible to create an AWS session!", zap.Error(err))
 	}
 	dynamodbClient := dynamodb.New(awsSession)
 
@@ -50,49 +48,57 @@ func (checker *SearchResultChecker) checkWithFastFail(event *events.APIGatewayV2
 
 	if path != "/api/faster/board" || method != "GET" {
 		logger.Error("searching status checker is attached to a wrong route!")
-		// fixme check if error is 500. if not consider panicing
-		err = errors.New("not supported")
-		return
+		logger.Panic("not supported")
 	}
-	searchRequestId, searchRequestIdExists := event.QueryStringParameters["searchRequestId"]
-	if !searchRequestIdExists {
+
+	searchId, searchIdExists := event.QueryStringParameters["searchId"]
+	if !searchIdExists {
 		err = api.ValidationError{
-			Msg: "query parameter searchRequestId is missing",
+			Msg: "query parameter searchId is missing",
 		}
 		return
 	}
 
-	input := &dynamodb.GetItemInput{
+	logger = logger.With(zap.String("searchId", searchId))
+
+	searchItems, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"search_request_id": {
-				S: aws.String(searchRequestId),
+			"search_id": {
+				S: aws.String(searchId),
 			},
 		},
-		TableName: aws.String(checker.searchResultTableName),
-	}
+		TableName: aws.String(checker.searchesTableName),
+	})
 
-	searchResultAttributes, err := dynamodbClient.GetItem(input)
 	if err != nil {
-		logger.Error(fmt.Sprintf("faild to get record %v from the %v", searchRequestId, checker.searchResultTableName))
+		logger.Error("faild to get search!")
 		return
 	}
 
-	if len(searchResultAttributes.Item) == 0 {
-		logger.Error(fmt.Sprintf("no search result found with id %v in the %v", searchRequestId, checker.searchResultTableName))
-		err = SearchResultNotFound(searchRequestId)
+	if len(searchItems.Item) == 0 {
+		logger.Error("no search search found!")
+		err = SearchNotFound(searchId)
 		return
 	}
 
-	searchResultRecord := new(SearchResultRecord)
-	err = dynamodbattribute.UnmarshalMap(searchResultAttributes.Item, searchResultRecord)
+	searchRecord := searches.SearchRecord{}
+	err = dynamodbattribute.UnmarshalMap(searchItems.Item, &searchRecord)
 	if err != nil {
-		logger.Error(fmt.Sprintf("faild to get record %v from the %v with the error %v", searchRequestId, checker.searchResultTableName, err.Error()))
+		logger.Error("faild to unmarshal search!", zap.Error(err))
 		return
 	}
-	searchResultResponse := (*SearchResultResponse)(searchResultRecord)
+	searchResultResponse := SearchResultResponse{
+		SearchId:       searchRecord.SearchId,
+		Total:          searchRecord.Total,
+		StartAt:        searchRecord.StartAt.ToTime(),
+		LastExaminedAt: searchRecord.LastExaminedAt.ToTime(),
+		Examined:       searchRecord.Examined,
+		Matched:        searchRecord.Matched,
+		Status:         SearchStatus(string(searchRecord.Status)),
+	}
 	responseBody, err := json.Marshal(searchResultResponse)
 	if err != nil {
-		logger.Error(fmt.Sprintf("faild to marshal record %v from the %v with the error %v", searchRequestId, checker.searchResultTableName, err.Error()))
+		logger.Error("faild to marshal search response!", zap.Error(err))
 		return
 	}
 	responseEvent = events.APIGatewayV2HTTPResponse{
@@ -101,21 +107,6 @@ func (checker *SearchResultChecker) checkWithFastFail(event *events.APIGatewayV2
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-	}
-	return
-}
-
-func (checker *SearchResultChecker) Check(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
-	responseEvent, err = checker.checkWithFastFail(event)
-	if err != nil {
-		switch err := err.(type) {
-		case api.ApiError:
-			// errr := err.(api.BusinessError)
-			responseEvent = err.ToResponseEvent()
-			return responseEvent, nil
-		default:
-			panic(err)
-		}
 	}
 	return
 }

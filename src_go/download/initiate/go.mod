@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/aws/aws-sdk-go v1.45.14
-	github.com/chessfinder/chessfinder-faster-backend/src_go/api v0.0.0-20230921201148-2f6c15cfb0c9
+	github.com/chessfinder/chessfinder-faster-backend/src_go/details/api v0.0.0-20230921201148-2f6c15cfb0c9
 	github.com/stretchr/testify v1.8.1
 	github.com/wiremock/go-wiremock v1.8.0
 	go.uber.org/zap v1.26.0
@@ -23,4 +23,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 )
 
-replace github.com/chessfinder/chessfinder-faster-backend/src_go/api => ../../api
+replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/api => ../../details/api
+replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue => ../../details/queue
+replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher => ../../details/batcher
+replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/db => ../../details/db

@@ -10,7 +10,7 @@ Parameters:
   SearchBoardQueueUrl:
     Type: String
 
-  DownloadRequestTableName:
+  DownloadsTableName:
     Type: String
   
   UsersTableName:
@@ -19,7 +19,7 @@ Parameters:
   ArchivesTableName:
     Type: String
   
-  SearchResultTableName:
+  SearchesTableName:
     Type: String
 
   ChessDotComUrl:
@@ -77,8 +77,9 @@ Resources:
   #     Role: !Ref 'ChessfinderLambdaRoleArn'
   #   Type: AWS::Serverless::Function
 
-  DownloadStatusFunction:
+  CheckDownloadFunction:
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-CheckDownload
       Timeout: 29
       MemorySize: 1024
       Events:
@@ -96,12 +97,13 @@ Resources:
       Handler: bootstrap
       Environment:
         Variables:
-          DOWNLOAD_REQUEST_TABLE_NAME: !Ref DownloadRequestTableName
+          DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
   
   InitiateDownloadFunction:
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-InitiateDownload
       Timeout: 29
       MemorySize: 1024
       Events:
@@ -121,14 +123,15 @@ Resources:
         Variables:
           DOWNLOAD_GAMES_QUEUE_URL: !Ref DownloadGamesQueueUrl
           CHESS_DOT_COM_URL: !Ref ChessDotComUrl
-          DOWNLOAD_REQUEST_TABLE_NAME: !Ref DownloadRequestTableName
+          DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
           USERS_TABLE_NAME: !Ref UsersTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
 
-  SearchStatusFunction:
+  CheckSearchFunction:
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-CheckSearch
       Timeout: 29
       MemorySize: 1024
       Events:
@@ -146,12 +149,13 @@ Resources:
       Handler: bootstrap
       Environment:
         Variables:
-          SEARCH_RESULT_TABLE_NAME: !Ref SearchResultTableName
+          SEARCHES_TABLE_NAME: !Ref SearchesTableName
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
 
   InitiateSearchFunction:
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-InitiateSearch
       Timeout: 29
       MemorySize: 1024
       Events:
@@ -171,7 +175,7 @@ Resources:
         Variables:
           USERS_TABLE_NAME: !Ref UsersTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
-          SEARCH_RESULT_TABLE_NAME: !Ref SearchResultTableName
+          SEARCHES_TABLE_NAME: !Ref SearchesTableName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function

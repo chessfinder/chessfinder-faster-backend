@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -11,7 +10,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -20,28 +23,14 @@ import (
 )
 
 type SearchRequestRegistrar struct {
-	userTableName         string
-	archivesTableName     string
-	searchResultTableName string
-	searchBoardQueueUrl   string
-	awsConfig             *aws.Config
+	userTableName       string
+	archivesTableName   string
+	searchesTableName   string
+	searchBoardQueueUrl string
+	awsConfig           *aws.Config
 }
 
 func (registrar *SearchRequestRegistrar) RegisterSearchRequest(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
-	responseEvent, err = registrar.downloadArchiveAndDistributeDonwloadGameCommandsFastFail(event)
-	if err != nil {
-		switch err := err.(type) {
-		case api.ApiError:
-			responseEvent = err.ToResponseEvent()
-			return responseEvent, nil
-		default:
-			panic(err)
-		}
-	}
-	return
-}
-
-func (registrar *SearchRequestRegistrar) downloadArchiveAndDistributeDonwloadGameCommandsFastFail(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 	config := zap.NewProductionConfig()
 	config.OutputPaths = []string{"stdout"}
 	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -59,7 +48,7 @@ func (registrar *SearchRequestRegistrar) downloadArchiveAndDistributeDonwloadGam
 
 	awsSession, err := session.NewSession(registrar.awsConfig)
 	if err != nil {
-		logger.Error("impossible to create an AWS session!")
+		logger.Panic("impossible to create an AWS session!")
 		return
 	}
 	dynamodbClient := dynamodb.New(awsSession)
@@ -69,11 +58,11 @@ func (registrar *SearchRequestRegistrar) downloadArchiveAndDistributeDonwloadGam
 	path := event.RequestContext.HTTP.Path
 
 	if path != "/api/faster/board" || method != "POST" {
-		logger.Error("search request registrar is attached to a wrong route!")
-		// fixme check if error is 500. if not consider panicing
-		err = errors.New("not supported")
-		return
+		logger.Panic("search request registrar is attached to a wrong route!")
+		panic("not supported")
 	}
+
+	logger = logger.With(zap.String("method", method), zap.String("path", path))
 
 	searchRequest := SearchRequest{}
 	err = json.Unmarshal([]byte(event.Body), &searchRequest)
@@ -82,21 +71,29 @@ func (registrar *SearchRequestRegistrar) downloadArchiveAndDistributeDonwloadGam
 		err = api.InvalidBody
 	}
 
-	logger.Info("validating board", zap.String("board", searchRequest.Board))
-	if !validation.ValidateBoard(searchRequest.Board) {
-		logger.Info("invalid board", zap.String("board", searchRequest.Board))
+	logger = logger.With(zap.String("username", searchRequest.Username), zap.String("platform", searchRequest.Platform))
+	logger = logger.With(zap.String("board", searchRequest.Board))
+
+	logger.Info("validating board")
+	if isValid, strangeError := validation.ValidateBoard(searchRequest.Board); !isValid || strangeError != nil {
+		logger.Info("invalid board")
+		if strangeError != nil {
+			logger.Error("error while validating board", zap.Error(strangeError))
+		}
 		err = InvalidSearchBoard
 		return
 	}
 
-	logger.Info("fetching user from db", zap.String("user", searchRequest.User))
-	user, err := registrar.getUserFromDb(searchRequest, logger, dynamodbClient)
+	logger.Info("fetching user from db", zap.String("user", searchRequest.Username))
+	user, err := registrar.getUserRecord(searchRequest, logger, dynamodbClient)
 	if err != nil {
 		return
 	}
 
-	logger.Info("fetching archives from db", zap.String("user", user.UserId))
-	archives, err := registrar.getArchivesFromDb(user, logger, dynamodbClient)
+	logger = logger.With(zap.String("userId", user.UserId))
+
+	logger.Info("fetching archives from db")
+	archives, err := registrar.getArchiveRecords(user, logger, dynamodbClient)
 	if err != nil {
 		return
 	}
@@ -108,68 +105,57 @@ func (registrar *SearchRequestRegistrar) downloadArchiveAndDistributeDonwloadGam
 
 	if downloadedGames == 0 {
 		logger.Info("no game available", zap.String("user", user.UserId))
-		err = NoGameAvailable(user)
+		err = NoGameAvailable(user.Username)
 		return
 	}
 
-	searchResultId := uuid.New().String()
+	searchId := uuid.New().String()
+	logger = logger.With(zap.String("searchResultId", searchId))
 	now := time.Now()
 
-	searchResult := NewSearchResultRecord(searchResultId, now, downloadedGames)
+	searchResult := searches.NewSearchRecord(searchId, now, downloadedGames)
 
-	logger.Info("putting search result", zap.String("searchResultId", searchResultId), zap.String("user", user.UserId))
-	err = putSearchResult(dynamodbClient, registrar, searchResult)
+	logger.Info("putting search result")
+	err = registrar.persistSearchRecord(dynamodbClient, logger, searchResult)
 	if err != nil {
-		logger.Error("error while putting search result",
-			zap.Error(err),
-			zap.String("searchResultId", searchResultId),
-			zap.String("user", user.UserId),
-		)
 		return
 	}
 
-	searchBoardCommand := SearchBoardCommand{
-		UserId:          user.UserId,
-		SearchRequestId: searchResultId,
-		Board:           searchRequest.Board,
+	logger.Info("sending search board command")
+
+	searchBoardCommand := queue.SearchBoardCommand{
+		UserId:   user.UserId,
+		SearchId: searchId,
+		Board:    searchRequest.Board,
 	}
 
 	searchBoardCommandJson, err := json.Marshal(searchBoardCommand)
 	if err != nil {
-		logger.Error("error while marshalling search board command",
-			zap.Error(err),
-			zap.String("searchResultId", searchResultId),
-			zap.String("user", user.UserId),
-		)
+		logger.Error("error while marshalling search board command")
 	}
 
 	sendMessageInput := &sqs.SendMessageInput{
-		MessageBody:            aws.String(string(searchBoardCommandJson)),
-		QueueUrl:               aws.String(registrar.searchBoardQueueUrl),
-		MessageDeduplicationId: aws.String(searchResultId),
+		MessageBody: aws.String(string(searchBoardCommandJson)),
+		QueueUrl:    aws.String(registrar.searchBoardQueueUrl),
+		//fixme this should be the boeard, but that makes the test flaky. in test we need to wait for the message to be processed and forgotten by SQS. To overcome this we should generate valid boear each time. That will break the restriction of deduplication.
+		MessageDeduplicationId: aws.String(searchBoardCommand.SearchId),
 		MessageGroupId:         aws.String(user.UserId),
 	}
 
 	_, err = svc.SendMessage(sendMessageInput)
 	if err != nil {
-		logger.Error("error while sending search board command",
-			zap.Error(err),
-			zap.String("searchResultId", searchResultId),
-			zap.String("user", user.UserId),
-		)
+		logger.Error("error while sending search board command")
 	}
 
+	logger.Info("search board command sent")
+
 	searchResponse := SearchResponse{
-		SearchResultId: searchResultId,
+		SearchId: searchId,
 	}
 
 	searchResponseJson, err := json.Marshal(searchResponse)
 	if err != nil {
-		logger.Error("error while marshalling search response",
-			zap.Error(err),
-			zap.String("searchResultId", searchResultId),
-			zap.String("user", user.UserId),
-		)
+		logger.Error("error while marshalling search response")
 	}
 
 	responseEvent = events.APIGatewayV2HTTPResponse{
@@ -183,84 +169,91 @@ func (registrar *SearchRequestRegistrar) downloadArchiveAndDistributeDonwloadGam
 	return
 }
 
-func (registrar *SearchRequestRegistrar) getUserFromDb(
+func (registrar *SearchRequestRegistrar) getUserRecord(
 	searchRequest SearchRequest,
 	logger *zap.Logger,
 	dynamodbClient *dynamodb.DynamoDB,
-) (user UserRecord, err error) {
-	getItemInput := &dynamodb.GetItemInput{
-		TableName: aws.String(registrar.userTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"user_name": {
-				S: aws.String(searchRequest.User),
-			},
-			"platform": {
-				S: aws.String(string(searchRequest.Platform)),
+) (user users.UserRecord, err error) {
+	getItemOutput, err := dynamodbClient.GetItem(
+		&dynamodb.GetItemInput{
+			TableName: aws.String(registrar.userTableName),
+			Key: map[string]*dynamodb.AttributeValue{
+				"username": {
+					S: aws.String(searchRequest.Username),
+				},
+				"platform": {
+					S: aws.String(string(searchRequest.Platform)),
+				},
 			},
 		},
-	}
-	getItemOutput, err := dynamodbClient.GetItem(getItemInput)
+	)
+
 	if err != nil {
-		logger.Error("error while getting user from db", zap.Error(err), zap.String("user", searchRequest.User))
+		logger.Error("error while getting user from db", zap.Error(err))
 		return
 	}
-	if getItemOutput.Item == nil {
-		err = ProfileIsNotCached(searchRequest.User, searchRequest.Platform)
-		logger.Info("profile is not cached", zap.String("userId", searchRequest.User))
+	if len(getItemOutput.Item) == 0 {
+		err = ProfileIsNotCached(searchRequest.Username, searchRequest.Platform)
+		logger.Info("profile is not cached")
 		return
 	}
 	err = dynamodbattribute.UnmarshalMap(getItemOutput.Item, &user)
 	if err != nil {
+		logger.Error("error while unmarshalling user from db", zap.Error(err))
 		return
 	}
 	return
 }
 
-func (registrar *SearchRequestRegistrar) getArchivesFromDb(
-	user UserRecord,
+func (registrar *SearchRequestRegistrar) getArchiveRecords(
+	user users.UserRecord,
 	logger *zap.Logger,
 	dynamodbClient *dynamodb.DynamoDB,
-) (archives []ArchiveRecord, err error) {
-	getItemInput := &dynamodb.QueryInput{
-		TableName: aws.String(registrar.archivesTableName),
-		KeyConditions: map[string]*dynamodb.Condition{
-			"user_id": {
-				ComparisonOperator: aws.String("EQ"),
-				AttributeValueList: []*dynamodb.AttributeValue{
-					{
-						S: aws.String(user.UserId),
-					},
-				},
+) (archives []archives.ArchiveRecord, err error) {
+	getItemOutput, err := dynamodbClient.Query(&dynamodb.QueryInput{
+		TableName:              aws.String(registrar.archivesTableName),
+		KeyConditionExpression: aws.String("user_id = :user_id"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":user_id": {
+				S: aws.String(user.UserId),
 			},
 		},
-	}
-	getItemOutput, err := dynamodbClient.Query(getItemInput)
+	})
 	if err != nil {
-		logger.Error("error while getting archives from db", zap.Error(err), zap.String("user", user.UserId))
+		logger.Error("error while getting archives from db", zap.Error(err))
 		return
 	}
 	if getItemOutput.Items == nil {
-		logger.Info("no archives found for user", zap.String("user", user.UserId))
+		logger.Info("no archives found for user")
 		return
 	}
 	err = dynamodbattribute.UnmarshalListOfMaps(getItemOutput.Items, &archives)
 	if err != nil {
-		logger.Error("error while unmarshalling archives from db", zap.Error(err), zap.String("user", user.UserId))
+		logger.Error("error while unmarshalling archives from db", zap.Error(err))
 		return
 	}
 	return
 }
 
-func putSearchResult(dynamodbClient *dynamodb.DynamoDB, registrar *SearchRequestRegistrar, searchResult SearchResultRecord) (err error) {
-	searchResultItem := searchResult.ToDynamoDbAttributes(registrar.searchResultTableName)
+func (registrar *SearchRequestRegistrar) persistSearchRecord(
+	dynamodbClient *dynamodb.DynamoDB,
+	logger *zap.Logger,
+	search searches.SearchRecord,
+) (err error) {
 
-	putSearchResultRequest := &dynamodb.PutItemInput{
-		TableName: aws.String(registrar.searchResultTableName),
-		Item:      searchResultItem,
+	searchRecordItems, err := dynamodbattribute.MarshalMap(search)
+	if err != nil {
+		logger.Error("error while marshalling search record", zap.Error(err))
+		return
 	}
 
-	_, err = dynamodbClient.PutItem(putSearchResultRequest)
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(registrar.searchesTableName),
+		Item:      searchRecordItems,
+	})
+
 	if err != nil {
+		logger.Error("error while putting search record", zap.Error(err))
 		return
 	}
 

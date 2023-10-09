@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -11,17 +9,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type DownloadStatusChecker struct {
-	awsConfig                *aws.Config
-	downloadRequestTableName string
+	awsConfig          *aws.Config
+	downloadsTableName string
 }
 
-func (checker *DownloadStatusChecker) checkWithFastFail(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
+func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 
 	config := zap.NewProductionConfig()
 	config.OutputPaths = []string{"stdout"}
@@ -40,59 +39,66 @@ func (checker *DownloadStatusChecker) checkWithFastFail(event *events.APIGateway
 
 	awsSession, err := session.NewSession(checker.awsConfig)
 	if err != nil {
-		logger.Error("impossible to create an AWS session!")
-		return
+		logger.Panic("impossible to create an AWS session!", zap.Error(err))
 	}
+
 	dynamodbClient := dynamodb.New(awsSession)
 
 	method := event.RequestContext.HTTP.Method
 	path := event.RequestContext.HTTP.Path
 
 	if path != "/api/faster/game" || method != "GET" {
-		logger.Error("downloading status checker is attached to a wrong route!")
-		// fixme check if error is 500. if not consider panicing
-		err = errors.New("not supported")
-		return
+		logger.Panic("downloading status checker is attached to a wrong route!")
 	}
-	downloadRequestId, downloadRequestIdExists := event.QueryStringParameters["downloadRequestId"]
-	if !downloadRequestIdExists {
+
+	downloadId, downloadIdExists := event.QueryStringParameters["downloadId"]
+	if !downloadIdExists {
 		err = api.ValidationError{
-			Msg: "query parameter downloadRequestId is missing",
+			Msg: "query parameter downloadId is missing",
 		}
 		return
 	}
 
-	input := &dynamodb.GetItemInput{
+	logger = logger.With(zap.String("downloadId", downloadId))
+
+	downloadItems, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"task_id": {
-				S: aws.String(downloadRequestId),
+			"download_id": {
+				S: aws.String(downloadId),
 			},
 		},
-		TableName: aws.String(checker.downloadRequestTableName),
-	}
+		TableName: aws.String(checker.downloadsTableName),
+	})
 
-	downloadRequestStatusAttributes, err := dynamodbClient.GetItem(input)
 	if err != nil {
-		logger.Error(fmt.Sprintf("faild to get record %v from the %v. Error %v", downloadRequestId, checker.downloadRequestTableName, err.Error()))
+		logger.Error("faild to get download record", zap.Error(err))
 		return
 	}
 
-	if len(downloadRequestStatusAttributes.Item) == 0 {
-		logger.Error(fmt.Sprintf("no dowload request found with id %v in the %v", downloadRequestId, checker.downloadRequestTableName))
-		err = DownloadRequestNotFound(downloadRequestId)
+	if downloadItems.Item == nil || len(downloadItems.Item) == 0 {
+		logger.Error("no dowload request found!", zap.String("downloadId", downloadId))
+		err = DownloadNotFound(downloadId)
 		return
 	}
 
-	downloadRequestStatusRecord := new(DownloadStatusRecord)
-	err = dynamodbattribute.UnmarshalMap(downloadRequestStatusAttributes.Item, downloadRequestStatusRecord)
+	downloadRecord := downloads.DownloadRecord{}
+	err = dynamodbattribute.UnmarshalMap(downloadItems.Item, &downloadRecord)
 	if err != nil {
-		logger.Error(fmt.Sprintf("faild to get record %v from the %v with the error %v", downloadRequestId, checker.downloadRequestTableName, err.Error()))
+		logger.Error("faild to unmarshal download record!", zap.Error(err))
 		return
 	}
-	downloadRequestStatusResponse := (*DownloadStatusResponse)(downloadRequestStatusRecord)
-	responseBody, err := json.Marshal(downloadRequestStatusResponse)
+	downloadStatusResponse := DownloadStatusResponse{
+		DownloadId: downloadRecord.DownloadId,
+		Failed:     downloadRecord.Failed,
+		Succeed:    downloadRecord.Succeed,
+		Done:       downloadRecord.Done,
+		Pending:    downloadRecord.Pending,
+		Total:      downloadRecord.Total,
+	}
+
+	responseBody, err := json.Marshal(downloadStatusResponse)
 	if err != nil {
-		logger.Error(fmt.Sprintf("faild to marshal record %v from the %v with the error %v", downloadRequestId, checker.downloadRequestTableName, err.Error()))
+		logger.Error("faild to marshal download response", zap.Error(err))
 		return
 	}
 	responseEvent = events.APIGatewayV2HTTPResponse{
@@ -101,21 +107,6 @@ func (checker *DownloadStatusChecker) checkWithFastFail(event *events.APIGateway
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-	}
-	return
-}
-
-func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
-	responseEvent, err = checker.checkWithFastFail(event)
-	if err != nil {
-		switch err := err.(type) {
-		case api.ApiError:
-			// errr := err.(api.BusinessError)
-			responseEvent = err.ToResponseEvent()
-			return responseEvent, nil
-		default:
-			panic(err)
-		}
 	}
 	return
 }

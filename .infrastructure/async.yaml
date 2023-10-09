@@ -5,6 +5,26 @@ Parameters:
     Type: String
     Description: Lambda role for basic execution and permissions
 
+  ChessDotComUrl:
+    Type: String
+    Description: URL for chess.com API
+  
+  DownloadsTableName:
+    Type: String
+    Description: DynamoDB table for downloads
+  
+  ArchivesTableName:
+    Type: String
+    Description: DynamoDB table for archives
+  
+  GamesTableName:
+    Type: String
+    Description: DynamoDB table for games 
+  
+  GamesByEndTimestampIndexName:
+    Type: String
+    Description: DynamoDB index for games by end timestamp
+    
   DownloadGamesQueueArn:
     Type: String
   
@@ -14,6 +34,7 @@ Parameters:
 Resources:
   DownloadGamesFunction:
     Properties:
+      FunctionName: !Sub ${AWS::StackName}-DownloadGames
       MemorySize: 1024
       Events:
         DownloadGamesCommand:
@@ -22,24 +43,32 @@ Resources:
             BatchSize: 10
           Type: SQS
       Timeout: 900
-      Runtime: java17
-      Handler: chessfinder.download.Lambda::handleRequest
-      CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/download/process/process.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          CHESS_DOT_COM_URL: !Ref ChessDotComUrl
+          DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
+          ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
+          GAMES_TABLE_NAME: !Ref GamesTableName
+          GAMES_BY_END_TIMESTAMP_INDEX_NAME: !Ref GamesByEndTimestampIndexName
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
 
-  SearchBoardFunction:
-    Properties:
-      MemorySize: 1024
-      Events:
-        SearchBoardCommand:
-          Properties:
-            Queue: !Ref 'SearchBoardQueueArn'
-            BatchSize: 1
-          Type: SQS
-      Timeout: 900
-      Runtime: java17
-      Handler: chessfinder.search.Lambda::handleRequest
-      CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
-      Role: !Ref 'ChessfinderLambdaRoleArn'
-    Type: AWS::Serverless::Function
+  # SearchBoardFunction:
+  #   Properties:
+  #     MemorySize: 1024
+  #     Events:
+  #       SearchBoardCommand:
+  #         Properties:
+  #           Queue: !Ref 'SearchBoardQueueArn'
+  #           BatchSize: 1
+  #         Type: SQS
+  #     Timeout: 900
+  #     Runtime: java17
+  #     Handler: chessfinder.search.Lambda::handleRequest
+  #     CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
+  #     Role: !Ref 'ChessfinderLambdaRoleArn'
+  #   Type: AWS::Serverless::Function

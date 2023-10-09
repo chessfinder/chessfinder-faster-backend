@@ -7,29 +7,29 @@ Resources:
   UsersTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: users
+      TableName: !Sub "${AWS::StackName}-users"
       AttributeDefinitions:
-        - AttributeName: user_name
+        - AttributeName: username
           AttributeType: S
         - AttributeName: platform
           AttributeType: S
       KeySchema:
-        - AttributeName: user_name
+        - AttributeName: username
           KeyType: HASH
         - AttributeName: platform
           KeyType: RANGE
       ProvisionedThroughput:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
-  TasksTable:
+  DownloadsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: tasks
+      TableName: !Sub "${AWS::StackName}-downloads"
       AttributeDefinitions:
-        - AttributeName: task_id
+        - AttributeName: download_id
           AttributeType: S
       KeySchema:
-        - AttributeName: task_id
+        - AttributeName: download_id
           KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: 5
@@ -37,23 +37,36 @@ Resources:
   GamesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: games
+      TableName: !Sub "${AWS::StackName}-games"
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
         - AttributeName: game_id
           AttributeType: S
+        - AttributeName: archive_id
+          AttributeType: S
+        - AttributeName: end_timestamp
+          AttributeType: N
       KeySchema:
         - AttributeName: user_id
           KeyType: HASH
         - AttributeName: game_id
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: !Sub "${AWS::StackName}-gamesByEndTimestamp"
+          KeySchema:
+            - AttributeName: archive_id
+              KeyType: HASH
+            - AttributeName: end_timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 
   ArchivesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: archives
+      TableName: !Sub "${AWS::StackName}-archives"
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -69,12 +82,12 @@ Resources:
   SearchesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: searches
+      TableName: !Sub "${AWS::StackName}-searches"
       AttributeDefinitions:
-        - AttributeName: search_request_id
+        - AttributeName: search_id
           AttributeType: S
       KeySchema:
-        - AttributeName: search_request_id
+        - AttributeName: search_id
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
@@ -82,12 +95,17 @@ Outputs:
   UsersTableName:
     Description: "Users Table Name"
     Value: !Ref UsersTable
-  TasksTableName:
-    Description: "Tasks Table Name"
-    Value: !Ref TasksTable
+  DownloadsTableName:
+    Description: "Downloads Table Name"
+    Value: !Ref DownloadsTable
   GamesTableName:
     Description: "Games Table Name"
     Value: !Ref GamesTable
+  GamesByEndTimestampIndexName:
+    Description: "Games By End Timestamp Index Name"
+     # this is a shame that we have to hardcode this
+    # Value: "!GetAtt ???.0.IndexName"
+    Value: !Sub "${AWS::StackName}-gamesByEndTimestamp"
   ArchivesTableName:
     Description: "Archives Table Name"
     Value: !Ref ArchivesTable

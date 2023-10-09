@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 )
 
 func main() {
@@ -39,9 +40,9 @@ func main() {
 		panic(errors.New("ARCHIVES_TABLE_NAME is missing"))
 	}
 
-	searchResultTableName, searchResultTableNameExists := os.LookupEnv("SEARCH_RESULT_TABLE_NAME")
-	if !searchResultTableNameExists {
-		panic(errors.New("SEARCH_RESULT_TABLE_NAME is missing"))
+	searchesTableName, searchesTableNameExists := os.LookupEnv("SEARCHES_TABLE_NAME")
+	if !searchesTableNameExists {
+		panic(errors.New("SEARCHES_TABLE_NAME is missing"))
 	}
 
 	searchBoardQueueUrl, searchBoardQueueUrlExists := os.LookupEnv("SEARCH_BOARD_QUEUE_URL")
@@ -55,15 +56,15 @@ func main() {
 	}
 
 	registrar := SearchRequestRegistrar{
-		userTableName:         userTableName,
-		archivesTableName:     archivesTableName,
-		searchResultTableName: searchResultTableName,
-		searchBoardQueueUrl:   searchBoardQueueUrl,
+		userTableName:       userTableName,
+		archivesTableName:   archivesTableName,
+		searchesTableName:   searchesTableName,
+		searchBoardQueueUrl: searchBoardQueueUrl,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
 	}
 
-	lambda.Start(registrar.RegisterSearchRequest)
+	lambda.Start(api.WithRecover(registrar.RegisterSearchRequest))
 
 }

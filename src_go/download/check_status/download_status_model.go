@@ -3,21 +3,21 @@ package main
 import (
 	"fmt"
 
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 )
 
 type DownloadStatusResponse struct {
-	DownloadRequestId string `json:"downloadRequestId"`
-	Failed            int    `json:"failed"`
-	Succeed           int    `json:"succeed"`
-	Done              int    `json:"done"`
-	Pending           int    `json:"pending"`
-	Total             int    `json:"total"`
+	DownloadId string `json:"downloadId"`
+	Failed     int    `json:"failed"`
+	Succeed    int    `json:"succeed"`
+	Done       int    `json:"done"`
+	Pending    int    `json:"pending"`
+	Total      int    `json:"total"`
 }
 
-func DownloadRequestNotFound(downloadRequestId string) api.BusinessError {
+func DownloadNotFound(downloadId string) api.BusinessError {
 	return api.BusinessError{
-		Msg:  fmt.Sprintf("Download request %v not found", downloadRequestId),
+		Msg:  fmt.Sprintf("Download request %v not found", downloadId),
 		Code: "DOWNLOAD_REQUEST_NOT_FOUND",
 	}
 }

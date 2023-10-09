@@ -13,13 +13,22 @@ import (
 	"unsafe"
 )
 
-func ValidateBoard(board string) bool {
+func ValidateBoard(board string) (bool, error) {
+	var err error
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in ValidateBoard", r)
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
 	var isolate *C.graal_isolate_t = nil
 	var thread *C.graal_isolatethread_t = nil
 
 	if C.graal_create_isolate(nil, &isolate, &thread) != 0 {
 		fmt.Println("Initialization error")
-		return false
+		return false, err
 	}
 
 	defer C.graal_tear_down_isolate(thread)
@@ -27,5 +36,5 @@ func ValidateBoard(board string) bool {
 	defer C.free(unsafe.Pointer(cstr))
 	isValid := C.validate(thread, cstr)
 
-	return isValid != 0
+	return isValid != 0, err
 }

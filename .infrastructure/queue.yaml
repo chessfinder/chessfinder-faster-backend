@@ -5,14 +5,14 @@ Resources:
   DownloadGames: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: "DownloadGames.fifo"
+      QueueName: !Sub "${AWS::StackName}-DownloadGames.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
 
   SearchBoard: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: "SearchBoard.fifo"
+      QueueName: !Sub "${AWS::StackName}-SearchBoard.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
 

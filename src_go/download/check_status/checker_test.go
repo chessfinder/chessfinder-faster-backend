@@ -8,6 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,21 +22,16 @@ var awsConfig = aws.Config{
 }
 
 var statusChecker = DownloadStatusChecker{
-	awsConfig:                &awsConfig,
-	downloadRequestTableName: "tasks",
+	awsConfig:          &awsConfig,
+	downloadsTableName: "chessfinder_dynamodb-downloads",
 }
 
+var awsSession = session.Must(session.NewSession(&awsConfig))
+var dynamodbClient = dynamodb.New(awsSession)
+
 func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *testing.T) {
-
-	awsSession, err := session.NewSession(statusChecker.awsConfig)
-	if err != nil {
-		assert.FailNow(t, "failed to establish aws session!")
-		return
-	}
-
-	dynamodbClient := dynamodb.New(awsSession)
-
-	downloadRequestId := uuid.New().String()
+	var err error
+	downloadId := uuid.New().String()
 
 	event := events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
@@ -43,34 +41,32 @@ func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *t
 			},
 		},
 		QueryStringParameters: map[string]string{
-			"downloadRequestId": downloadRequestId,
+			"downloadId": downloadId,
 		},
 	}
 
-	item := map[string]*dynamodb.AttributeValue{
-		"done":    {N: aws.String("7")},
-		"task_id": {S: aws.String(downloadRequestId)},
-		"failed":  {N: aws.String("5")},
-		"pending": {N: aws.String("3")},
-		"succeed": {N: aws.String("2")},
-		"total":   {N: aws.String("10")},
-	}
-	input := &dynamodb.PutItemInput{
-		Item:      item,
-		TableName: aws.String(statusChecker.downloadRequestTableName),
+	dowloadRecord := downloads.DownloadRecord{
+		DownloadId: downloadId,
+		Succeed:    2,
+		Failed:     5,
+		Done:       7,
+		Pending:    3,
+		Total:      10,
 	}
 
-	_, err = dynamodbClient.PutItem(input)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	item, err := dynamodbattribute.MarshalMap(dowloadRecord)
+	assert.NoError(t, err)
+
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
+		Item:      item,
+		TableName: aws.String(statusChecker.downloadsTableName),
+	})
+	assert.NoError(t, err)
 
 	actualResponse, err := statusChecker.Check(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
-	expectedResponseBody := fmt.Sprintf(`{"downloadRequestId":"%v","failed":5,"succeed":2,"done":7,"pending":3,"total":10}`, downloadRequestId)
+	expectedResponseBody := fmt.Sprintf(`{"downloadId":"%v","failed":5,"succeed":2,"done":7,"pending":3,"total":10}`, downloadId)
 
 	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Expected download status is not met!")
 	assert.Equal(t, 200, actualResponse.StatusCode, "Expected status code is not met!")
@@ -78,7 +74,7 @@ func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *t
 
 func Test_download_request_not_found_is_responded_if_there_is_no_task_for_given_id(t *testing.T) {
 
-	downloadRequestId := uuid.New().String()
+	downloadId := uuid.New().String()
 
 	event := events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
@@ -88,16 +84,16 @@ func Test_download_request_not_found_is_responded_if_there_is_no_task_for_given_
 			},
 		},
 		QueryStringParameters: map[string]string{
-			"downloadRequestId": downloadRequestId,
+			"downloadId": downloadId,
 		},
 	}
 
-	actualResponse, err := statusChecker.Check(&event)
+	actualResponse, err := api.WithRecover(statusChecker.Check)(&event)
 	if err != nil {
 		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
 	}
 
-	expectedResponseBody := fmt.Sprintf(`{"code":"DOWNLOAD_REQUEST_NOT_FOUND","msg":"Download request %v not found"}`, downloadRequestId)
+	expectedResponseBody := fmt.Sprintf(`{"code":"DOWNLOAD_REQUEST_NOT_FOUND","msg":"Download request %v not found"}`, downloadId)
 
 	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Expected error is not met!")
 	assert.Equal(t, 422, actualResponse.StatusCode, "Expected status code is not met!")

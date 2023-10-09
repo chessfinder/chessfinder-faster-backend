@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,6 +15,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,11 +32,11 @@ var awsConfig = aws.Config{
 }
 
 var registrar = SearchRequestRegistrar{
-	userTableName:         "users",
-	archivesTableName:     "archives",
-	searchResultTableName: "searches",
-	searchBoardQueueUrl:   "http://localhost:4566/000000000000/SearchBoard.fifo",
-	awsConfig:             &awsConfig,
+	userTableName:       "chessfinder_dynamodb-users",
+	archivesTableName:   "chessfinder_dynamodb-archives",
+	searchesTableName:   "chessfinder_dynamodb-searches",
+	searchBoardQueueUrl: "http://localhost:4566/000000000000/chessfinder_sqs-SearchBoard.fifo",
+	awsConfig:           &awsConfig,
 }
 var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
@@ -39,41 +46,47 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	var err error
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
-	user := UserRecord{
+	user := users.UserRecord{
 		UserId:   userId,
-		UserName: username,
-		Platform: "CHESS_DOT_COM",
+		Username: username,
+		Platform: users.ChessDotCom,
 	}
 
-	err = putUser(dynamodbClient, registrar, user)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
+	err = persistUserRecord(dynamodbClient, registrar, user)
+	assert.NoError(t, err)
+
+	archive1Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
+	archive1DownloadedAt := db.Zuludatetime(time.Date(2021, 10, 17, 0, 0, 0, 0, time.UTC))
+	archive1 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archive1Resource,
+		Resource:     archive1Resource,
+		Year:         2021,
+		Month:        10,
+		DownloadedAt: &archive1DownloadedAt,
+		Downloaded:   17,
 	}
 
-	archive1 := ArchiveRecord{
-		UserId:     userId,
-		ArchiveId:  fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username),
-		Downloaded: 17,
+	err = persistArchiveRecords(dynamodbClient, registrar, archive1)
+	assert.NoError(t, err)
+
+	archive2Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
+	archive2DownloadedAt := db.Zuludatetime(time.Date(2021, 11, 23, 0, 0, 0, 0, time.UTC))
+	archive2 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archive2Resource,
+		Resource:     archive2Resource,
+		Year:         2021,
+		Month:        11,
+		DownloadedAt: &archive2DownloadedAt,
+		Downloaded:   23,
 	}
 
-	err = putArchive(dynamodbClient, registrar, archive1)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
-
-	archive2 := ArchiveRecord{
-		UserId:     userId,
-		ArchiveId:  fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username),
-		Downloaded: 23,
-	}
-
-	err = putArchive(dynamodbClient, registrar, archive2)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	err = persistArchiveRecords(dynamodbClient, registrar, archive2)
+	assert.NoError(t, err)
 
 	event := events.APIGatewayV2HTTPRequest{
-		Body: fmt.Sprintf(`{"user":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
 			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
 				Method: "POST",
@@ -83,37 +96,30 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	}
 
 	actualResponse, err := registrar.RegisterSearchRequest(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
 
 	actualSearchResultResponse := SearchResponse{}
 	err = json.Unmarshal([]byte(actualResponse.Body), &actualSearchResultResponse)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
-	actualSearchResult, err := getSearchResultFromDb(dynamodbClient, registrar, actualSearchResultResponse.SearchResultId)
+	actualSearchRecord, err := getSearchRecord(dynamodbClient, registrar, actualSearchResultResponse.SearchId)
 
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
-	assert.Equal(t, InProgress, actualSearchResult.Status, "Search status is not equal!")
-	assert.Equal(t, int(0), actualSearchResult.Examined, "Examined is not equal!")
-	assert.Equal(t, int(40), actualSearchResult.Total, "Total is not equal!")
-	assert.Equal(t, []string{}, actualSearchResult.Matched, "Matched is not equal!")
+	assert.Equal(t, searches.InProgress, actualSearchRecord.Status, "Search status is not equal!")
+	assert.Equal(t, int(0), actualSearchRecord.Examined, "Examined is not equal!")
+	assert.Equal(t, int(40), actualSearchRecord.Total, "Total is not equal!")
+	assert.Nil(t, actualSearchRecord.Matched, "Matched is not equal!")
 
 	actualCommand, err := getTheLastCommand(svc, registrar)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
-	expectedCommand := SearchBoardCommand{
-		UserId:          userId,
-		SearchRequestId: actualSearchResultResponse.SearchResultId,
-		Board:           "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????",
+	expectedCommand := queue.SearchBoardCommand{
+		UserId:   userId,
+		SearchId: actualSearchResultResponse.SearchId,
+		Board:    "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????",
 	}
 
 	assert.Equal(t, expectedCommand, *actualCommand, "Commands are not equal!")
@@ -125,19 +131,17 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
-	user := UserRecord{
+	user := users.UserRecord{
 		UserId:   userId,
-		UserName: username,
-		Platform: "CHESS_DOT_COM",
+		Username: username,
+		Platform: users.ChessDotCom,
 	}
 
-	err = putUser(dynamodbClient, registrar, user)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	err = persistUserRecord(dynamodbClient, registrar, user)
+	assert.NoError(t, err)
 
 	event := events.APIGatewayV2HTTPRequest{
-		Body: fmt.Sprintf(`{"user":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
 			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
 				Method: "POST",
@@ -146,10 +150,9 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 		},
 	}
 
-	actualResponse, err := registrar.RegisterSearchRequest(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	actualResponse, err := api.WithRecover(registrar.RegisterSearchRequest)(&event)
+	assert.NoError(t, err)
+
 	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
 
 	expectedErroneousResponse := fmt.Sprintf(
@@ -160,9 +163,7 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
 
 	amountOfCommands, err := countCommands(svc, registrar)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
 }
@@ -173,7 +174,7 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_sear
 	username := uuid.New().String()
 
 	event := events.APIGatewayV2HTTPRequest{
-		Body: fmt.Sprintf(`{"user":"%v", "platform": "CHESS_DOT_COM", "board": "this is not a searchfen!"}`, username),
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "this is not a searchfen!"}`, username),
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
 			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
 				Method: "POST",
@@ -182,10 +183,9 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_sear
 		},
 	}
 
-	actualResponse, err := registrar.RegisterSearchRequest(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	actualResponse, err := api.WithRecover(registrar.RegisterSearchRequest)(&event)
+	assert.NoError(t, err)
+
 	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
 
 	expectedErroneousResponse := fmt.Sprintf(
@@ -196,9 +196,7 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_sear
 	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
 
 	amountOfCommands, err := countCommands(svc, registrar)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
 }
@@ -209,7 +207,7 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	username := uuid.New().String()
 
 	event := events.APIGatewayV2HTTPRequest{
-		Body: fmt.Sprintf(`{"user":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
 			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
 				Method: "POST",
@@ -218,10 +216,9 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 		},
 	}
 
-	actualResponse, err := registrar.RegisterSearchRequest(&event)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	actualResponse, err := api.WithRecover(registrar.RegisterSearchRequest)(&event)
+	assert.NoError(t, err)
+
 	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
 
 	expectedErroneousResponse := fmt.Sprintf(
@@ -232,26 +229,21 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
 
 	amountOfCommands, err := countCommands(svc, registrar)
-	if err != nil {
-		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
-	}
+	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
 }
 
-func putUser(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, user UserRecord) (err error) {
+func persistUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, user users.UserRecord) (err error) {
 
 	userItem, err := dynamodbattribute.MarshalMap(user)
 	if err != nil {
 		return
 	}
-
-	putUserRequest := &dynamodb.PutItemInput{
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String(registrar.userTableName),
 		Item:      userItem,
-	}
-
-	_, err = dynamodbClient.PutItem(putUserRequest)
+	})
 	if err != nil {
 		return
 	}
@@ -259,19 +251,18 @@ func putUser(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRe
 	return
 }
 
-func putArchive(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, archive ArchiveRecord) (err error) {
+func persistArchiveRecords(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, archive archives.ArchiveRecord) (err error) {
 
 	archiveItem, err := dynamodbattribute.MarshalMap(archive)
 	if err != nil {
 		return
 	}
 
-	putArchiveRequest := &dynamodb.PutItemInput{
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String(registrar.archivesTableName),
 		Item:      archiveItem,
-	}
+	})
 
-	_, err = dynamodbClient.PutItem(putArchiveRequest)
 	if err != nil {
 		return
 	}
@@ -279,22 +270,22 @@ func putArchive(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchReques
 	return
 }
 
-func getSearchResultFromDb(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, searchResultId string) (searchResult SearchResultRecord, err error) {
-	getSearchResultRequest := &dynamodb.GetItemInput{
-		TableName: aws.String(registrar.searchResultTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"search_request_id": {
-				S: aws.String(searchResultId),
+func getSearchRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, searchResultId string) (searchResult searches.SearchRecord, err error) {
+	searchRecordItems, err := dynamodbClient.GetItem(
+		&dynamodb.GetItemInput{
+			TableName: aws.String(registrar.searchesTableName),
+			Key: map[string]*dynamodb.AttributeValue{
+				"search_id": {
+					S: aws.String(searchResultId),
+				},
 			},
 		},
-	}
-
-	getSearchResultResponse, err := dynamodbClient.GetItem(getSearchResultRequest)
+	)
 	if err != nil {
 		return
 	}
 
-	err = dynamodbattribute.UnmarshalMap(getSearchResultResponse.Item, &searchResult)
+	err = dynamodbattribute.UnmarshalMap(searchRecordItems.Item, &searchResult)
 	if err != nil {
 		return
 	}
@@ -302,11 +293,23 @@ func getSearchResultFromDb(dynamodbClient dynamodbiface.DynamoDBAPI, registrar S
 	return
 }
 
-func getTheLastCommand(svc *sqs.SQS, registrar SearchRequestRegistrar) (command *SearchBoardCommand, err error) {
+func getTheLastCommand(svc *sqs.SQS, registrar SearchRequestRegistrar) (command *queue.SearchBoardCommand, err error) {
+	count, err := countCommands(svc, registrar)
+	if err != nil {
+		fmt.Printf("Failed to count commands with error%v", err)
+	}
+	fmt.Printf("Amount of commands: %v", count)
+
+	defer func() {
+
+		fmt.Println("Closing the connection to the queue")
+		fmt.Printf("Alo, ALo, ALOOOO")
+	}()
+
 	resp, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		QueueUrl:            &registrar.searchBoardQueueUrl,
 		MaxNumberOfMessages: aws.Int64(10), // You can adjust this number
-		VisibilityTimeout:   aws.Int64(30), // 30 seconds timeout for processing
+		VisibilityTimeout:   aws.Int64(1),  // 30 seconds timeout for processing
 		WaitTimeSeconds:     aws.Int64(0),  // Long polling
 	})
 	if err != nil {
@@ -322,7 +325,7 @@ func getTheLastCommand(svc *sqs.SQS, registrar SearchRequestRegistrar) (command 
 			fmt.Printf("Failed to delete message with error%v", err)
 			return
 		}
-		currentCommand := SearchBoardCommand{}
+		currentCommand := queue.SearchBoardCommand{}
 		body := message.Body
 		err = json.Unmarshal([]byte(*body), &currentCommand)
 		if err != nil {

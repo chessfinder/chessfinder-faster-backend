@@ -19,15 +19,20 @@ Resources:
     Properties:
       Location: .infrastructure/queue.yaml
 
-  # Async:
-  #   Type: AWS::Serverless::Application
-  #   Properties:
-  #     Location: .infrastructure/async.yaml
-  #     Parameters:
-  #       ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-  #       DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
-  #       SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
-  
+  Async:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/async.yaml
+      Parameters:
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+        DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
+        SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
+        DownloadsTableName: !GetAtt DynamoDB.Outputs.DownloadsTableName
+        ArchivesTableName: !GetAtt DynamoDB.Outputs.ArchivesTableName
+        GamesTableName: !GetAtt DynamoDB.Outputs.GamesTableName
+        GamesByEndTimestampIndexName: !GetAtt DynamoDB.Outputs.GamesByEndTimestampIndexName
+        ChessDotComUrl: "https://api.chess.com"
+        
   Api:
     Type: AWS::Serverless::Application
     Properties:
@@ -36,10 +41,10 @@ Resources:
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
         DownloadGamesQueueUrl: !GetAtt SQS.Outputs.DownloadGamesQueueUrl
         SearchBoardQueueUrl: !GetAtt SQS.Outputs.SearchBoardQueueUrl
-        DownloadRequestTableName: !GetAtt DynamoDB.Outputs.TasksTableName
+        DownloadsTableName: !GetAtt DynamoDB.Outputs.DownloadsTableName
         UsersTableName: !GetAtt DynamoDB.Outputs.UsersTableName
         ArchivesTableName: !GetAtt DynamoDB.Outputs.ArchivesTableName
-        SearchResultTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
+        SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
         ChessDotComUrl: "https://api.chess.com"
 
 Outputs:

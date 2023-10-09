@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -17,39 +15,27 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type ArchiveDownloader struct {
-	chessDotComUrl           string
-	awsConfig                *aws.Config
-	usersTableName           string
-	archivesTableName        string
-	downloadRequestTableName string
-	downloadGamesQueueUrl    string
+	chessDotComUrl        string
+	awsConfig             *aws.Config
+	usersTableName        string
+	archivesTableName     string
+	downloadsTableName    string
+	downloadGamesQueueUrl string
 }
 
-func (downloader ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCommands(
-	event *events.APIGatewayV2HTTPRequest,
-) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
-	responseEvent, err = downloader.downloadArchiveAndDistributeDonwloadGameCommandsFastFail(event)
-	if err != nil {
-		switch err := err.(type) {
-		case api.ApiError:
-			responseEvent = err.ToResponseEvent()
-			return responseEvent, nil
-		default:
-			panic(err)
-		}
-	}
-	return
-
-}
-
-func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCommandsFastFail(
+func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCommands(
 	event *events.APIGatewayV2HTTPRequest,
 ) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 	config := zap.NewProductionConfig()
@@ -69,7 +55,7 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 
 	awsSession, err := session.NewSession(downloader.awsConfig)
 	if err != nil {
-		logger.Error("impossible to create an AWS session!")
+		logger.Panic("impossible to create an AWS session!")
 		return
 	}
 	dynamodbClient := dynamodb.New(awsSession)
@@ -80,10 +66,7 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 	path := event.RequestContext.HTTP.Path
 
 	if path != "/api/faster/game" || method != "POST" {
-		logger.Error("archive downloader is attached to a wrong route!")
-		// fixme check if error is 500. if not consider panicing
-		err = errors.New("not supported")
-		return
+		logger.Panic("archive downloader is attached to a wrong route!")
 	}
 	downloadRequest := DownloadRequest{}
 	err = json.Unmarshal([]byte(event.Body), &downloadRequest)
@@ -93,10 +76,14 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 		return
 	}
 
+	logger = logger.With(zap.String("username", downloadRequest.Username), zap.String("platform", downloadRequest.Platform))
+
 	profile, err := downloader.getAndPersistUser(dynamodbClient, chessDotComClient, logger, downloadRequest)
 	if err != nil {
 		return
 	}
+
+	logger = logger.With(zap.String("userId", profile.UserId))
 
 	archivesFromChessDotCom, err := downloader.getArchivesFromChessDotCom(logger, profile)
 	if err != nil {
@@ -115,9 +102,19 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 	}
 
 	archivesToDownload := resolveArchivesToDownload(archivesFromDb)
-	downloadRequestId := uuid.New().String()
-	downloadRecord := NewDownloadStatusRecord(downloadRequestId, len(missingArchives)+len(archivesToDownload))
-	_, err = dynamodbClient.PutItem(downloadRecord.toPutItem(downloader.downloadRequestTableName))
+	downloadId := uuid.New().String()
+	downloadRecord := downloads.NewDownloadRecord(downloadId, len(missingArchives)+len(archivesToDownload))
+
+	downloadRecorItems, err := dynamodbattribute.MarshalMap(downloadRecord)
+	if err != nil {
+		logger.Error("impossible to marshal the download record!", zap.Error(err))
+		return
+	}
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(downloader.downloadsTableName),
+		Item:      downloadRecorItems,
+	})
+
 	if err != nil {
 		logger.Error("impossible to persist the download record!", zap.Error(err))
 		return
@@ -129,7 +126,7 @@ func (downloader *ArchiveDownloader) downloadArchiveAndDistributeDonwloadGameCom
 	}
 
 	downloadResponse := DownloadResponse{
-		TaskId: downloadRequestId,
+		DownloadId: downloadId,
 	}
 
 	jsonBody, err := json.Marshal(downloadResponse)
@@ -154,29 +151,20 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 	chessDotComClient *http.Client,
 	logger *zap.Logger,
 	downloadRequest DownloadRequest,
-) (user UserRecord, err error) {
-	url := downloader.chessDotComUrl + "/pub/player/" + downloadRequest.User
+) (userRecord users.UserRecord, err error) {
+	url := downloader.chessDotComUrl + "/pub/player/" + downloadRequest.Username
+	logger = logger.With(zap.String("url", url))
+
 	request, err := http.NewRequest("GET", url, bytes.NewBuffer([]byte{}))
 
 	if err != nil {
-		logger.Error("impossible to create a request to chess.com!", zap.String("url", url))
+		logger.Error("impossible to create a request to chess.com!")
 		return
 	}
 
-	logger.Info("requesting chess.com for profile", zap.String("url", url))
+	logger.Info("requesting chess.com for profile")
 	response, err := chessDotComClient.Do(request)
 	if err != nil {
-		return
-	}
-	if response.StatusCode == 404 {
-		logger.Error(fmt.Sprintf("profile %v not found on chess.com!", downloadRequest.User), zap.String("url", url))
-		err = ProfileNotFound(downloadRequest)
-		return
-	}
-
-	if response.StatusCode != 200 {
-		logger.Error("unexpected status code from chess.com", zap.String("url", url), zap.Int("statusCode", response.StatusCode))
-		err = api.ServiceOverloaded
 		return
 	}
 
@@ -184,11 +172,24 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 
 	responseBodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		logger.Error("impossible to read the response body from chess.com!", zap.Error(err), zap.String("url", url))
+		logger.Error("impossible to read the response body from chess.com!", zap.Error(err))
 		return
 	}
 
 	responseBodyString := string(responseBodyBytes)
+
+	if response.StatusCode == 404 {
+		logger.Error("profile not found on chess.com!", zap.String("responseBody", responseBodyString))
+		err = ProfileNotFound(downloadRequest)
+		return
+	}
+
+	if response.StatusCode != 200 {
+		logger.Error("unexpected status code from chess.com!", zap.Int("statusCode", response.StatusCode), zap.String("responseBody", responseBodyString))
+		err = api.ServiceOverloaded
+		return
+	}
+
 	profile := ChessDotComProfile{}
 	err = json.Unmarshal([]byte(responseBodyString), &profile)
 	if err != nil {
@@ -196,44 +197,51 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 		return
 	}
 
-	logger.Info("profile found", zap.String("userId", profile.UserId), zap.String("userName", downloadRequest.User))
+	logger.Info("profile found!")
 
-	user = UserRecord{
-		Username: downloadRequest.User,
+	userRecord = users.UserRecord{
+		Username: downloadRequest.Username,
 		UserId:   profile.UserId,
+		Platform: users.ChessDotCom,
 	}
 
-	_, err = dynamodbClient.PutItem(user.toPutItem(downloader.usersTableName))
+	userRecordItems, err := dynamodbattribute.MarshalMap(userRecord)
+
+	if err != nil {
+		logger.Error("impossible to marshal the user!", zap.Error(err))
+		return
+	}
+
+	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
+		TableName: aws.String(downloader.usersTableName),
+		Item:      userRecordItems,
+	})
+
 	if err != nil {
 		logger.Error("impossible to persist the user!", zap.Error(err))
 		return
 	}
-	logger.Info("user persisted", zap.String("userId", user.UserId), zap.String("userName", user.Username))
+	logger.Info("user persisted")
 
 	return
 }
 
 func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 	logger *zap.Logger,
-	user UserRecord,
+	user users.UserRecord,
 ) (archives ChessDotComArchives, err error) {
 	url := downloader.chessDotComUrl + "/pub/player/" + user.Username + "/games/archives"
-
-	logger.Info("requesting chess.com for archives", zap.String("url", url))
+	logger = logger.With(zap.String("url", url))
+	logger.Info("requesting chess.com for archives")
 	request, err := http.NewRequest("GET", url, bytes.NewBuffer([]byte{}))
 	if err != nil {
-		logger.Error("impossible to create a request to chess.com!", zap.String("url", url))
+		logger.Error("impossible to create a request to chess.com!")
 		return
 	}
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		logger.Error("impossible to request chess.com!", zap.String("url", url))
-		return
-	}
-	if response.StatusCode != 200 {
-		logger.Error("unexpected status code from chess.com", zap.String("url", url), zap.Int("statusCode", response.StatusCode))
-		err = api.ServiceOverloaded
+		logger.Error("impossible to request chess.com!")
 		return
 	}
 
@@ -241,17 +249,26 @@ func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 
 	responseBodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		logger.Error("impossible to read the response body from chess.com!", zap.Error(err), zap.String("url", url))
+		logger.Error("impossible to read the response body from chess.com!", zap.Error(err))
 		return
 	}
 
 	responseBodyString := string(responseBodyBytes)
+
+	if response.StatusCode != 200 {
+		logger.Error("unexpected status code from chess.com", zap.Int("statusCode", response.StatusCode), zap.String("responseBody", responseBodyString))
+		err = api.ServiceOverloaded
+		return
+	}
+
 	archives = ChessDotComArchives{}
 	err = json.Unmarshal([]byte(responseBodyString), &archives)
 	if err != nil {
-		logger.Error("impossible to unmarshal the response body from chess.com!", zap.Error(err), zap.String("responseBody", responseBodyString), zap.String("url", url))
+		logger.Error("impossible to unmarshal the response body from chess.com!", zap.Error(err), zap.String("responseBody", responseBodyString))
 		return
 	}
+
+	logger.Info("archives found from chess.com", zap.Int("existingArchivesCount", len(archives.Archives)))
 
 	return
 }
@@ -259,9 +276,9 @@ func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 func (downloader ArchiveDownloader) getArchivesFromDb(
 	dynamodbClient *dynamodb.DynamoDB,
 	logger *zap.Logger,
-	user UserRecord,
-) (archives []ArchiveRecord, err error) {
-	logger.Info("requesting dynamodb for archives", zap.String("userId", user.UserId))
+	user users.UserRecord,
+) (archiveRecords []archives.ArchiveRecord, err error) {
+	logger.Info("requesting dynamodb for archives")
 	response, err := dynamodbClient.Query(&dynamodb.QueryInput{
 		TableName: aws.String(downloader.archivesTableName),
 		KeyConditions: map[string]*dynamodb.Condition{
@@ -280,26 +297,26 @@ func (downloader ArchiveDownloader) getArchivesFromDb(
 		return
 	}
 
-	archives = make([]ArchiveRecord, len(response.Items))
+	archiveRecords = make([]archives.ArchiveRecord, len(response.Items))
 	for i, item := range response.Items {
-		archive := ArchiveRecord{}
+		archive := archives.ArchiveRecord{}
 		err = dynamodbattribute.UnmarshalMap(item, &archive)
 		if err != nil {
 			logger.Error("impossible to unmarshal the archive!", zap.Error(err))
 			return
 		}
-		archives[i] = archive
+		archiveRecords[i] = archive
 	}
-	logger.Info("archives found", zap.Int("archivesCount", len(archives)), zap.String("userId", user.UserId))
+	logger.Info("archives found from database", zap.Int("totalArchivesCount", len(archiveRecords)))
 
 	return
 }
 
 func resolveMissingArchives(
 	archivesFromChessDotCom ChessDotComArchives,
-	archivesFromDb []ArchiveRecord,
+	archivesFromDb []archives.ArchiveRecord,
 ) (missingArchives []string) {
-	existingArchives := make(map[string]ArchiveRecord, len(archivesFromDb))
+	existingArchives := make(map[string]archives.ArchiveRecord, len(archivesFromDb))
 	for _, archiveFromDb := range archivesFromDb {
 		existingArchives[archiveFromDb.ArchiveId] = archiveFromDb
 	}
@@ -314,11 +331,16 @@ func resolveMissingArchives(
 }
 
 func resolveArchivesToDownload(
-	archivesFromDb []ArchiveRecord,
-) (archivesToDownload []ArchiveRecord) {
-	archivesToDownload = make([]ArchiveRecord, 0)
+	archivesFromDb []archives.ArchiveRecord,
+) (archivesToDownload []archives.ArchiveRecord) {
+	archivesToDownload = make([]archives.ArchiveRecord, 0)
 	for _, archiveFromDb := range archivesFromDb {
-		if archiveFromDb.Status == NotDownloaded || archiveFromDb.Status == PartiallyDownloaded {
+		if archiveFromDb.DownloadedAt == nil {
+			archivesToDownload = append(archivesToDownload, archiveFromDb)
+			continue
+		}
+		archiveHasGamesTill := time.Date(archiveFromDb.Year, time.Month(archiveFromDb.Month), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 1, 0)
+		if archiveFromDb.DownloadedAt.ToTime().Before(archiveHasGamesTill) {
 			archivesToDownload = append(archivesToDownload, archiveFromDb)
 		}
 	}
@@ -328,12 +350,13 @@ func resolveArchivesToDownload(
 func (downloader ArchiveDownloader) persistMissingArchives(
 	dynamodbClient *dynamodb.DynamoDB,
 	logger *zap.Logger,
-	user UserRecord,
+	user users.UserRecord,
 	missingArchiveUrls []string,
-) (missingArchives []ArchiveRecord, err error) {
-	logger.Info("persisting missing archives", zap.Int("archivesCount", len(missingArchiveUrls)), zap.String("userId", user.UserId))
-	for _, missingArchiveUrl := range missingArchiveUrls {
+) (missingArchiveRecords []archives.ArchiveRecord, err error) {
+	logger.Info("persisting missing archives", zap.Int("missingArchivesCount", len(missingArchiveUrls)))
 
+	for _, missingArchiveUrl := range missingArchiveUrls {
+		logger := logger.With(zap.String("archiveId", missingArchiveUrl))
 		archiveSegments := strings.Split(missingArchiveUrl, "/")
 		maybeYear := archiveSegments[len(archiveSegments)-2]
 		maybeMonth := archiveSegments[len(archiveSegments)-1]
@@ -341,62 +364,106 @@ func (downloader ArchiveDownloader) persistMissingArchives(
 		var year int
 		year, err = strconv.Atoi(maybeYear)
 		if err != nil {
-			logger.Error("impossible to parse the year!", zap.Error(err), zap.String("userId", user.UserId))
+			logger.Error("impossible to parse the year!", zap.Error(err))
 			return
 		}
 
 		var month int
 		month, err = strconv.Atoi(maybeMonth)
 		if err != nil {
-			logger.Error("impossible to parse the month!", zap.Error(err), zap.String("userId", user.UserId))
+			logger.Error("impossible to parse the month!", zap.Error(err))
 			return
 		}
 
-		till := time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.Local)
-
-		missingArchive := ArchiveRecord{
-			UserId:     user.UserId,
-			ArchiveId:  missingArchiveUrl,
-			Resource:   missingArchiveUrl,
-			Till:       till,
-			Downloaded: 0,
-			Status:     NotDownloaded,
+		missingArchiveRecord := archives.ArchiveRecord{
+			UserId:       user.UserId,
+			ArchiveId:    missingArchiveUrl,
+			Resource:     missingArchiveUrl,
+			Year:         year,
+			Month:        month,
+			Downloaded:   0,
+			DownloadedAt: nil,
 		}
 
-		_, err = dynamodbClient.PutItem(missingArchive.toPutItem(downloader.archivesTableName))
-		if err != nil {
-			logger.Error("impossible to persist the archive!", zap.Error(err), zap.String("userId", user.UserId))
-			return
-		}
-
-		missingArchives = append(missingArchives, missingArchive)
+		missingArchiveRecords = append(missingArchiveRecords, missingArchiveRecord)
 	}
-	logger.Info("missing archives persisted", zap.Int("archivesCount", len(missingArchiveUrls)), zap.String("userId", user.UserId))
+
+	missingArchiveRecordWriteRequests := make([]*dynamodb.WriteRequest, len(missingArchiveRecords))
+	for i, missingArchiveRecord := range missingArchiveRecords {
+		var missingArchiveRecordItems map[string]*dynamodb.AttributeValue
+		missingArchiveRecordItems, err = dynamodbattribute.MarshalMap(missingArchiveRecord)
+		if err != nil {
+			logger.Error("impossible to marshal the archive!", zap.Error(err))
+			return nil, err
+		}
+
+		writeRequest := dynamodb.WriteRequest{
+			PutRequest: &dynamodb.PutRequest{
+				Item: missingArchiveRecordItems,
+			},
+		}
+
+		missingArchiveRecordWriteRequests[i] = &writeRequest
+	}
+
+	missingArchiveRecordWriteRequestsMatrix := batcher.Batcher(missingArchiveRecordWriteRequests, 25)
+
+	logger.Info("persisting missing archives in batches", zap.Int("batchesCount", len(missingArchiveRecordWriteRequestsMatrix)))
+
+	for batchNumber, batch := range missingArchiveRecordWriteRequestsMatrix {
+		logger := logger.With(zap.Int("batchNumber", batchNumber+1), zap.Int("batchSize", len(batch)))
+		logger.Info("trying to persist a batch of missing archives")
+
+		unprocessedWriteRequests := map[string][]*dynamodb.WriteRequest{
+			downloader.archivesTableName: batch,
+		}
+
+		for len(unprocessedWriteRequests) > 0 {
+			logger.Info("trying to persist missing archives in one iteration")
+			var writeOutput *dynamodb.BatchWriteItemOutput
+			writeOutput, err = dynamodbClient.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+				RequestItems: unprocessedWriteRequests,
+			})
+
+			if err != nil {
+				logger.Error("impossible to persist the missing archive records", zap.Error(err))
+				return
+			}
+
+			unprocessedWriteRequests = writeOutput.UnprocessedItems
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+
+	logger.Info("missing archives persisted", zap.Int("persistedArchivesCount", len(missingArchiveUrls)))
 	return
 }
 
 func (downloader ArchiveDownloader) publishDownloadGameCommands(
 	logger *zap.Logger,
 	svc *sqs.SQS,
-	user UserRecord,
-	downloadStatus DownloadStatusRecord,
-	missingArchives []ArchiveRecord,
-	shouldBeDownloadedArchives []ArchiveRecord,
+	user users.UserRecord,
+	downloadRecords downloads.DownloadRecord,
+	missingArchives []archives.ArchiveRecord,
+	shouldBeDownloadedArchives []archives.ArchiveRecord,
 ) (err error) {
-	logger.Info("publishing download game commands", zap.Int("archivesCount", len(missingArchives)+len(shouldBeDownloadedArchives)))
 	allArchives := append(shouldBeDownloadedArchives, missingArchives...)
+	logger = logger.With(zap.Int("eligibleForDownloadArchivesCount", len(allArchives)))
+	logger.Info("publishing download game commands ...")
+
 	for _, archive := range allArchives {
-		command := DownloadGameCommand{
-			UserName:          user.Username,
-			Platform:          "CHESS_DOT_COM",
-			ArchiveId:         archive.ArchiveId,
-			UserId:            archive.UserId,
-			DownloadRequestId: downloadStatus.DownloadRequestId,
+		logger := logger.With(zap.String("archiveId", archive.ArchiveId))
+		command := queue.DownloadGamesCommand{
+			Username:   user.Username,
+			Platform:   "CHESS_DOT_COM",
+			ArchiveId:  archive.ArchiveId,
+			UserId:     archive.UserId,
+			DownloadId: downloadRecords.DownloadId,
 		}
 		var jsonBody []byte
 		jsonBody, err = json.Marshal(command)
 		if err != nil {
-			logger.Error("impossible to marshal the download game command!", zap.Error(err), zap.String("archiveId", archive.ArchiveId))
+			logger.Error("impossible to marshal the download game command!", zap.Error(err))
 			return err
 		}
 
@@ -407,11 +474,11 @@ func (downloader ArchiveDownloader) publishDownloadGameCommands(
 			MessageGroupId:         aws.String(archive.UserId),
 		})
 		if err != nil {
-			logger.Error("impossible to publish the download game command!", zap.Error(err), zap.String("archiveId", archive.ArchiveId))
+			logger.Error("impossible to publish the download game command!", zap.Error(err))
 			return
 		}
 	}
 
-	logger.Info("download game commands published", zap.Int("archivesCount", len(allArchives)))
+	logger.Info("download game commands published")
 	return
 }

@@ -32,6 +32,10 @@ src_go/download/initiate/initiate
 src_go/download/initiate/initiate.zip
 src_go/download/initiate/bootstrap
 
+src_go/download/process/process
+src_go/download/process/process.zip
+src_go/download/process/bootstrap
+
 src_go/**/chess-finder-core_dynamic.h
 src_go/**/chess-finder-core.h
 src_go/**/chess-finder-core.so
