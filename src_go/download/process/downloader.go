@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -76,7 +75,12 @@ func (downloader *GameDownloader) processSingle(
 		return
 	}
 
-	logger = logger.With(zap.String("userId", command.UserId), zap.String("archiveId", command.ArchiveId), zap.String("downloadId", command.DownloadId))
+	logger = logger.With(zap.String("userId", command.UserId))
+	logger = logger.With(zap.String("archiveId", command.ArchiveId))
+	logger = logger.With(zap.String("downloadId", command.DownloadId))
+	logger = logger.With(zap.String("username", command.Username))
+	logger = logger.With(zap.String("platform", string(command.Platform)))
+
 	logger.Info("Processing command")
 
 	incrementDownloadStatus := func(incrementSuccess bool) (err error) {
@@ -275,9 +279,6 @@ func (downloader *GameDownloader) processSingle(
 		for _, chessDotComGame := range chessDotComGames.Games {
 			if chessDotComGame.EndTime > latestDownloadedGameRecord.EndTimestamp {
 				pgnString := string(chessDotComGame.Pgn)
-				if strings.HasPrefix(pgnString, "\"") && strings.HasSuffix(pgnString, "\"") {
-					pgnString = pgnString[1 : len(pgnString)-1]
-				}
 				gameRecord := games.GameRecord{
 					UserId:       command.UserId,
 					ArchiveId:    command.ArchiveId,

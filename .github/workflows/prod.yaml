@@ -112,6 +112,7 @@ jobs:
         run: |
           sbt -v "core/GraalVMSharedLib/packageBin;"
           cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/initiate/validation/
+          cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/process/searcher/
 
       - name: GO - Install dependencies
         run: |
@@ -139,6 +140,11 @@ jobs:
           go get .
           go mod tidy
           cd ../../../   
+
+          cd src_go/search/process
+          go get .
+          go mod tidy
+          cd ../../../   
           
       - name: GO - Build
         shell: bash
@@ -148,6 +154,10 @@ jobs:
           GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o ./src_go/download/process/bootstrap -tags lambda.norpc ./src_go/download/process/.
           GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o ./src_go/search/check_status/bootstrap -tags lambda.norpc ./src_go/search/check_status/.
           cd ./src_go/search/initiate
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
+          cd ../../../
+
+          cd ./src_go/search/process
           GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
           cd ../../../
 
@@ -172,6 +182,10 @@ jobs:
 
           cd ./src_go/search/initiate
           zip initiate.zip bootstrap validation/chess-finder-core_dynamic.h validation/chess-finder-core.h validation/graal_isolate_dynamic.h validation/graal_isolate.h validation/chess-finder-core.so
+          cd ../../../
+          
+          cd ./src_go/search/process
+          zip process.zip bootstrap searcher/chess-finder-core_dynamic.h searcher/chess-finder-core.h searcher/graal_isolate_dynamic.h searcher/graal_isolate.h searcher/chess-finder-core.so
           cd ../../../
       
       - name: Make Python 3 default

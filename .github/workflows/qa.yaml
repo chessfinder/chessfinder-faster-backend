@@ -118,9 +118,14 @@ jobs:
           cd src_go/search/check_status
           go get .
           go mod tidy
-          cd ../../../   
+          cd ../../../  
 
           cd src_go/search/initiate
+          go get .
+          go mod tidy
+          cd ../../../   
+
+          cd src_go/search/process
           go get .
           go mod tidy
           cd ../../../   
@@ -135,6 +140,11 @@ jobs:
           cd ./src_go/search/initiate
           GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
           cd ../../../
+
+          cd ./src_go/search/process
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
+          cd ../../../
+
 
       - name: GO - Packaging Code
         shell: bash
@@ -157,6 +167,10 @@ jobs:
 
           cd ./src_go/search/initiate
           zip initiate.zip bootstrap validation/chess-finder-core_dynamic.h validation/chess-finder-core.h validation/graal_isolate_dynamic.h validation/graal_isolate.h validation/chess-finder-core.so
+          cd ../../../
+
+          cd ./src_go/search/process
+          zip process.zip bootstrap searcher/chess-finder-core_dynamic.h searcher/chess-finder-core.h searcher/graal_isolate_dynamic.h searcher/graal_isolate.h searcher/chess-finder-core.so
           cd ../../../
       
       - name: Make Python 3 default

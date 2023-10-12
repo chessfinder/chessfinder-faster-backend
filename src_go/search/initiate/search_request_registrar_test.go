@@ -31,7 +31,7 @@ var awsConfig = aws.Config{
 	DisableSSL: aws.Bool(true),
 }
 
-var registrar = SearchRequestRegistrar{
+var registrar = SearchRegistrar{
 	userTableName:       "chessfinder_dynamodb-users",
 	archivesTableName:   "chessfinder_dynamodb-archives",
 	searchesTableName:   "chessfinder_dynamodb-searches",
@@ -234,7 +234,7 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
 }
 
-func persistUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, user users.UserRecord) (err error) {
+func persistUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, user users.UserRecord) (err error) {
 
 	userItem, err := dynamodbattribute.MarshalMap(user)
 	if err != nil {
@@ -251,7 +251,7 @@ func persistUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar Searc
 	return
 }
 
-func persistArchiveRecords(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, archive archives.ArchiveRecord) (err error) {
+func persistArchiveRecords(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, archive archives.ArchiveRecord) (err error) {
 
 	archiveItem, err := dynamodbattribute.MarshalMap(archive)
 	if err != nil {
@@ -270,7 +270,7 @@ func persistArchiveRecords(dynamodbClient dynamodbiface.DynamoDBAPI, registrar S
 	return
 }
 
-func getSearchRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRequestRegistrar, searchResultId string) (searchResult searches.SearchRecord, err error) {
+func getSearchRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, searchResultId string) (searchResult searches.SearchRecord, err error) {
 	searchRecordItems, err := dynamodbClient.GetItem(
 		&dynamodb.GetItemInput{
 			TableName: aws.String(registrar.searchesTableName),
@@ -293,7 +293,7 @@ func getSearchRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchR
 	return
 }
 
-func getTheLastCommand(svc *sqs.SQS, registrar SearchRequestRegistrar) (command *queue.SearchBoardCommand, err error) {
+func getTheLastCommand(svc *sqs.SQS, registrar SearchRegistrar) (command *queue.SearchBoardCommand, err error) {
 	count, err := countCommands(svc, registrar)
 	if err != nil {
 		fmt.Printf("Failed to count commands with error%v", err)
@@ -338,7 +338,7 @@ func getTheLastCommand(svc *sqs.SQS, registrar SearchRequestRegistrar) (command 
 	return
 }
 
-func countCommands(svc *sqs.SQS, registrar SearchRequestRegistrar) (count int, err error) {
+func countCommands(svc *sqs.SQS, registrar SearchRegistrar) (count int, err error) {
 	resp, err := svc.GetQueueAttributes(&sqs.GetQueueAttributesInput{
 		QueueUrl: &registrar.searchBoardQueueUrl,
 		AttributeNames: []*string{

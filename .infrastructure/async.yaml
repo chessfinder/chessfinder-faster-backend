@@ -24,6 +24,10 @@ Parameters:
   GamesByEndTimestampIndexName:
     Type: String
     Description: DynamoDB index for games by end timestamp
+
+  SearchesTableName:
+    Type: String
+    Description: DynamoDB table for searches
     
   DownloadGamesQueueArn:
     Type: String
@@ -57,18 +61,24 @@ Resources:
       Role: !Ref 'ChessfinderLambdaRoleArn'
     Type: AWS::Serverless::Function
 
-  # SearchBoardFunction:
-  #   Properties:
-  #     MemorySize: 1024
-  #     Events:
-  #       SearchBoardCommand:
-  #         Properties:
-  #           Queue: !Ref 'SearchBoardQueueArn'
-  #           BatchSize: 1
-  #         Type: SQS
-  #     Timeout: 900
-  #     Runtime: java17
-  #     Handler: chessfinder.search.Lambda::handleRequest
-  #     CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
-  #     Role: !Ref 'ChessfinderLambdaRoleArn'
-  #   Type: AWS::Serverless::Function
+  SearchBoardFunction:
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-SearchBoard
+      MemorySize: 1024
+      Events:
+        SearchBoardCommand:
+          Properties:
+            Queue: !Ref 'SearchBoardQueueArn'
+            BatchSize: 1
+          Type: SQS
+      Timeout: 900
+      Architectures: ["x86_64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/search/process/process.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          SEARCHES_TABLE_NAME: !Ref SearchesTableName
+          GAMES_TABLE_NAME: !Ref GamesTableName
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function

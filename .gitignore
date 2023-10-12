@@ -24,6 +24,10 @@ src_go/search/initiate/initiate
 src_go/search/initiate/initiate.zip
 src_go/search/initiate/bootstrap
 
+src_go/search/process/process
+src_go/search/process/process.zip
+src_go/search/process/bootstrap
+
 src_go/download/check_status/check_status
 src_go/download/check_status/check_status.zip
 src_go/download/check_status/bootstrap
