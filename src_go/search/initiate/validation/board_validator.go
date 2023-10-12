@@ -10,10 +10,12 @@ import "C"
 
 import (
 	"fmt"
+	"runtime/debug"
 	"unsafe"
 )
 
 func ValidateBoard(board string) (bool, error) {
+	debug.SetPanicOnFault(true)
 	var err error
 
 	defer func() {

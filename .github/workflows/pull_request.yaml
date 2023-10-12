@@ -7,7 +7,7 @@ on:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:    
       - name: Check GLIGC version
         shell: bash
@@ -71,6 +71,7 @@ jobs:
         run: |
           sbt -v "core/GraalVMSharedLib/packageBin;"
           cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/initiate/validation/
+          cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/process/searcher/
       
       - name: GO - Install dependencies
         run: |
@@ -98,8 +99,12 @@ jobs:
           go get .
           go mod tidy
           cd ../../../     
-          
-      
+
+          cd src_go/search/process
+          go get .
+          go mod tidy
+          cd ../../../
+                
       - name: Install AWS CLI
         shell: bash
         run: |
@@ -135,6 +140,10 @@ jobs:
           go test ./src_go/download/process/... -v
           go test ./src_go/search/check_status/... -v
           cd src_go/search/initiate
+          go test ./... -v
+          cd ../../../
+
+          cd src_go/search/process
           go test ./... -v
           cd ../../../
           docker compose -f ./src/it/resources/docker-compose.yaml down

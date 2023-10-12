@@ -1,7 +1,7 @@
 package queue
 
 type DownloadGamesCommand struct {
-	Username   string   `json:"username"` //fixme rename to username
+	Username   string   `json:"username"`
 	UserId     string   `json:"userId"`
 	Platform   Platform `json:"platform"`
 	ArchiveId  string   `json:"archiveId"`

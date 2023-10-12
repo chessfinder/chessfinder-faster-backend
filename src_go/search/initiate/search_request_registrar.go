@@ -22,7 +22,7 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/search/initiate/validation"
 )
 
-type SearchRequestRegistrar struct {
+type SearchRegistrar struct {
 	userTableName       string
 	archivesTableName   string
 	searchesTableName   string
@@ -30,7 +30,7 @@ type SearchRequestRegistrar struct {
 	awsConfig           *aws.Config
 }
 
-func (registrar *SearchRequestRegistrar) RegisterSearchRequest(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
+func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 	config := zap.NewProductionConfig()
 	config.OutputPaths = []string{"stdout"}
 	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -169,7 +169,7 @@ func (registrar *SearchRequestRegistrar) RegisterSearchRequest(event *events.API
 	return
 }
 
-func (registrar *SearchRequestRegistrar) getUserRecord(
+func (registrar *SearchRegistrar) getUserRecord(
 	searchRequest SearchRequest,
 	logger *zap.Logger,
 	dynamodbClient *dynamodb.DynamoDB,
@@ -205,7 +205,7 @@ func (registrar *SearchRequestRegistrar) getUserRecord(
 	return
 }
 
-func (registrar *SearchRequestRegistrar) getArchiveRecords(
+func (registrar *SearchRegistrar) getArchiveRecords(
 	user users.UserRecord,
 	logger *zap.Logger,
 	dynamodbClient *dynamodb.DynamoDB,
@@ -235,7 +235,7 @@ func (registrar *SearchRequestRegistrar) getArchiveRecords(
 	return
 }
 
-func (registrar *SearchRequestRegistrar) persistSearchRecord(
+func (registrar *SearchRegistrar) persistSearchRecord(
 	dynamodbClient *dynamodb.DynamoDB,
 	logger *zap.Logger,
 	search searches.SearchRecord,

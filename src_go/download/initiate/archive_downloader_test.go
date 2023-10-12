@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
@@ -124,7 +123,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 	downloadId := actualDownloadResponse.DownloadId
 
-	downloadRequestStatus, err := downloader.getDownloadRecord(dynamodbClient, downloadId)
+	downloadRequestStatus, err := downloader.getDownloadRecord(downloadId)
 	assert.NoError(t, err)
 
 	expectedDownloadRecord := downloads.DownloadRecord{
@@ -146,7 +145,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.NoError(t, err)
 	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
 
-	actualUserRecord, err := getUserRecord(dynamodbClient, downloader, username)
+	actualUserRecord, err := downloader.getUserRecord(username)
 	assert.NoError(t, err)
 
 	expectedUserRecord := users.UserRecord{
@@ -158,7 +157,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.Equal(t, expectedUserRecord, actualUserRecord)
 
 	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
-	archive_2021_10, err := downloader.getArchiveRecord(dynamodbClient, userId, archiveId_2021_10)
+	archive_2021_10, err := downloader.getArchiveRecord(userId, archiveId_2021_10)
 	assert.NoError(t, err)
 
 	expectedArchive_2021_10 := archives.ArchiveRecord{
@@ -174,7 +173,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.Equal(t, expectedArchive_2021_10, archive_2021_10)
 
 	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
-	archive_2021_11, err := downloader.getArchiveRecord(dynamodbClient, userId, archiveId_2021_11)
+	archive_2021_11, err := downloader.getArchiveRecord(userId, archiveId_2021_11)
 	assert.NoError(t, err)
 
 	expectedArchive_2021_11 := archives.ArchiveRecord{
@@ -190,7 +189,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.Equal(t, expectedArchive_2021_11, archive_2021_11)
 
 	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
-	archive_2021_12, err := downloader.getArchiveRecord(dynamodbClient, userId, archiveId_2021_12)
+	archive_2021_12, err := downloader.getArchiveRecord(userId, archiveId_2021_12)
 	assert.NoError(t, err)
 
 	expectedArchive_2021_12 := archives.ArchiveRecord{
@@ -205,7 +204,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 	assert.Equal(t, expectedArchive_2021_12, archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
 
-	actualCommands, err := downloader.getCommands(svc)
+	actualCommands, err := downloader.getCommands()
 	assert.NoError(t, err)
 
 	command_2021_10 := queue.DownloadGamesCommand{
@@ -261,7 +260,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		DownloadedAt: nil,
 	}
 
-	err = downloader.persistArchiveRecord(dynamodbClient, existingArchive_2021_10)
+	err = downloader.persistArchiveRecord(existingArchive_2021_10)
 	assert.NoError(t, err)
 
 	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
@@ -276,7 +275,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		DownloadedAt: &archive_2021_11_downloadedAt,
 	}
 
-	err = downloader.persistArchiveRecord(dynamodbClient, existingArchive_2021_11)
+	err = downloader.persistArchiveRecord(existingArchive_2021_11)
 	assert.NoError(t, err)
 
 	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
@@ -292,7 +291,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		DownloadedAt: &archive_2021_12_downloadedAt,
 	}
 
-	err = downloader.persistArchiveRecord(dynamodbClient, existingArchive_2021_12)
+	err = downloader.persistArchiveRecord(existingArchive_2021_12)
 	assert.NoError(t, err)
 
 	usersProfileReponseBody := fmt.Sprintf(
@@ -365,7 +364,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	downloadId := actualDownloadResponse.DownloadId
 
-	actualDownloadRecord, err := downloader.getDownloadRecord(dynamodbClient, downloadId)
+	actualDownloadRecord, err := downloader.getDownloadRecord(downloadId)
 	assert.NoError(t, err)
 
 	expectedDownloadRecord := downloads.DownloadRecord{
@@ -388,7 +387,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
 
-	actualUserRecord, err := getUserRecord(dynamodbClient, downloader, username)
+	actualUserRecord, err := downloader.getUserRecord(username)
 	assert.NoError(t, err)
 
 	expectedUser := users.UserRecord{
@@ -399,7 +398,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	assert.Equal(t, expectedUser, actualUserRecord)
 
-	actualCommands, err := downloader.getCommands(svc)
+	actualCommands, err := downloader.getCommands()
 	assert.NoError(t, err)
 
 	command_2021_10 := queue.DownloadGamesCommand{
@@ -427,7 +426,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 }
 
-func getUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, archviveDownloader ArchiveDownloader, userId string) (user users.UserRecord, err error) {
+func (archviveDownloader ArchiveDownloader) getUserRecord(userId string) (user users.UserRecord, err error) {
 
 	userRecordQuery := &dynamodb.GetItemInput{
 		TableName: aws.String(archviveDownloader.usersTableName),
@@ -454,7 +453,7 @@ func getUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, archviveDownloader 
 	return
 }
 
-func (downloader ArchiveDownloader) getArchiveRecord(dynamodbClient dynamodbiface.DynamoDBAPI, userId string, archiveId string) (archive archives.ArchiveRecord, err error) {
+func (downloader ArchiveDownloader) getArchiveRecord(userId string, archiveId string) (archive archives.ArchiveRecord, err error) {
 
 	archiveRecordQuery := &dynamodb.GetItemInput{
 		TableName: aws.String(downloader.archivesTableName),
@@ -481,7 +480,7 @@ func (downloader ArchiveDownloader) getArchiveRecord(dynamodbClient dynamodbifac
 	return
 }
 
-func (downloader ArchiveDownloader) getDownloadRecord(dynamodbClient dynamodbiface.DynamoDBAPI, downloadId string) (downloadRecord downloads.DownloadRecord, err error) {
+func (downloader ArchiveDownloader) getDownloadRecord(downloadId string) (downloadRecord downloads.DownloadRecord, err error) {
 
 	downloadRecordQuery := &dynamodb.GetItemInput{
 		TableName: aws.String(downloader.downloadsTableName),
@@ -505,7 +504,7 @@ func (downloader ArchiveDownloader) getDownloadRecord(dynamodbClient dynamodbifa
 	return
 }
 
-func (downloader ArchiveDownloader) persistArchiveRecord(dynamodbClient dynamodbiface.DynamoDBAPI, archive archives.ArchiveRecord) (err error) {
+func (downloader ArchiveDownloader) persistArchiveRecord(archive archives.ArchiveRecord) (err error) {
 
 	archiveItem, err := dynamodbattribute.MarshalMap(archive)
 	if err != nil {
@@ -525,7 +524,7 @@ func (downloader ArchiveDownloader) persistArchiveRecord(dynamodbClient dynamodb
 	return
 }
 
-func (downloader ArchiveDownloader) getCommands(svc *sqs.SQS) (commands []queue.DownloadGamesCommand, err error) {
+func (downloader ArchiveDownloader) getCommands() (commands []queue.DownloadGamesCommand, err error) {
 	resp, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		QueueUrl:            &downloader.downloadGamesQueueUrl,
 		MaxNumberOfMessages: aws.Int64(10), // You can adjust this number
