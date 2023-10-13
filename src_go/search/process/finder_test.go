@@ -40,6 +40,10 @@ var wiremockClient = wiremock.NewClient("http://0.0.0.0:18443")
 func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_games(t *testing.T) {
 	defer wiremockClient.Reset()
 
+	if !testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	startOfTest := time.Now().UTC()
 
 	var err error
@@ -134,6 +138,10 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 func Test_when_there_is_no_registered_search_BoardFinder_should_skip(t *testing.T) {
 	defer wiremockClient.Reset()
 
+	if !testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	var err error
 	userId := uuid.New().String()
 	searchId := uuid.New().String()
@@ -170,6 +178,10 @@ func Test_when_there_is_no_registered_search_BoardFinder_should_skip(t *testing.
 
 func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFinder_should_stop(t *testing.T) {
 	defer wiremockClient.Reset()
+
+	if !testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 
 	startOfTest := time.Now().UTC()
 

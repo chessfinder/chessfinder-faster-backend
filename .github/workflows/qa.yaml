@@ -97,6 +97,7 @@ jobs:
         run: |
           sbt -v "core/GraalVMSharedLib/packageBin;"
           cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/initiate/validation/
+          cp -r ./src_core/target/graalvm-shared-lib/* ./src_go/search/process/searcher/
 
       - name: GO - Install dependencies
         run: |
