@@ -64,7 +64,7 @@ Resources:
   SearchBoardFunction:
     Properties:
       FunctionName: !Sub ${AWS::StackName}-SearchBoard
-      MemorySize: 1024
+      MemorySize: 2048
       Events:
         SearchBoardCommand:
           Properties:

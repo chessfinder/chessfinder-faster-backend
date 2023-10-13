@@ -44,6 +44,10 @@ var svc = sqs.New(awsSession)
 
 func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_and_there_are_cached_archives(t *testing.T) {
 	var err error
+	if !testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
 	user := users.UserRecord{
@@ -129,6 +133,10 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_user_if_there_are_no_cached_archives(t *testing.T) {
 	var err error
 
+	if !testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
 	user := users.UserRecord{
@@ -170,6 +178,10 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 
 func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_searchfen(t *testing.T) {
 	var err error
+
+	if !testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 
 	username := uuid.New().String()
 
