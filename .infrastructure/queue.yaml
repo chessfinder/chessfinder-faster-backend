@@ -1,18 +1,23 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+
 Resources:
   DownloadGames: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: !Sub "${AWS::StackName}-DownloadGames.fifo"
+      QueueName: !Sub "${TheStackName}-DownloadGames.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
 
   SearchBoard: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: !Sub "${AWS::StackName}-SearchBoard.fifo"
+      QueueName: !Sub "${TheStackName}-SearchBoard.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
 

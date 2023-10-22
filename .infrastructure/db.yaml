@@ -3,6 +3,11 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   chessfinder caching with dynamodb
 
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+
 Resources:
   UsersTable:
     Type: AWS::DynamoDB::Table
