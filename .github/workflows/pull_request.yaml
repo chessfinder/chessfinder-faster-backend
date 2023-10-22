@@ -129,11 +129,12 @@ jobs:
           sleep 10s          
           awslocal  s3api create-bucket --bucket chessfinder
           # samlocal deploy --template-file template_resources.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-          samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dynamodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
-          samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder
+          samlocal deploy --template-file .infrastructure/db.yaml --stack-name chessfinder_dynamodb --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder --parameter-overrides TheStackName=chessfinder_dynamodb
+          samlocal deploy --template-file .infrastructure/queue.yaml --stack-name chessfinder_sqs --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket chessfinder --parameter-overrides TheStackName=chessfinder_sqs
           go test ./src_go/details/db/... -v
           go test ./src_go/details/api/... -v
           go test ./src_go/details/queue/... -v
+          go test ./src_go/details/batcher/... -v
           
           go test ./src_go/download/check_status/... -v
           go test ./src_go/download/initiate/... -v

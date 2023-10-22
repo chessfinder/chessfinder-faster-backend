@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+
   ChessfinderLambdaRoleArn:
     Type: String
     Description: Lambda role for basic execution and permissions
@@ -38,12 +42,12 @@ Parameters:
 Resources:
   DownloadGamesFunction:
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-DownloadGames
+      FunctionName: !Sub ${TheStackName}-DownloadGames
       MemorySize: 1024
       Events:
         DownloadGamesCommand:
           Properties:
-            Queue: !Ref 'DownloadGamesQueueArn'
+            Queue: !Ref DownloadGamesQueueArn
             BatchSize: 10
           Type: SQS
       Timeout: 900
@@ -58,17 +62,17 @@ Resources:
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
           GAMES_TABLE_NAME: !Ref GamesTableName
           GAMES_BY_END_TIMESTAMP_INDEX_NAME: !Ref GamesByEndTimestampIndexName
-      Role: !Ref 'ChessfinderLambdaRoleArn'
+      Role: !Ref ChessfinderLambdaRoleArn
     Type: AWS::Serverless::Function
 
   SearchBoardFunction:
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-SearchBoard
+      FunctionName: !Sub ${TheStackName}-SearchBoard
       MemorySize: 2048
       Events:
         SearchBoardCommand:
           Properties:
-            Queue: !Ref 'SearchBoardQueueArn'
+            Queue: !Ref SearchBoardQueueArn
             BatchSize: 1
           Type: SQS
       Timeout: 900
@@ -80,5 +84,5 @@ Resources:
         Variables:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           GAMES_TABLE_NAME: !Ref GamesTableName
-      Role: !Ref 'ChessfinderLambdaRoleArn'
+      Role: !Ref ChessfinderLambdaRoleArn
     Type: AWS::Serverless::Function

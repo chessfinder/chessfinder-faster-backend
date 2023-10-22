@@ -208,4 +208,4 @@ jobs:
       
       - name: Deploying Application
         run: |
-          sam deploy --template-file template.yaml --stack-name chessfinder --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket ${{ secrets.AWS_APPLICATION_BUCKET }}
+          sam deploy --template-file template.yaml --stack-name chessfinder-prod --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket ${{ secrets.AWS_APPLICATION_BUCKET }} --parameter-overrides ChessfinderZoneFileId=${{ secrets.CHESSFINDER_ZONE_FILE_ID }} EnvType=PROD

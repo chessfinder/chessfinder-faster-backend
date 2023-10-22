@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: "Chessfinder roles and identities"
+
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+
 Resources:
   RoleForChessfinderLambda:
     Type: AWS::IAM::Role
@@ -21,11 +27,9 @@ Resources:
         - "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
       MaxSessionDuration: 43200
       Path: "/chessfinder/"
-      RoleName: "RoleForChessfinderLambda"
+      RoleName: !Sub "${TheStackName}-RoleForChessfinderLambda"
 
 Outputs:
   RoleForChessfinderLambdaArn:
     Description: ARN of the Lambda role for basic execution and dynamodb access
     Value: !GetAtt RoleForChessfinderLambda.Arn
-    Export:
-      Name: RoleForChessfinderLambdaArn

@@ -3,27 +3,63 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Chessfinder - application for finding chessgame having only partial information about the game.
 
+Parameters:
+  EnvType:
+    Type: String
+    Default: QA
+    AllowedValues:
+      - QA
+      - PROD
+    Description: Enter QA or PROD. Default is QA.
+  
+  ChessfinderZoneFileId:
+    Type: String
+    Description: Enter HostedZoneId.
+
+Conditions:
+  IsProd: 
+    Fn::Equals: 
+      - Ref: EnvType
+      - PROD
+
 Resources:
+  ChessfinderCertificate: # don not put in a separate file, it won't work
+    Type: "AWS::CertificateManager::Certificate"
+    Properties: 
+      DomainName: !If [IsProd, "api.chessfinder.org", "api-qa.chessfinder.org"]
+      ValidationMethod: DNS
+      DomainValidationOptions: 
+        - DomainName: !If [IsProd, "api.chessfinder.org", "api-qa.chessfinder.org"]
+          HostedZoneId: !Ref ChessfinderZoneFileId
+
   Roles:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/role.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
 
   DynamoDB:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/db.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
 
   SQS:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/queue.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
 
   Async:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/async.yaml
       Parameters:
+        TheStackName: !Ref AWS::StackName
+
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
         DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
         SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
@@ -33,12 +69,19 @@ Resources:
         GamesByEndTimestampIndexName: !GetAtt DynamoDB.Outputs.GamesByEndTimestampIndexName
         SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
         ChessDotComUrl: "https://api.chess.com"
+    DependsOn: 
+      - Roles
+      - DynamoDB
+      - SQS
         
   Api:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/api.yaml
       Parameters:
+        TheStackName: !Ref AWS::StackName
+        ChessfinderCertificateArn: !Ref ChessfinderCertificate
+        ChessfinderApiDomainName: !If [IsProd, "api.chessfinder.org", "api-qa.chessfinder.org"]
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
         DownloadGamesQueueUrl: !GetAtt SQS.Outputs.DownloadGamesQueueUrl
         SearchBoardQueueUrl: !GetAtt SQS.Outputs.SearchBoardQueueUrl
@@ -47,8 +90,20 @@ Resources:
         ArchivesTableName: !GetAtt DynamoDB.Outputs.ArchivesTableName
         SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
         ChessDotComUrl: "https://api.chess.com"
-
-Outputs:
-  ChessfinderApiEndpoint:
-    Description: "Chessfinder API Gateway Endpoint URL"
-    Value: !GetAtt Api.Outputs.ChessfinderUrl
+    DependsOn: 
+      - ChessfinderCertificate
+      - Roles
+      - DynamoDB
+      - SQS
+  
+  ChessfinderDomainRecord: # don not put in a separate file, it won't work
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !If [IsProd, "api.chessfinder.org", "api-qa.chessfinder.org"]
+      HostedZoneId: !Ref ChessfinderZoneFileId
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt Api.Outputs.ChessfinderApiRegionalDomainName
+        HostedZoneId: !GetAtt Api.Outputs.ChessfinderApiRegionalHostedZoneId
+        EvaluateTargetHealth: false
+    DependsOn: Api

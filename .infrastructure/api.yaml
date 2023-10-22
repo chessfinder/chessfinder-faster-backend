@@ -1,6 +1,16 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+
+  ChessfinderApiDomainName:
+    Type: String
+
+  ChessfinderCertificateArn:
+    Type: String
+
   ChessfinderLambdaRoleArn:
     Type: String
 
@@ -26,6 +36,30 @@ Parameters:
     Type: String
   
 Resources:
+  ChessfinderCustomDomainName:
+    Properties:
+      DomainName: !Ref ChessfinderApiDomainName
+      DomainNameConfigurations:
+        - CertificateArn: !Ref ChessfinderCertificateArn
+          SecurityPolicy: TLS_1_2
+          EndpointType: REGIONAL
+    Type: AWS::ApiGatewayV2::DomainName
+  
+  ChessfinderHttpApi:
+    Properties:
+      Name: !Sub "${TheStackName}-ChessfinderHttpApi"
+      StageName: $default
+    Type: AWS::Serverless::HttpApi
+    DependsOn: ChessfinderCustomDomainName
+  
+  ChessfinderApiMapping:
+    Properties:
+      ApiId: !Ref ChessfinderHttpApi
+      DomainName: !Ref ChessfinderApiDomainName
+      Stage: $default
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ChessfinderCustomDomainName
+  
   CheckDownloadFunction:
     Properties:
       FunctionName: !Sub ${AWS::StackName}-CheckDownload
@@ -34,7 +68,7 @@ Resources:
       Events:
         GetApiFasterGame:
           Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
+            ApiId: !Ref ChessfinderHttpApi
             Method: GET
             Path: /api/faster/game
             TimeoutInMillis: 29000
@@ -47,7 +81,7 @@ Resources:
       Environment:
         Variables:
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
-      Role: !Ref 'ChessfinderLambdaRoleArn'
+      Role: !Ref ChessfinderLambdaRoleArn
     Type: AWS::Serverless::Function
   
   InitiateDownloadFunction:
@@ -58,7 +92,7 @@ Resources:
       Events:
         PostApiFasterGame:
           Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
+            ApiId: !Ref ChessfinderHttpApi
             Method: POST
             Path: /api/faster/game
             TimeoutInMillis: 29000
@@ -75,7 +109,7 @@ Resources:
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
           USERS_TABLE_NAME: !Ref UsersTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
-      Role: !Ref 'ChessfinderLambdaRoleArn'
+      Role: !Ref ChessfinderLambdaRoleArn
     Type: AWS::Serverless::Function
 
   CheckSearchFunction:
@@ -86,7 +120,7 @@ Resources:
       Events:
         GetApiFasterBoard:
           Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
+            ApiId: !Ref ChessfinderHttpApi
             Method: GET
             Path: /api/faster/board
             TimeoutInMillis: 29000
@@ -99,7 +133,7 @@ Resources:
       Environment:
         Variables:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
-      Role: !Ref 'ChessfinderLambdaRoleArn'
+      Role: !Ref ChessfinderLambdaRoleArn
     Type: AWS::Serverless::Function
 
   InitiateSearchFunction:
@@ -110,7 +144,7 @@ Resources:
       Events:
         PostApiFasterGame:
           Properties:
-            ApiId: !Ref 'ChessfinderHttpApi'
+            ApiId: !Ref ChessfinderHttpApi
             Method: POST
             Path: /api/faster/board
             TimeoutInMillis: 29000
@@ -126,16 +160,13 @@ Resources:
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
-      Role: !Ref 'ChessfinderLambdaRoleArn'
+      Role: !Ref ChessfinderLambdaRoleArn
     Type: AWS::Serverless::Function
 
-  ChessfinderHttpApi:
-    Properties:
-      StageName: $default
-    Type: AWS::Serverless::HttpApi
-
 Outputs:
-  ChessfinderUrl:
-    Description: Base URL of your endpoints
-    Value:
-      Fn::Sub: https://${ChessfinderHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  ChessfinderApiRegionalDomainName: 
+    Description: "Chessfinder API Regional Domain Name"
+    Value: !GetAtt ChessfinderCustomDomainName.RegionalDomainName
+  ChessfinderApiRegionalHostedZoneId:
+    Description: "Chessfinder API Regional Hosted Zone Id"
+    Value: !GetAtt ChessfinderCustomDomainName.RegionalHostedZoneId
