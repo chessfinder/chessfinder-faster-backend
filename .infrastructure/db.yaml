@@ -12,7 +12,7 @@ Resources:
   UsersTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AWS::StackName}-users"
+      TableName: !Sub "${TheStackName}-users"
       AttributeDefinitions:
         - AttributeName: username
           AttributeType: S
@@ -29,7 +29,7 @@ Resources:
   DownloadsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AWS::StackName}-downloads"
+      TableName: !Sub "${TheStackName}-downloads"
       AttributeDefinitions:
         - AttributeName: download_id
           AttributeType: S
@@ -42,7 +42,7 @@ Resources:
   GamesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AWS::StackName}-games"
+      TableName: !Sub "${TheStackName}-games"
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -58,7 +58,7 @@ Resources:
         - AttributeName: game_id
           KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: !Sub "${AWS::StackName}-gamesByEndTimestamp"
+        - IndexName: !Sub "${TheStackName}-gamesByEndTimestamp"
           KeySchema:
             - AttributeName: archive_id
               KeyType: HASH
@@ -71,7 +71,7 @@ Resources:
   ArchivesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AWS::StackName}-archives"
+      TableName: !Sub "${TheStackName}-archives"
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -87,7 +87,7 @@ Resources:
   SearchesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${AWS::StackName}-searches"
+      TableName: !Sub "${TheStackName}-searches"
       AttributeDefinitions:
         - AttributeName: search_id
           AttributeType: S
@@ -110,7 +110,7 @@ Outputs:
     Description: "Games By End Timestamp Index Name"
      # this is a shame that we have to hardcode this
     # Value: "!GetAtt ???.0.IndexName"
-    Value: !Sub "${AWS::StackName}-gamesByEndTimestamp"
+    Value: !Sub "${TheStackName}-gamesByEndTimestamp"
   ArchivesTableName:
     Description: "Archives Table Name"
     Value: !Ref ArchivesTable
