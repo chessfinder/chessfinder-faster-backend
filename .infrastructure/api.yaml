@@ -49,6 +49,17 @@ Resources:
     Properties:
       Name: !Sub "${TheStackName}-ChessfinderHttpApi"
       StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+          - "http://localhost:8080"
+          - "https://demo.chessfinder.org"
+          - "https://www.chessfinder.org"
+          - "https://chessfinder.org"
+        AllowHeaders:
+          - "*"
+        AllowMethods: [GET, POST, OPTIONS]
+        MaxAge: 300
+        AllowCredentials: false
     Type: AWS::Serverless::HttpApi
     DependsOn: ChessfinderCustomDomainName
   
