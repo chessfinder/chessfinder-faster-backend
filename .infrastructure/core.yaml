@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+  ChessfinderLambdaRoleArn:
+    Type: String
+
+Resources:
+  ChessfinderFunction:
+    Properties:
+      FunctionName: !Sub ${TheStackName}-ChessfinderCoreFunction
+      Timeout: 29
+      MemorySize: 1024
+      Runtime: java17
+      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.3.0\chessfinder-lambda.jar
+      Handler: chessfinder.api.Lambda::handleRequest
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+    Type: AWS::Serverless::Function

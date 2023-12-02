@@ -7,9 +7,16 @@ services:
     container_name: wiremock-gui
     ports:
       - "${WIREMOCK_EXPOSED_PORT}:8443"
-    environment:
-      WIREMOCK_OPTIONS: "--port=8443,--max-request-journal=1000,--local-response-templating,--root-dir=/home/wiremock/storage"
-
+    command:
+      [
+        "--port",
+        "8443",
+        "--max-request-journal",
+        "1000",
+        "--local-response-templating",
+        "--root-dir",
+        "/home/wiremock/storage"
+      ]
   # dynamodb:
   #   image: amazon/dynamodb-local:latest
   #   command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
@@ -36,13 +43,13 @@ services:
 
   localstack:
     hostname: aws
-    container_name: "localstack_main"
+    container_name: "localstack_main:3.0.1"
     image: localstack/localstack:latest
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway
     environment:
       - DEBUG=1
       - EAGER_SERVICE_LOADING=1
-      - SERVICES=sqs,secretsmanager,dynamodb,lambda,iam
+      - SERVICES=sqs,secretsmanager,dynamodb,lambda,iam,cloudformation
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"

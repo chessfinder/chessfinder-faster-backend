@@ -149,44 +149,40 @@ jobs:
       - name: GO - Build
         shell: bash
         run: |
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o ./src_go/download/check_status/bootstrap -tags lambda.norpc ./src_go/download/check_status/.
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o ./src_go/download/initiate/bootstrap -tags lambda.norpc ./src_go/download/initiate/.
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o ./src_go/download/process/bootstrap -tags lambda.norpc ./src_go/download/process/.
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o ./src_go/search/check_status/bootstrap -tags lambda.norpc ./src_go/search/check_status/.
-          cd ./src_go/search/initiate
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
-          cd ../../../
-
-          cd ./src_go/search/process
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
-          cd ../../../
-
-      - name: GO - Packaging Code
-        shell: bash
-        run: |
           cd ./src_go/download/check_status
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
           zip check_status.zip bootstrap
           cd ../../../
 
           cd ./src_go/download/initiate
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
           zip initiate.zip bootstrap
           cd ../../../
 
           cd ./src_go/download/process
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
           zip process.zip bootstrap
           cd ../../../
 
           cd ./src_go/search/check_status
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
           zip check_status.zip bootstrap
           cd ../../../
 
           cd ./src_go/search/initiate
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
           zip initiate.zip bootstrap validation/chess-finder-core_dynamic.h validation/chess-finder-core.h validation/graal_isolate_dynamic.h validation/graal_isolate.h validation/chess-finder-core.so
           cd ../../../
-          
+
           cd ./src_go/search/process
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -v -o bootstrap -tags lambda.norpc .
           zip process.zip bootstrap searcher/chess-finder-core_dynamic.h searcher/chess-finder-core.h searcher/graal_isolate_dynamic.h searcher/graal_isolate.h searcher/chess-finder-core.so
           cd ../../../
+
+      - name: Build Scala
+        shell: bash
+        run: |
+          sbt -v "assembly;"
       
       - name: Make Python 3 default
         shell: bash

@@ -43,7 +43,7 @@ Resources:
   DownloadGamesFunction:
     Properties:
       FunctionName: !Sub ${TheStackName}-DownloadGames
-      MemorySize: 1024
+      MemorySize: 256
       Events:
         DownloadGamesCommand:
           Properties:

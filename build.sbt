@@ -93,8 +93,19 @@ lazy val root = (project in file("."))
     IntegrationTest / fork := true,
     IntegrationTest / javaOptions += "-Dconfig.file=src/it/resources/local.conf"
   )
-  .dependsOn(testkit % Test)
+  .settings(
+    assembly / assemblyJarName := "chessfinder-lambda.jar",
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "maven", _*)                                       => MergeStrategy.concat
+      case PathList("META-INF", "io.netty.versions.properties", _*)                => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last == "module-info.class"                     => MergeStrategy.first
+      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+      case PathList("deriving.conf") => MergeStrategy.concat // FIXME get rid of zio.json
+      case PathList(path @ _*) if path.exists(_.contains("module-info.class")) => MergeStrategy.first
+      case x =>
+        val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
+        oldStrategy(x)
+    }
+  )
   .dependsOn(core)
-
-lazy val testkit = project
-  .in(file("src_testkit"))

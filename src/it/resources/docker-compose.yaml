@@ -21,7 +21,7 @@ services:
       ]
   
   localstack:
-    container_name: "localstack_main"
+    container_name: "localstack_main:3.0.1"
     image: localstack/localstack:latest
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway
@@ -32,7 +32,7 @@ services:
     environment:
       - DEBUG=1
       - EAGER_SERVICE_LOADING=1
-      - SERVICES=sqs,secretsmanager,dynamodb,lambda,iam
+      - SERVICES=sqs,secretsmanager,dynamodb,lambda,iam,cloudformation
       # - LS_LOG=trace-internal
       # - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
