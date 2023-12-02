@@ -54,17 +54,17 @@ jobs:
       - name: SCALA - Check Fomatting
         shell: bash
         run: |
-          sbt -v "core/scalafmtCheckAll;"
+          sbt -v "core/scalafmtCheckAll;scalafmtCheckAll;"
       
       - name: SCALA - Compile Code
         shell: bash
         run: |
-          sbt -v "core/compile;"
+          sbt -v "core/compile;compile;"
 
       - name: SCALA - Unit Tests
         shell: bash
         run: |
-          sbt -v "core/test;"
+          sbt -v "core/test;test;"
       
       - name: SCALA - Packaging Code
         shell: bash

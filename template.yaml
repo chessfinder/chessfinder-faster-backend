@@ -73,6 +73,18 @@ Resources:
       - Roles
       - DynamoDB
       - SQS
+
+  Core:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/core.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+    DependsOn: 
+      - Roles
+      - DynamoDB
+      - SQS
         
   Api:
     Type: AWS::Serverless::Application
