@@ -40,6 +40,12 @@ Parameters:
     Type: String
   
 Resources:
+  DownloadGamesLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/DownloadGames"
+      RetentionInDays: 30
+    
   DownloadGamesFunction:
     Properties:
       FunctionName: !Sub ${TheStackName}-DownloadGames
@@ -63,8 +69,17 @@ Resources:
           GAMES_TABLE_NAME: !Ref GamesTableName
           GAMES_BY_END_TIMESTAMP_INDEX_NAME: !Ref GamesByEndTimestampIndexName
       Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref DownloadGamesLogs
     Type: AWS::Serverless::Function
 
+  SearchBoardLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/SearchBoard"
+      RetentionInDays: 30
+  
   SearchBoardFunction:
     Properties:
       FunctionName: !Sub ${TheStackName}-SearchBoard
@@ -85,4 +100,7 @@ Resources:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           GAMES_TABLE_NAME: !Ref GamesTableName
       Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref SearchBoardLogs
     Type: AWS::Serverless::Function

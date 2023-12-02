@@ -8,13 +8,22 @@ Parameters:
     Type: String
 
 Resources:
-  ChessfinderFunction:
+  ChessfinderCoreLogs:
+    Type: AWS::Logs::LogGroup
     Properties:
-      FunctionName: !Sub ${TheStackName}-ChessfinderCoreFunction
+      LogGroupName: !Sub "/${TheStackName}/ChessfinderCore"
+      RetentionInDays: 30
+    
+  ChessfinderCoreFunction:
+    Properties:
+      FunctionName: !Sub "${TheStackName}-ChessfinderCore"
       Timeout: 29
       MemorySize: 1024
       Runtime: java17
-      CodeUri: C:\Users\tohanyan\IdeaProjects\chessfinder\chess-finder-backend\target\scala-3.3.0\chessfinder-lambda.jar
+      CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
       Handler: chessfinder.api.Lambda::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref ChessfinderCoreLogs
     Type: AWS::Serverless::Function

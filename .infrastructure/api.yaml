@@ -71,9 +71,15 @@ Resources:
     Type: AWS::ApiGatewayV2::ApiMapping
     DependsOn: ChessfinderCustomDomainName
   
+  CheckDownloadLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/CheckDownload"
+      RetentionInDays: 30
+
   CheckDownloadFunction:
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-CheckDownload
+      FunctionName: !Sub "${TheStackName}-CheckDownload"
       Timeout: 29
       MemorySize: 256
       Events:
@@ -93,11 +99,20 @@ Resources:
         Variables:
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
       Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref CheckDownloadLogs
     Type: AWS::Serverless::Function
   
+  InitiateDownloadLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/InitiateDownload"
+      RetentionInDays: 30
+
   InitiateDownloadFunction:
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-InitiateDownload
+      FunctionName: !Sub "${TheStackName}-InitiateDownload"
       Timeout: 29
       MemorySize: 256
       Events:
@@ -121,11 +136,20 @@ Resources:
           USERS_TABLE_NAME: !Ref UsersTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
       Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref InitiateDownloadLogs
     Type: AWS::Serverless::Function
 
+  CheckSearchLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/CheckSearch"
+      RetentionInDays: 30
+  
   CheckSearchFunction:
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-CheckSearch
+      FunctionName: !Sub "${TheStackName}-CheckSearch"
       Timeout: 29
       MemorySize: 256
       Events:
@@ -145,11 +169,20 @@ Resources:
         Variables:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
       Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref CheckSearchLogs
     Type: AWS::Serverless::Function
 
+  InitiateSearchLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/InitiateSearch"
+      RetentionInDays: 30
+  
   InitiateSearchFunction:
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-InitiateSearch
+      FunctionName: !Sub "${TheStackName}-InitiateSearch"
       Timeout: 29
       MemorySize: 1024
       Events:
@@ -172,6 +205,9 @@ Resources:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
       Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref InitiateSearchLogs
     Type: AWS::Serverless::Function
 
 Outputs:
