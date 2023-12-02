@@ -43,8 +43,8 @@ services:
 
   localstack:
     hostname: aws
-    container_name: "localstack_main:3.0.1"
-    image: localstack/localstack:latest
+    container_name: "localstack_main"
+    image: localstack/localstack:3.0.1
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway
     environment:
