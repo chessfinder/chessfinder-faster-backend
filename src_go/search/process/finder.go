@@ -27,6 +27,7 @@ type BoardFinder struct {
 	searchesTableName string
 	gamesTableName    string
 	awsConfig         *aws.Config
+	searcher          searcher.BoardSearcher
 }
 
 func (finder *BoardFinder) Find(commands events.SQSEvent) (commandsProcessed events.SQSEventResponse, err error) {
@@ -154,7 +155,7 @@ func (finder *BoardFinder) processSingle(
 		}
 
 		for _, gameRecord := range gameRecords {
-			isFound, errFromSearch := searcher.SearchBoard(command.Board, gameRecord.Pgn)
+			isFound, errFromSearch := finder.searcher.SearchBoard(command.Board, gameRecord.Pgn)
 			totalExamined++
 			if errFromSearch != nil {
 				logger.Error("impossible to search the board", zap.Error(errFromSearch))

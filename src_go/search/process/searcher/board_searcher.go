@@ -14,7 +14,13 @@ import (
 	"unsafe"
 )
 
-func SearchBoard(board string, pgn string) (bool, error) {
+type BoardSearcher interface {
+	SearchBoard(board string, pgn string) (bool, error)
+}
+
+type DefaultBoardSearcher struct{}
+
+func (searcher DefaultBoardSearcher) SearchBoard(board string, pgn string) (bool, error) {
 	debug.SetPanicOnFault(true)
 	var err error
 

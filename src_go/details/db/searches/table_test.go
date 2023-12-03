@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
-
+func Test_SearchTable_should_persist_search_record_into_the_table(t *testing.T) {
+	var err error
 	seachId := uuid.New().String()
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
@@ -33,42 +33,7 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 		Matched:        matched,
 	}
 
-	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)
-	assert.NoError(t, err)
-
-	expectedMarshalledItems := map[string]*dynamodb.AttributeValue{
-		"search_id": {
-			S: aws.String(seachId),
-		},
-		"start_at": {
-			S: aws.String("2023-10-01T11:30:17.123Z"),
-		},
-		"last_examined_at": {
-			S: aws.String("2023-09-05T19:45:17.321Z"),
-		},
-		"examined": {
-			N: aws.String("456"),
-		},
-		"status": {
-			S: aws.String(string(status)),
-		},
-		"total": {
-			N: aws.String("789"),
-		},
-		"matched": {
-			SS: []*string{
-				aws.String(matchedGame1),
-				aws.String(matchedGame2),
-			},
-		},
-	}
-
-	assert.Equal(t, expectedMarshalledItems, actualMarshalledItems)
-
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(searchesTableName),
-		Item:      actualMarshalledItems,
-	})
+	err = searchesTable.PutSearchRecord(search)
 	assert.NoError(t, err)
 
 	getArchiveOutput, err := dynamodbClient.GetItem(
@@ -98,15 +63,17 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 	assert.Equal(t, expectedSearch.Status, actualSearch.Status)
 }
 
-func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is_empty_slice(t *testing.T) {
-
+func Test_SearchTable_should_get_search_record_from_the_table(t *testing.T) {
+	var err error
 	seachId := uuid.New().String()
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
 	status := SearchedPartially
 	total := 789
-
+	matchedGame1 := uuid.New().String()
+	matchedGame2 := uuid.New().String()
+	matched := []string{matchedGame1, matchedGame2}
 	search := SearchRecord{
 		SearchId:       seachId,
 		StartAt:        startAt,
@@ -114,60 +81,21 @@ func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is
 		Examined:       examined,
 		Status:         status,
 		Total:          total,
-		Matched:        nil,
+		Matched:        matched,
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)
 	assert.NoError(t, err)
 
-	expectedMarshalledItems := map[string]*dynamodb.AttributeValue{
-		"search_id": {
-			S: aws.String(seachId),
-		},
-		"start_at": {
-			S: aws.String("2023-10-01T11:30:17.123Z"),
-		},
-		"last_examined_at": {
-			S: aws.String("2023-09-05T19:45:17.321Z"),
-		},
-		"examined": {
-			N: aws.String("456"),
-		},
-		"status": {
-			S: aws.String(string(status)),
-		},
-		"total": {
-			N: aws.String("789"),
-		},
-		"matched": {
-			NULL: aws.Bool(true),
-		},
-	}
-
-	assert.Equal(t, expectedMarshalledItems, actualMarshalledItems)
-
 	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String(searchesTableName),
-		Item:      expectedMarshalledItems,
+		Item:      actualMarshalledItems,
 	})
 	assert.NoError(t, err)
 
-	getArchiveOutput, err := dynamodbClient.GetItem(
-		&dynamodb.GetItemInput{
-			TableName: aws.String(searchesTableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"search_id": {
-					S: aws.String(seachId),
-				},
-			},
-		},
-	)
-
+	actualSearch, err := searchesTable.GetSearchRecord(seachId)
 	assert.NoError(t, err)
-
-	actualSearch := SearchRecord{}
-	err = dynamodbattribute.UnmarshalMap(getArchiveOutput.Item, &actualSearch)
-	assert.NoError(t, err)
+	assert.NotNil(t, actualSearch)
 
 	expectedSearch := search
 
@@ -175,6 +103,16 @@ func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is
 	assert.Equal(t, expectedSearch.LastExaminedAt, actualSearch.LastExaminedAt)
 	assert.Equal(t, expectedSearch.Examined, actualSearch.Examined)
 	assert.Equal(t, expectedSearch.Total, actualSearch.Total)
-	assert.Nil(t, actualSearch.Matched)
+	assert.ElementsMatch(t, expectedSearch.Matched, actualSearch.Matched)
 	assert.Equal(t, expectedSearch.Status, actualSearch.Status)
+}
+
+func Test_SearchTable_should_return_nil_if_the_search_is_missing_from_the_table(t *testing.T) {
+	var err error
+
+	seachId := uuid.New().String()
+
+	actualSearch, err := searchesTable.GetSearchRecord(seachId)
+	assert.NoError(t, err)
+	assert.Nil(t, actualSearch)
 }

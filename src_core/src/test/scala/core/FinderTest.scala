@@ -17,6 +17,7 @@ import chess.format.pgn.{ PgnStr, Reader }
 import munit.Clue.generate
 import munit.{ FunSuite, ScalaCheckSuite }
 import org.scalacheck.{ Arbitrary, Prop }
+
 class FinderTest extends FunSuite with WalidatedUnsafeExt with DescriptionHelper:
 
   test("""

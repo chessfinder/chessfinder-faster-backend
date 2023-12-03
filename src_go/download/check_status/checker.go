@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"go.uber.org/zap"
@@ -61,32 +60,24 @@ func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPReques
 
 	logger = logger.With(zap.String("downloadId", downloadId))
 
-	downloadItems, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
-		Key: map[string]*dynamodb.AttributeValue{
-			"download_id": {
-				S: aws.String(downloadId),
-			},
-		},
-		TableName: aws.String(checker.downloadsTableName),
-	})
+	downloadRecordCandidate, err := downloads.DownloadsTable{
+		Name:           checker.downloadsTableName,
+		DynamodbClient: dynamodbClient,
+	}.GetDownloadRecord(downloadId)
 
 	if err != nil {
-		logger.Error("faild to get download record", zap.Error(err))
+		logger.Error("faild to get download record!", zap.Error(err))
 		return
 	}
 
-	if downloadItems.Item == nil || len(downloadItems.Item) == 0 {
-		logger.Error("no dowload request found!", zap.String("downloadId", downloadId))
+	if downloadRecordCandidate == nil {
+		logger.Error("no download record found!", zap.String("downloadId", downloadId))
 		err = DownloadNotFound(downloadId)
 		return
 	}
 
-	downloadRecord := downloads.DownloadRecord{}
-	err = dynamodbattribute.UnmarshalMap(downloadItems.Item, &downloadRecord)
-	if err != nil {
-		logger.Error("faild to unmarshal download record!", zap.Error(err))
-		return
-	}
+	downloadRecord := *downloadRecordCandidate
+
 	downloadStatusResponse := DownloadStatusResponse{
 		DownloadId: downloadRecord.DownloadId,
 		Failed:     downloadRecord.Failed,

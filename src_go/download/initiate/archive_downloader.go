@@ -105,15 +105,10 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	downloadId := uuid.New().String()
 	downloadRecord := downloads.NewDownloadRecord(downloadId, len(missingArchives)+len(archivesToDownload))
 
-	downloadRecorItems, err := dynamodbattribute.MarshalMap(downloadRecord)
-	if err != nil {
-		logger.Error("impossible to marshal the download record!", zap.Error(err))
-		return
-	}
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(downloader.downloadsTableName),
-		Item:      downloadRecorItems,
-	})
+	err = downloads.DownloadsTable{
+		Name:           downloader.downloadsTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutDownloadRecord(downloadRecord)
 
 	if err != nil {
 		logger.Error("impossible to persist the download record!", zap.Error(err))
@@ -205,17 +200,10 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 		Platform: users.ChessDotCom,
 	}
 
-	userRecordItems, err := dynamodbattribute.MarshalMap(userRecord)
-
-	if err != nil {
-		logger.Error("impossible to marshal the user!", zap.Error(err))
-		return
-	}
-
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(downloader.usersTableName),
-		Item:      userRecordItems,
-	})
+	err = users.UsersTable{
+		Name:           downloader.usersTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutUserRecord(userRecord)
 
 	if err != nil {
 		logger.Error("impossible to persist the user!", zap.Error(err))

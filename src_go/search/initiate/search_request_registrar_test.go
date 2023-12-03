@@ -42,6 +42,11 @@ var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
 var svc = sqs.New(awsSession)
 
+var usersTable = users.UsersTable{
+	Name:           registrar.userTableName,
+	DynamodbClient: dynamodbClient,
+}
+
 func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_and_there_are_cached_archives(t *testing.T) {
 	var err error
 	if !testing.Short() {
@@ -56,7 +61,7 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 		Platform: users.ChessDotCom,
 	}
 
-	err = persistUserRecord(dynamodbClient, registrar, user)
+	err = usersTable.PutUserRecord(user)
 	assert.NoError(t, err)
 
 	archive1Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
@@ -145,7 +150,7 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 		Platform: users.ChessDotCom,
 	}
 
-	err = persistUserRecord(dynamodbClient, registrar, user)
+	err = usersTable.PutUserRecord(user)
 	assert.NoError(t, err)
 
 	event := events.APIGatewayV2HTTPRequest{
@@ -244,23 +249,6 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
-}
-
-func persistUserRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, user users.UserRecord) (err error) {
-
-	userItem, err := dynamodbattribute.MarshalMap(user)
-	if err != nil {
-		return
-	}
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(registrar.userTableName),
-		Item:      userItem,
-	})
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 func persistArchiveRecords(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, archive archives.ArchiveRecord) (err error) {

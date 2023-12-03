@@ -4,7 +4,7 @@ import sbt.librarymanagement.ModuleID
 
 object Dependencies {
 
-  lazy val `chessfinder-core-tests`: Seq[ModuleID] = munit ++ scalatest ++ scalaCheck
+  lazy val `chessfinder-core-tests`: Seq[ModuleID] = (munit ++ scalatest ++ scalaCheck).map(_ % Test)
 
   lazy val circe: Seq[ModuleID] = {
     val version = "0.14.3"
@@ -47,13 +47,6 @@ object Dependencies {
     Seq(
       "com.amazonaws" % "aws-lambda-java-events" % "3.11.1",
       "com.amazonaws" % "aws-lambda-java-core"   % "1.2.2"
-    )
-  }
-
-  lazy val `zio-sqs` = {
-    val version = "0.6.0"
-    Seq(
-      "dev.zio" %% "zio-sqs" % version
     )
   }
 

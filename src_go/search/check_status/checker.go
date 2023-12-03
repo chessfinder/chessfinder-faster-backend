@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"go.uber.org/zap"
@@ -61,32 +60,24 @@ func (checker *SearchResultChecker) Check(event *events.APIGatewayV2HTTPRequest)
 
 	logger = logger.With(zap.String("searchId", searchId))
 
-	searchItems, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
-		Key: map[string]*dynamodb.AttributeValue{
-			"search_id": {
-				S: aws.String(searchId),
-			},
-		},
-		TableName: aws.String(checker.searchesTableName),
-	})
+	searchRecordCandidate, err := searches.SearchesTable{
+		Name:           checker.searchesTableName,
+		DynamodbClient: dynamodbClient,
+	}.GetSearchRecord(searchId)
 
 	if err != nil {
 		logger.Error("faild to get search!")
 		return
 	}
 
-	if len(searchItems.Item) == 0 {
+	if searchRecordCandidate == nil {
 		logger.Error("no search search found!")
 		err = SearchNotFound(searchId)
 		return
 	}
 
-	searchRecord := searches.SearchRecord{}
-	err = dynamodbattribute.UnmarshalMap(searchItems.Item, &searchRecord)
-	if err != nil {
-		logger.Error("faild to unmarshal search!", zap.Error(err))
-		return
-	}
+	searchRecord := *searchRecordCandidate
+
 	searchResultResponse := SearchResultResponse{
 		SearchId:       searchRecord.SearchId,
 		Total:          searchRecord.Total,

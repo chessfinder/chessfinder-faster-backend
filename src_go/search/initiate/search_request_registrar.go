@@ -85,10 +85,22 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	}
 
 	logger.Info("fetching user from db", zap.String("user", searchRequest.Username))
-	user, err := registrar.getUserRecord(searchRequest, logger, dynamodbClient)
+	userCandidate, err := users.UsersTable{
+		Name:           registrar.userTableName,
+		DynamodbClient: dynamodbClient,
+	}.GetUserRecord(searchRequest.Username, users.Platform(searchRequest.Platform))
+
 	if err != nil {
+		logger.Error("error while getting user from db", zap.Error(err))
 		return
 	}
+
+	if userCandidate == nil {
+		err = ProfileIsNotCached(searchRequest.Username, searchRequest.Platform)
+		logger.Info("profile is not cached")
+		return
+	}
+	user := *userCandidate
 
 	logger = logger.With(zap.String("userId", user.UserId))
 
@@ -116,8 +128,13 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	searchResult := searches.NewSearchRecord(searchId, now, downloadedGames)
 
 	logger.Info("putting search result")
-	err = registrar.persistSearchRecord(dynamodbClient, logger, searchResult)
+	err = searches.SearchesTable{
+		Name:           registrar.searchesTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutSearchRecord(searchResult)
+
 	if err != nil {
+		logger.Error("error while persisting search record", zap.Error(err))
 		return
 	}
 
@@ -169,42 +186,6 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	return
 }
 
-func (registrar *SearchRegistrar) getUserRecord(
-	searchRequest SearchRequest,
-	logger *zap.Logger,
-	dynamodbClient *dynamodb.DynamoDB,
-) (user users.UserRecord, err error) {
-	getItemOutput, err := dynamodbClient.GetItem(
-		&dynamodb.GetItemInput{
-			TableName: aws.String(registrar.userTableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"username": {
-					S: aws.String(searchRequest.Username),
-				},
-				"platform": {
-					S: aws.String(string(searchRequest.Platform)),
-				},
-			},
-		},
-	)
-
-	if err != nil {
-		logger.Error("error while getting user from db", zap.Error(err))
-		return
-	}
-	if len(getItemOutput.Item) == 0 {
-		err = ProfileIsNotCached(searchRequest.Username, searchRequest.Platform)
-		logger.Info("profile is not cached")
-		return
-	}
-	err = dynamodbattribute.UnmarshalMap(getItemOutput.Item, &user)
-	if err != nil {
-		logger.Error("error while unmarshalling user from db", zap.Error(err))
-		return
-	}
-	return
-}
-
 func (registrar *SearchRegistrar) getArchiveRecords(
 	user users.UserRecord,
 	logger *zap.Logger,
@@ -232,30 +213,5 @@ func (registrar *SearchRegistrar) getArchiveRecords(
 		logger.Error("error while unmarshalling archives from db", zap.Error(err))
 		return
 	}
-	return
-}
-
-func (registrar *SearchRegistrar) persistSearchRecord(
-	dynamodbClient *dynamodb.DynamoDB,
-	logger *zap.Logger,
-	search searches.SearchRecord,
-) (err error) {
-
-	searchRecordItems, err := dynamodbattribute.MarshalMap(search)
-	if err != nil {
-		logger.Error("error while marshalling search record", zap.Error(err))
-		return
-	}
-
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(registrar.searchesTableName),
-		Item:      searchRecordItems,
-	})
-
-	if err != nil {
-		logger.Error("error while putting search record", zap.Error(err))
-		return
-	}
-
 	return
 }
