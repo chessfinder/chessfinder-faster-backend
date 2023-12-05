@@ -307,7 +307,6 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
-	assert.NotNil(t, err)
 	assert.NoError(t, err)
 
 	stubDownload, err := downloader.stubChessDotCom(username, "2022", "08")
