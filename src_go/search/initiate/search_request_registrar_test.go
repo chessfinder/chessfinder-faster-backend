@@ -12,8 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
@@ -47,6 +45,16 @@ var usersTable = users.UsersTable{
 	DynamodbClient: dynamodbClient,
 }
 
+var archivesTable = archives.ArchivesTable{
+	Name:           registrar.archivesTableName,
+	DynamodbClient: dynamodbClient,
+}
+
+var searchesTable = searches.SearchesTable{
+	Name:           registrar.searchesTableName,
+	DynamodbClient: dynamodbClient,
+}
+
 func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_and_there_are_cached_archives(t *testing.T) {
 	var err error
 	if !testing.Short() {
@@ -76,7 +84,7 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 		Downloaded:   17,
 	}
 
-	err = persistArchiveRecords(dynamodbClient, registrar, archive1)
+	err = archivesTable.PutArchiveRecord(archive1)
 	assert.NoError(t, err)
 
 	archive2Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
@@ -91,7 +99,7 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 		Downloaded:   23,
 	}
 
-	err = persistArchiveRecords(dynamodbClient, registrar, archive2)
+	err = archivesTable.PutArchiveRecord(archive2)
 	assert.NoError(t, err)
 
 	event := events.APIGatewayV2HTTPRequest{
@@ -113,9 +121,9 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	err = json.Unmarshal([]byte(actualResponse.Body), &actualSearchResultResponse)
 	assert.NoError(t, err)
 
-	actualSearchRecord, err := getSearchRecord(dynamodbClient, registrar, actualSearchResultResponse.SearchId)
-
+	actualSearchRecord, err := searchesTable.GetSearchRecord(actualSearchResultResponse.SearchId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualSearchRecord, "Search record is nil!")
 
 	assert.Equal(t, searches.InProgress, actualSearchRecord.Status, "Search status is not equal!")
 	assert.Equal(t, int(0), actualSearchRecord.Examined, "Examined is not equal!")
@@ -249,48 +257,6 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
-}
-
-func persistArchiveRecords(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, archive archives.ArchiveRecord) (err error) {
-
-	archiveItem, err := dynamodbattribute.MarshalMap(archive)
-	if err != nil {
-		return
-	}
-
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(registrar.archivesTableName),
-		Item:      archiveItem,
-	})
-
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func getSearchRecord(dynamodbClient dynamodbiface.DynamoDBAPI, registrar SearchRegistrar, searchResultId string) (searchResult searches.SearchRecord, err error) {
-	searchRecordItems, err := dynamodbClient.GetItem(
-		&dynamodb.GetItemInput{
-			TableName: aws.String(registrar.searchesTableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"search_id": {
-					S: aws.String(searchResultId),
-				},
-			},
-		},
-	)
-	if err != nil {
-		return
-	}
-
-	err = dynamodbattribute.UnmarshalMap(searchRecordItems.Item, &searchResult)
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 func getTheLastCommand(svc *sqs.SQS, registrar SearchRegistrar) (command *queue.SearchBoardCommand, err error) {

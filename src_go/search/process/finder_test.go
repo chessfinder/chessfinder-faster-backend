@@ -12,8 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
@@ -39,6 +37,16 @@ var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
 var wiremockClient = wiremock.NewClient("http://0.0.0.0:18443")
 var searchers = []searcher.BoardSearcher{searcher.DefaultBoardSearcher{}}
+
+var searchesTable = searches.SearchesTable{
+	Name:           finder.searchesTableName,
+	DynamodbClient: dynamodbClient,
+}
+
+var gamesTable = games.GamesTable{
+	Name:           finder.gamesTableName,
+	DynamodbClient: dynamodbClient,
+}
 
 func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_games(t *testing.T) {
 	for _, searcher := range searchers {
@@ -77,14 +85,14 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			// }
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-10.json"); assert.NoError(t, err) {
-				err = finder.persistGameRecords(gameRecords)
+				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
 
 			}
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-11.json"); assert.NoError(t, err) {
-				err = finder.persistGameRecords(gameRecords)
+				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
 			}
@@ -131,7 +139,7 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			}
 			assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-			actualSearchRecord, err := finder.getSearchRecord(searchId)
+			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId)
 			assert.NoError(t, err)
 
 			startOfChecking := time.Now().UTC()
@@ -162,7 +170,7 @@ func Test_when_there_is_no_registered_search_BoardFinder_should_skip(t *testing.
 			searchId := uuid.New().String()
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-07_very_few_games.json"); assert.NoError(t, err) {
-				err = finder.persistGameRecords(gameRecords)
+				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 			}
 
@@ -186,7 +194,7 @@ func Test_when_there_is_no_registered_search_BoardFinder_should_skip(t *testing.
 			assert.NoError(t, err)
 			assert.Nil(t, actualCommandsProcessed.BatchItemFailures)
 
-			actualSearchRecord, err := finder.getSearchRecord(searchId)
+			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId)
 			assert.NoError(t, err)
 			assert.Nil(t, actualSearchRecord)
 		}()
@@ -211,13 +219,13 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			total := 0
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-07_repeating_games.json"); assert.NoError(t, err) {
-				err = finder.persistGameRecords(gameRecords)
+				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
 			}
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-08.json"); assert.NoError(t, err) {
-				err = finder.persistGameRecords(gameRecords)
+				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
 			}
@@ -263,7 +271,7 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			}
 			assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-			actualSearchRecord, err := finder.getSearchRecord(searchId)
+			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId)
 			assert.NoError(t, err)
 
 			startOfChecking := time.Now().UTC()
@@ -289,26 +297,6 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			assert.ElementsMatch(t, expectedMatchedGames, actualSearchRecord.Matched)
 		}()
 	}
-}
-
-func (finder BoardFinder) getSearchRecord(searchId string) (searchRecord *searches.SearchRecord, err error) {
-	getItemOutput, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(finder.searchesTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"search_id": {
-				S: aws.String(searchId),
-			},
-		},
-	})
-	if err != nil {
-		return
-	}
-	if len(getItemOutput.Item) == 0 {
-		return
-	}
-	searchRecord = &searches.SearchRecord{}
-	err = dynamodbattribute.UnmarshalMap(getItemOutput.Item, searchRecord)
-	return
 }
 
 func loadGameRecords(userId string, archiveId string, fileRelativePath string) (gameRecords []games.GameRecord, err error) {
@@ -342,42 +330,6 @@ func loadGameRecords(userId string, archiveId string, fileRelativePath string) (
 		gameRecords = append(gameRecords, gameRecord)
 
 	}
-	return
-}
-
-func (finder *BoardFinder) persistGameRecords(gameRecords []games.GameRecord) (err error) {
-	fmt.Printf("persisting %d game records\n", len(gameRecords))
-	writeRequests := []*dynamodb.WriteRequest{}
-	for _, gameRecord := range gameRecords {
-		gameMarshalledItems, err := dynamodbattribute.MarshalMap(gameRecord)
-		if err != nil {
-			panic(err)
-		}
-
-		writeRequests = append(writeRequests, &dynamodb.WriteRequest{
-			PutRequest: &dynamodb.PutRequest{
-				Item: gameMarshalledItems,
-			},
-		})
-	}
-
-	batches := batcher.Batcher(writeRequests, 25)
-	for _, batch := range batches {
-		unprocessedItems := map[string][]*dynamodb.WriteRequest{
-			finder.gamesTableName: batch,
-		}
-		for len(unprocessedItems) > 0 {
-			var writeOutput *dynamodb.BatchWriteItemOutput
-			writeOutput, err = dynamodbClient.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-				RequestItems: unprocessedItems,
-			})
-			if err != nil {
-				return
-			}
-			unprocessedItems = writeOutput.UnprocessedItems
-		}
-	}
-
 	return
 }
 

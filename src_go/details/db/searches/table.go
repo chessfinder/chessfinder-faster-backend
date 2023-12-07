@@ -56,13 +56,13 @@ func (table SearchesTable) GetSearchRecord(searchId string) (searchRecord *Searc
 }
 
 func (table SearchesTable) UpdateMatchings(searchId string, examined int, matched []string, now db.ZuluDateTime) (err error) {
-	var totalMatchedDynamodbAttribute *dynamodb.AttributeValue
+	var matchedAttributes *dynamodb.AttributeValue
 	if len(matched) > 0 {
-		totalMatchedDynamodbAttribute = &dynamodb.AttributeValue{
+		matchedAttributes = &dynamodb.AttributeValue{
 			SS: aws.StringSlice(matched),
 		}
 	} else {
-		totalMatchedDynamodbAttribute = &dynamodb.AttributeValue{
+		matchedAttributes = &dynamodb.AttributeValue{
 			NULL: aws.Bool(true),
 		}
 	}
@@ -80,7 +80,7 @@ func (table SearchesTable) UpdateMatchings(searchId string, examined int, matche
 			":lastExaminedAt": {
 				S: aws.String(now.String()),
 			},
-			":matched": totalMatchedDynamodbAttribute,
+			":matched": matchedAttributes,
 		},
 		UpdateExpression: aws.String("SET examined = :examined, last_examined_at = :lastExaminedAt, matched = :matched"),
 	})

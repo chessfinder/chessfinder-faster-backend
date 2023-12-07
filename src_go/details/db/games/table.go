@@ -19,10 +19,10 @@ type GamesTable struct {
 
 func (table GamesTable) PutGameRecords(gameRecords []GameRecord) (err error) {
 
-	missingGameRecordWriteRequests := []*dynamodb.WriteRequest{}
-	for _, missingGameRecord := range gameRecords {
+	gameRecordWriteRequests := make([]*dynamodb.WriteRequest, len(gameRecords))
+	for i, gameRecord := range gameRecords {
 		var missingGameRecordItems map[string]*dynamodb.AttributeValue
-		missingGameRecordItems, err = dynamodbattribute.MarshalMap(missingGameRecord)
+		missingGameRecordItems, err = dynamodbattribute.MarshalMap(gameRecord)
 		if err != nil {
 			return
 		}
@@ -31,12 +31,12 @@ func (table GamesTable) PutGameRecords(gameRecords []GameRecord) (err error) {
 				Item: missingGameRecordItems,
 			},
 		}
-		missingGameRecordWriteRequests = append(missingGameRecordWriteRequests, writeRequest)
+		gameRecordWriteRequests[i] = writeRequest
 	}
 
-	missingGameRecordWriteRequestsMatrix := batcher.Batcher(missingGameRecordWriteRequests, db.MaxBatchWriteLimit)
+	gameRecordWriteRequestsMatrix := batcher.Batcher(gameRecordWriteRequests, db.MaxBatchWriteLimit)
 
-	for _, batch := range missingGameRecordWriteRequestsMatrix {
+	for _, batch := range gameRecordWriteRequestsMatrix {
 
 		unprocessedWriteRequests := map[string][]*dynamodb.WriteRequest{
 			table.Name: batch,

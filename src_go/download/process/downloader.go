@@ -13,8 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
@@ -83,32 +81,23 @@ func (downloader *GameDownloader) processSingle(
 
 	logger.Info("Processing command")
 
+	downloadsTable := downloads.DownloadsTable{
+		Name:           downloader.downloadsTableName,
+		DynamodbClient: dynamodbClient,
+	}
+
 	incrementDownloadStatus := func(incrementSuccess bool) (err error) {
 
 		logger.Info("incrementing the download status")
-		downloadRecord := downloads.DownloadRecord{}
-		downloadRecordItems, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
-			TableName: aws.String(downloader.downloadsTableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"download_id": {
-					S: aws.String(command.DownloadId),
-				},
-			},
-		})
+		downloadRecord, err := downloadsTable.GetDownloadRecord(command.DownloadId)
 
 		if err != nil {
 			logger.Error("impossible to get the download record", zap.Error(err))
 			return
 		}
 
-		if downloadRecordItems.Item == nil || len(downloadRecordItems.Item) == 0 {
+		if downloadRecord == nil {
 			logger.Error("download record not found")
-			return
-		}
-
-		err = dynamodbattribute.UnmarshalMap(downloadRecordItems.Item, &downloadRecord)
-		if err != nil {
-			logger.Error("impossible to unmarshal the download record", zap.Error(err))
 			return
 		}
 
@@ -125,56 +114,35 @@ func (downloader *GameDownloader) processSingle(
 		}
 		downloadRecord.Done++
 
-		updatedDownloadRecordItems, err := dynamodbattribute.MarshalMap(downloadRecord)
+		err = downloadsTable.PutDownloadRecord(*downloadRecord)
 
 		if err != nil {
 			logger.Error("impossible to marshal the download record", zap.Error(err))
 			return
 		}
 
-		_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-			TableName: aws.String(downloader.downloadsTableName),
-			Item:      updatedDownloadRecordItems,
-		})
-
-		if err != nil {
-			logger.Error("impossible to update the download record", zap.Error(err))
-			return
-		}
 		return
 	}
 
+	archivesTable := archives.ArchivesTable{
+		Name:           downloader.archivesTableName,
+		DynamodbClient: dynamodbClient,
+	}
+
 	unsafeProcessSingle := func() (err error) {
-		archiveRecord := archives.ArchiveRecord{}
-		archiveRecordItems, err := dynamodbClient.GetItem(&dynamodb.GetItemInput{
-			TableName: aws.String(downloader.archivesTableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"user_id": {
-					S: aws.String(command.UserId),
-				},
-				"archive_id": {
-					S: aws.String(command.ArchiveId),
-				},
-			},
-		})
+		archiveRecord, err := archivesTable.GetArchiveRecord(command.UserId, command.ArchiveId)
 
 		if err != nil {
 			logger.Error("impossible to get the archive record", zap.Error(err))
 			return
 		}
 
-		if archiveRecordItems.Item == nil || len(archiveRecordItems.Item) == 0 {
+		if archiveRecord == nil {
 			logger.Error("archive record not found")
 			errOfIncrement := incrementDownloadStatus(true)
 			if errOfIncrement != nil {
 				logger.Error("impossible to increment the download status", zap.Error(err))
 			}
-			return
-		}
-
-		err = dynamodbattribute.UnmarshalMap(archiveRecordItems.Item, &archiveRecord)
-		if err != nil {
-			logger.Error("impossible to unmarshal the archive record", zap.Error(err))
 			return
 		}
 
@@ -248,36 +216,22 @@ func (downloader *GameDownloader) processSingle(
 			return
 		}
 
-		latestDownloadedGameRecord := games.GameRecord{}
-		latestDownloadedGameRecordItems, err := dynamodbClient.Query(&dynamodb.QueryInput{
-			TableName:              aws.String(downloader.gamesTableName),
-			IndexName:              aws.String(downloader.gamesByEndTimestampIndexName),
-			KeyConditionExpression: aws.String("archive_id = :archive_id"),
-			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-				":archive_id": {
-					S: aws.String(command.ArchiveId),
-				},
-			},
-			ScanIndexForward: aws.Bool(false),
-			Limit:            aws.Int64(1),
-		})
+		latestDownloadedGameRecord, err :=
+			games.LatestGameIndex{
+				Name:           downloader.gamesByEndTimestampIndexName,
+				TableName:      downloader.gamesTableName,
+				DynamodbClient: dynamodbClient,
+			}.QueryByEndTimestamp(command.ArchiveId)
 
 		if err != nil {
 			logger.Error("impossible to get the latest downloaded game", zap.Error(err))
 			return
 		}
 
-		if len(latestDownloadedGameRecordItems.Items) > 0 {
-			err = dynamodbattribute.UnmarshalMap(latestDownloadedGameRecordItems.Items[0], &latestDownloadedGameRecord)
-			if err != nil {
-				logger.Error("impossible to unmarshal the latest downloaded game", zap.Error(err))
-				return
-			}
-		}
-
 		missingGameRecords := []games.GameRecord{}
 		for _, chessDotComGame := range chessDotComGames.Games {
-			if chessDotComGame.EndTime > latestDownloadedGameRecord.EndTimestamp {
+			isGameMissing := latestDownloadedGameRecord == nil || (latestDownloadedGameRecord != nil && chessDotComGame.EndTime > latestDownloadedGameRecord.EndTimestamp)
+			if isGameMissing {
 				pgnString := string(chessDotComGame.Pgn)
 				gameRecord := games.GameRecord{
 					UserId:       command.UserId,
@@ -294,49 +248,14 @@ func (downloader *GameDownloader) processSingle(
 		logger = logger.With(zap.Int("missingGames", len(missingGameRecords)))
 		logger.Info("persisiting missing games")
 
-		missingGameRecordWriteRequests := []*dynamodb.WriteRequest{}
-		for _, missingGameRecord := range missingGameRecords {
-			var missingGameRecordItems map[string]*dynamodb.AttributeValue
-			missingGameRecordItems, err = dynamodbattribute.MarshalMap(missingGameRecord)
-			if err != nil {
-				logger.Error("impossible to marshal the missing game record", zap.Error(err))
-				return
-			}
-			writeRequest := &dynamodb.WriteRequest{
-				PutRequest: &dynamodb.PutRequest{
-					Item: missingGameRecordItems,
-				},
-			}
-			missingGameRecordWriteRequests = append(missingGameRecordWriteRequests, writeRequest)
-		}
+		err = games.GamesTable{
+			Name:           downloader.gamesTableName,
+			DynamodbClient: dynamodbClient,
+		}.PutGameRecords(missingGameRecords)
 
-		missingGameRecordWriteRequestsMatrix := batcher.Batcher(missingGameRecordWriteRequests, 25)
-
-		logger.Info("trying to persist missing games in batches", zap.Int("batches", len(missingGameRecordWriteRequestsMatrix)))
-
-		for bacthNumber, batch := range missingGameRecordWriteRequestsMatrix {
-			logger := logger.With(zap.Int("batchNumber", bacthNumber+1), zap.Int("batchSize", len(batch)))
-			logger.Info("trying to persist a batch of missing games")
-
-			unprocessedWriteRequests := map[string][]*dynamodb.WriteRequest{
-				downloader.gamesTableName: batch,
-			}
-
-			for len(unprocessedWriteRequests) > 0 {
-				logger.Info("trying to persist missing games in one iteration")
-				var writeOutput *dynamodb.BatchWriteItemOutput
-				writeOutput, err = dynamodbClient.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-					RequestItems: unprocessedWriteRequests,
-				})
-
-				if err != nil {
-					logger.Error("impossible to persist the missing game records", zap.Error(err))
-					return
-				}
-
-				unprocessedWriteRequests = writeOutput.UnprocessedItems
-				time.Sleep(time.Millisecond * 100)
-			}
+		if err != nil {
+			logger.Error("impossible to persist the missing game records", zap.Error(err))
+			return
 		}
 
 		nowInZulu := db.Zuludatetime(now)
@@ -345,17 +264,7 @@ func (downloader *GameDownloader) processSingle(
 
 		logger.Info("updating the archive record")
 
-		updatedArchiveRecordItems, err := dynamodbattribute.MarshalMap(archiveRecord)
-
-		if err != nil {
-			logger.Error("impossible to marshal the archive record", zap.Error(err))
-			return
-		}
-
-		_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-			TableName: aws.String(downloader.archivesTableName),
-			Item:      updatedArchiveRecordItems,
-		})
+		err = archivesTable.PutArchiveRecord(*archiveRecord)
 
 		if err != nil {
 			logger.Error("impossible to update the archive record", zap.Error(err))

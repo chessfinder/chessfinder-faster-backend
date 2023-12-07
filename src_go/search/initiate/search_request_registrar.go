@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
@@ -105,7 +104,12 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	logger = logger.With(zap.String("userId", user.UserId))
 
 	logger.Info("fetching archives from db")
-	archives, err := registrar.getArchiveRecords(user, logger, dynamodbClient)
+	archives, err :=
+		archives.ArchivesTable{
+			Name:           registrar.archivesTableName,
+			DynamodbClient: dynamodbClient,
+		}.GetArchiveRecords(user.UserId)
+
 	if err != nil {
 		return
 	}
@@ -183,35 +187,5 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 		Body: string(searchResponseJson),
 	}
 
-	return
-}
-
-func (registrar *SearchRegistrar) getArchiveRecords(
-	user users.UserRecord,
-	logger *zap.Logger,
-	dynamodbClient *dynamodb.DynamoDB,
-) (archives []archives.ArchiveRecord, err error) {
-	getItemOutput, err := dynamodbClient.Query(&dynamodb.QueryInput{
-		TableName:              aws.String(registrar.archivesTableName),
-		KeyConditionExpression: aws.String("user_id = :user_id"),
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":user_id": {
-				S: aws.String(user.UserId),
-			},
-		},
-	})
-	if err != nil {
-		logger.Error("error while getting archives from db", zap.Error(err))
-		return
-	}
-	if getItemOutput.Items == nil {
-		logger.Info("no archives found for user")
-		return
-	}
-	err = dynamodbattribute.UnmarshalListOfMaps(getItemOutput.Items, &archives)
-	if err != nil {
-		logger.Error("error while unmarshalling archives from db", zap.Error(err))
-		return
-	}
 	return
 }

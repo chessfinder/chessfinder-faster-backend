@@ -12,7 +12,7 @@ type LatestGameIndex struct {
 	DynamodbClient *dynamodb.DynamoDB
 }
 
-func (index *LatestGameIndex) QueryByEndTimestamp(archiveId string) (game *GameRecord, err error) {
+func (index LatestGameIndex) QueryByEndTimestamp(archiveId string) (game *GameRecord, err error) {
 	items, err := index.DynamodbClient.Query(&dynamodb.QueryInput{
 		TableName:              aws.String(index.TableName),
 		IndexName:              aws.String(index.Name),
