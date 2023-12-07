@@ -13,10 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
@@ -90,10 +88,18 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 		return
 	}
 
-	archivesFromDb, err := downloader.getArchivesFromDb(dynamodbClient, logger, profile)
+	logger.Info("requesting dynamodb for archives")
+	archivesFromDb, err := archives.ArchivesTable{
+		Name:           downloader.archivesTableName,
+		DynamodbClient: dynamodbClient,
+	}.GetArchiveRecords(profile.UserId)
+
 	if err != nil {
+		logger.Error("impossible to get archives!", zap.Error(err))
 		return
 	}
+
+	logger.Info("archives found from database", zap.Int("totalArchivesCount", len(archivesFromDb)))
 
 	missingArchiveUrls := resolveMissingArchives(archivesFromChessDotCom, archivesFromDb)
 	missingArchives, err := downloader.persistMissingArchives(dynamodbClient, logger, profile, missingArchiveUrls)
@@ -105,15 +111,10 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	downloadId := uuid.New().String()
 	downloadRecord := downloads.NewDownloadRecord(downloadId, len(missingArchives)+len(archivesToDownload))
 
-	downloadRecorItems, err := dynamodbattribute.MarshalMap(downloadRecord)
-	if err != nil {
-		logger.Error("impossible to marshal the download record!", zap.Error(err))
-		return
-	}
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(downloader.downloadsTableName),
-		Item:      downloadRecorItems,
-	})
+	err = downloads.DownloadsTable{
+		Name:           downloader.downloadsTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutDownloadRecord(downloadRecord)
 
 	if err != nil {
 		logger.Error("impossible to persist the download record!", zap.Error(err))
@@ -205,17 +206,10 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 		Platform: users.ChessDotCom,
 	}
 
-	userRecordItems, err := dynamodbattribute.MarshalMap(userRecord)
-
-	if err != nil {
-		logger.Error("impossible to marshal the user!", zap.Error(err))
-		return
-	}
-
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(downloader.usersTableName),
-		Item:      userRecordItems,
-	})
+	err = users.UsersTable{
+		Name:           downloader.usersTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutUserRecord(userRecord)
 
 	if err != nil {
 		logger.Error("impossible to persist the user!", zap.Error(err))
@@ -269,45 +263,6 @@ func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 	}
 
 	logger.Info("archives found from chess.com", zap.Int("existingArchivesCount", len(archives.Archives)))
-
-	return
-}
-
-func (downloader ArchiveDownloader) getArchivesFromDb(
-	dynamodbClient *dynamodb.DynamoDB,
-	logger *zap.Logger,
-	user users.UserRecord,
-) (archiveRecords []archives.ArchiveRecord, err error) {
-	logger.Info("requesting dynamodb for archives")
-	response, err := dynamodbClient.Query(&dynamodb.QueryInput{
-		TableName: aws.String(downloader.archivesTableName),
-		KeyConditions: map[string]*dynamodb.Condition{
-			"user_id": {
-				ComparisonOperator: aws.String("EQ"),
-				AttributeValueList: []*dynamodb.AttributeValue{
-					{
-						S: aws.String(user.UserId),
-					},
-				},
-			},
-		},
-	})
-	if err != nil {
-		logger.Error("impossible to query dynamodb for archives!", zap.Error(err))
-		return
-	}
-
-	archiveRecords = make([]archives.ArchiveRecord, len(response.Items))
-	for i, item := range response.Items {
-		archive := archives.ArchiveRecord{}
-		err = dynamodbattribute.UnmarshalMap(item, &archive)
-		if err != nil {
-			logger.Error("impossible to unmarshal the archive!", zap.Error(err))
-			return
-		}
-		archiveRecords[i] = archive
-	}
-	logger.Info("archives found from database", zap.Int("totalArchivesCount", len(archiveRecords)))
 
 	return
 }
@@ -388,51 +343,14 @@ func (downloader ArchiveDownloader) persistMissingArchives(
 		missingArchiveRecords = append(missingArchiveRecords, missingArchiveRecord)
 	}
 
-	missingArchiveRecordWriteRequests := make([]*dynamodb.WriteRequest, len(missingArchiveRecords))
-	for i, missingArchiveRecord := range missingArchiveRecords {
-		var missingArchiveRecordItems map[string]*dynamodb.AttributeValue
-		missingArchiveRecordItems, err = dynamodbattribute.MarshalMap(missingArchiveRecord)
-		if err != nil {
-			logger.Error("impossible to marshal the archive!", zap.Error(err))
-			return nil, err
-		}
+	err = archives.ArchivesTable{
+		Name:           downloader.archivesTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutArchiveRecords(missingArchiveRecords)
 
-		writeRequest := dynamodb.WriteRequest{
-			PutRequest: &dynamodb.PutRequest{
-				Item: missingArchiveRecordItems,
-			},
-		}
-
-		missingArchiveRecordWriteRequests[i] = &writeRequest
-	}
-
-	missingArchiveRecordWriteRequestsMatrix := batcher.Batcher(missingArchiveRecordWriteRequests, 25)
-
-	logger.Info("persisting missing archives in batches", zap.Int("batchesCount", len(missingArchiveRecordWriteRequestsMatrix)))
-
-	for batchNumber, batch := range missingArchiveRecordWriteRequestsMatrix {
-		logger := logger.With(zap.Int("batchNumber", batchNumber+1), zap.Int("batchSize", len(batch)))
-		logger.Info("trying to persist a batch of missing archives")
-
-		unprocessedWriteRequests := map[string][]*dynamodb.WriteRequest{
-			downloader.archivesTableName: batch,
-		}
-
-		for len(unprocessedWriteRequests) > 0 {
-			logger.Info("trying to persist missing archives in one iteration")
-			var writeOutput *dynamodb.BatchWriteItemOutput
-			writeOutput, err = dynamodbClient.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-				RequestItems: unprocessedWriteRequests,
-			})
-
-			if err != nil {
-				logger.Error("impossible to persist the missing archive records", zap.Error(err))
-				return
-			}
-
-			unprocessedWriteRequests = writeOutput.UnprocessedItems
-			time.Sleep(time.Millisecond * 100)
-		}
+	if err != nil {
+		logger.Error("impossible to persist the missing archive records", zap.Error(err))
+		return
 	}
 
 	logger.Info("missing archives persisted", zap.Int("persistedArchivesCount", len(missingArchiveUrls)))

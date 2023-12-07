@@ -3,7 +3,7 @@ This application will allow to search games using partial information about the 
 Soon it will be available
 
 In order to run integration tests run
-```docker compose -f ./src/it/resources/docker-compose_local.yaml --env-file ./src/it/resources/.env up```,
+```docker compose -f .dev/docker-compose_local.yaml --env-file .dev/.env up```,
 then
 ```aws --endpoint-url http://localhost:4566  s3api create-bucket --bucket chessfinder```,
 then

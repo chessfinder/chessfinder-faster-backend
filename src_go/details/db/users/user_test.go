@@ -4,27 +4,15 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-const usersTableName = "chessfinder_dynamodb-users"
-
-var awsConfig = aws.Config{
-	Region:     aws.String("us-east-1"),
-	Endpoint:   aws.String("http://localhost:4566"), // this is the LocalStack endpoint for all services
-	DisableSSL: aws.Bool(true),
-}
-
-var awsSession = session.Must(session.NewSession(&awsConfig))
-
-var dynamodbClient = dynamodb.New(awsSession)
-
 func Test_UserRecord_should_be_stored_in_correct_form(t *testing.T) {
 
-	username := "username"
+	username := uuid.New().String()
 	platform := ChessDotCom
 	userId := "userId"
 

@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/google/uuid"
@@ -28,6 +27,10 @@ var statusChecker = DownloadStatusChecker{
 
 var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
+var downloadsTable = downloads.DownloadsTable{
+	Name:           statusChecker.downloadsTableName,
+	DynamodbClient: dynamodbClient,
+}
 
 func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *testing.T) {
 	var err error
@@ -54,13 +57,8 @@ func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *t
 		Total:      10,
 	}
 
-	item, err := dynamodbattribute.MarshalMap(dowloadRecord)
-	assert.NoError(t, err)
+	err = downloadsTable.PutDownloadRecord(dowloadRecord)
 
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		Item:      item,
-		TableName: aws.String(statusChecker.downloadsTableName),
-	})
 	assert.NoError(t, err)
 
 	actualResponse, err := statusChecker.Check(&event)

@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
@@ -39,6 +38,18 @@ var downloader = GameDownloader{
 var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
 var wiremockClient = wiremock.NewClient("http://0.0.0.0:18443")
+var downloadsTable = downloads.DownloadsTable{
+	Name:           downloader.downloadsTableName,
+	DynamodbClient: dynamodbClient,
+}
+var gamesTable = games.GamesTable{
+	Name:           downloader.gamesTableName,
+	DynamodbClient: dynamodbClient,
+}
+var archivesTable = archives.ArchivesTable{
+	Name:           downloader.archivesTableName,
+	DynamodbClient: dynamodbClient,
+}
 
 func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_remaing_games(t *testing.T) {
 	defer wiremockClient.Reset()
@@ -62,7 +73,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 		Downloaded:   3,
 	}
 
-	err = downloader.persistArchive(archiveRecord)
+	err = archivesTable.PutArchiveRecord(archiveRecord)
 	assert.NoError(t, err)
 
 	existingGame1 := games.GameRecord{
@@ -119,7 +130,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 		EndTimestamp: 1659431445,
 	}
 
-	err = downloader.persistGames([]games.GameRecord{existingGame1, existingGame2, existingGame3})
+	err = gamesTable.PutGameRecords([]games.GameRecord{existingGame1, existingGame2, existingGame3})
 	assert.NoError(t, err)
 
 	downloadId := uuid.New().String()
@@ -132,7 +143,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 		Total:      5,
 	}
 
-	err = downloader.persistDownload(downloadRecord)
+	err = downloadsTable.PutDownloadRecord(downloadRecord)
 	assert.NoError(t, err)
 
 	stubDownload, err := downloader.stubChessDotCom(username, "2022", "08")
@@ -169,8 +180,9 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	}
 	assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-	actualArchive, err := downloader.getArchive(userId, archiveId)
+	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive)
 
 	assert.Equal(t, 6, actualArchive.Downloaded)
 
@@ -179,7 +191,8 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
 	assert.True(t, startOfTest.Before(actualArchive.DownloadedAt.ToTime()))
 
-	actualGames, err := downloader.getAllGames(userId)
+	var noKey map[string]*dynamodb.AttributeValue
+	actualGames, _, err := gamesTable.QueryGames(userId, noKey, 1000)
 	assert.NoError(t, err)
 
 	expectedGames := []games.GameRecord{
@@ -194,8 +207,9 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	assert.Equal(t, 6, len(actualGames))
 	assert.ElementsMatch(t, expectedGames, actualGames)
 
-	actualDownload, err := downloader.getDownload(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualDownload)
 
 	expectedDownload := downloads.DownloadRecord{
 		DownloadId: downloadId,
@@ -206,7 +220,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 		Total:      5,
 	}
 
-	assert.Equal(t, expectedDownload, actualDownload)
+	assert.Equal(t, expectedDownload, *actualDownload)
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
 	assert.NoError(t, err)
@@ -234,7 +248,7 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 		Downloaded:   0,
 	}
 
-	err = downloader.persistArchive(archiveRecord)
+	err = archivesTable.PutArchiveRecord(archiveRecord)
 	assert.NoError(t, err)
 
 	newGame1 := games.GameRecord{
@@ -301,7 +315,7 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 		Total:      5,
 	}
 
-	err = downloader.persistDownload(downloadRecord)
+	err = downloadsTable.PutDownloadRecord(downloadRecord)
 	assert.NoError(t, err)
 
 	stubDownload, err := downloader.stubChessDotCom(username, "2022", "08")
@@ -338,8 +352,9 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	}
 	assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-	actualArchive, err := downloader.getArchive(userId, archiveId)
+	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive)
 
 	startOfChecking := time.Now().UTC()
 
@@ -347,7 +362,8 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
 	assert.True(t, startOfTest.Before(actualArchive.DownloadedAt.ToTime()))
 
-	actualGames, err := downloader.getAllGames(userId)
+	var noKey map[string]*dynamodb.AttributeValue
+	actualGames, _, err := gamesTable.QueryGames(userId, noKey, 1000)
 	assert.NoError(t, err)
 
 	expectedGames := []games.GameRecord{
@@ -361,8 +377,9 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 
 	assert.ElementsMatch(t, expectedGames, actualGames)
 
-	actualDownload, err := downloader.getDownload(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualDownload)
 
 	expectedDownload := downloads.DownloadRecord{
 		DownloadId: downloadId,
@@ -373,7 +390,7 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 		Total:      5,
 	}
 
-	assert.Equal(t, expectedDownload, actualDownload)
+	assert.Equal(t, expectedDownload, *actualDownload)
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
 	assert.NoError(t, err)
@@ -403,7 +420,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 		Downloaded:   6,
 	}
 
-	err = downloader.persistArchive(archiveRecord)
+	err = archivesTable.PutArchiveRecord(archiveRecord)
 	assert.NoError(t, err)
 
 	downloadId := uuid.New().String()
@@ -416,7 +433,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 		Total:      5,
 	}
 
-	err = downloader.persistDownload(downloadRecord)
+	err = downloadsTable.PutDownloadRecord(downloadRecord)
 	assert.NoError(t, err)
 
 	stubDownload, err := downloader.stubChessDotCom(username, "2022", "08")
@@ -453,14 +470,16 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 	}
 	assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-	actualArchive, err := downloader.getArchive(userId, archiveId)
+	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive)
 
 	assert.Equal(t, 6, actualArchive.Downloaded)
 	assert.Equal(t, lastDownloadedAt, *actualArchive.DownloadedAt)
 
-	actualDownload, err := downloader.getDownload(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualDownload)
 
 	expectedDownload := downloads.DownloadRecord{
 		DownloadId: downloadId,
@@ -471,7 +490,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 		Total:      5,
 	}
 
-	assert.Equal(t, expectedDownload, actualDownload)
+	assert.Equal(t, expectedDownload, *actualDownload)
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 0)
 	assert.NoError(t, err)
@@ -496,7 +515,7 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 		Total:      5,
 	}
 
-	err = downloader.persistDownload(downloadRecord)
+	err = downloadsTable.PutDownloadRecord(downloadRecord)
 	assert.NoError(t, err)
 
 	stubDownload, err := downloader.stubChessDotCom(username, "2022", "08")
@@ -533,8 +552,9 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 	}
 	assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-	actualDownload, err := downloader.getDownload(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualDownload)
 
 	expectedDownload := downloads.DownloadRecord{
 		DownloadId: downloadId,
@@ -545,110 +565,11 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 		Total:      5,
 	}
 
-	assert.Equal(t, expectedDownload, actualDownload)
+	assert.Equal(t, expectedDownload, *actualDownload)
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 0)
 	assert.NoError(t, err)
 	assert.True(t, verifyDownloadedCall)
-}
-
-func (downloader *GameDownloader) persistArchive(archive archives.ArchiveRecord) (err error) {
-	archiveMarshalledItems, err := dynamodbattribute.MarshalMap(archive)
-	if err != nil {
-		return
-	}
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(downloader.archivesTableName),
-		Item:      archiveMarshalledItems,
-	})
-	return
-}
-
-func (downloader *GameDownloader) persistGames(gameRecords []games.GameRecord) (err error) {
-	for _, game := range gameRecords {
-		gameMarshalledItems, err := dynamodbattribute.MarshalMap(game)
-		if err != nil {
-			return err
-		}
-		_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-			TableName: aws.String(downloader.gamesTableName),
-			Item:      gameMarshalledItems,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func (downloader *GameDownloader) persistDownload(downloadRecord downloads.DownloadRecord) (err error) {
-	downloadMarshalledItems, err := dynamodbattribute.MarshalMap(downloadRecord)
-	if err != nil {
-		return
-	}
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String(downloader.downloadsTableName),
-		Item:      downloadMarshalledItems,
-	})
-	return
-}
-
-func (downloader *GameDownloader) getAllGames(userId string) (gameRecords []games.GameRecord, err error) {
-	queryInput := &dynamodb.QueryInput{
-		TableName:              aws.String(downloader.gamesTableName),
-		KeyConditionExpression: aws.String("user_id = :user_id"),
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":user_id": {
-				S: aws.String(userId),
-			},
-		},
-	}
-	var queryOutput *dynamodb.QueryOutput
-	queryOutput, err = dynamodbClient.Query(queryInput)
-	if err != nil {
-		return
-	}
-	err = dynamodbattribute.UnmarshalListOfMaps(queryOutput.Items, &gameRecords)
-	return
-}
-
-func (downloader *GameDownloader) getArchive(userId string, archiveId string) (archive archives.ArchiveRecord, err error) {
-	getItemInput := &dynamodb.GetItemInput{
-		TableName: aws.String(downloader.archivesTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"user_id": {
-				S: aws.String(userId),
-			},
-			"archive_id": {
-				S: aws.String(archiveId),
-			},
-		},
-	}
-	var getItemOutput *dynamodb.GetItemOutput
-	getItemOutput, err = dynamodbClient.GetItem(getItemInput)
-	if err != nil {
-		return
-	}
-	err = dynamodbattribute.UnmarshalMap(getItemOutput.Item, &archive)
-	return
-}
-
-func (downloader *GameDownloader) getDownload(downloadId string) (download downloads.DownloadRecord, err error) {
-	getItemInput := &dynamodb.GetItemInput{
-		TableName: aws.String(downloader.downloadsTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"download_id": {
-				S: aws.String(downloadId),
-			},
-		},
-	}
-	var getItemOutput *dynamodb.GetItemOutput
-	getItemOutput, err = dynamodbClient.GetItem(getItemInput)
-	if err != nil {
-		return
-	}
-	err = dynamodbattribute.UnmarshalMap(getItemOutput.Item, &download)
-	return
 }
 
 func (downloader GameDownloader) stubChessDotCom(username string, year string, month string) (rule *wiremock.StubRule, err error) {

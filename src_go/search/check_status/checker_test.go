@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
@@ -62,14 +61,10 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 		Status:         "SEARCHED_ALL",
 	}
 
-	item, err := dynamodbattribute.MarshalMap(searchRecord)
-	assert.NoError(t, err)
-
-	_, err = dynamodbClient.PutItem(&dynamodb.PutItemInput{
-		Item:      item,
-		TableName: aws.String(statusChecker.searchesTableName),
-	})
-
+	err = searches.SearchesTable{
+		Name:           statusChecker.searchesTableName,
+		DynamodbClient: dynamodbClient,
+	}.PutSearchRecord(searchRecord)
 	assert.NoError(t, err)
 
 	actualResponse, err := statusChecker.Check(&event)

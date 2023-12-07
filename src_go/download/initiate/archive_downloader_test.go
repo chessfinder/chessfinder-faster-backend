@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
@@ -44,6 +43,21 @@ var dynamodbClient = dynamodb.New(awsSession)
 var svc = sqs.New(awsSession)
 
 var wiremockClient = wiremock.NewClient("http://0.0.0.0:18443")
+
+var usersTable = users.UsersTable{
+	Name:           downloader.usersTableName,
+	DynamodbClient: dynamodbClient,
+}
+
+var downloadsTable = downloads.DownloadsTable{
+	Name:           downloader.downloadsTableName,
+	DynamodbClient: dynamodbClient,
+}
+
+var archivesTable = archives.ArchivesTable{
+	Name:           downloader.archivesTableName,
+	DynamodbClient: dynamodbClient,
+}
 
 func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_archives(t *testing.T) {
 	var err error
@@ -123,8 +137,9 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 	downloadId := actualDownloadResponse.DownloadId
 
-	downloadRequestStatus, err := downloader.getDownloadRecord(downloadId)
+	actualDownloadRecord, err := downloadsTable.GetDownloadRecord(downloadId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualDownloadRecord)
 
 	expectedDownloadRecord := downloads.DownloadRecord{
 		DownloadId: downloadId,
@@ -135,7 +150,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 		Total:      3,
 	}
 
-	assert.Equal(t, expectedDownloadRecord, downloadRequestStatus, "Download request status is not equal!")
+	assert.Equal(t, expectedDownloadRecord, *actualDownloadRecord, "Download request status is not equal!")
 
 	verifyGetUsersProfileStub, err := wiremockClient.Verify(getUsersProfileStub.Request(), 1)
 	assert.NoError(t, err)
@@ -145,8 +160,9 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.NoError(t, err)
 	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
 
-	actualUserRecord, err := downloader.getUserRecord(username)
+	actualUserRecord, err := usersTable.GetUserRecord(username, users.ChessDotCom)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualUserRecord)
 
 	expectedUserRecord := users.UserRecord{
 		UserId:   userId,
@@ -154,11 +170,12 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 		Username: username,
 	}
 
-	assert.Equal(t, expectedUserRecord, actualUserRecord)
+	assert.Equal(t, expectedUserRecord, *actualUserRecord)
 
 	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
-	archive_2021_10, err := downloader.getArchiveRecord(userId, archiveId_2021_10)
+	archive_2021_10, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_10)
 	assert.NoError(t, err)
+	assert.NotNil(t, archive_2021_10)
 
 	expectedArchive_2021_10 := archives.ArchiveRecord{
 		UserId:       userId,
@@ -170,11 +187,12 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 		Downloaded:   0,
 	}
 
-	assert.Equal(t, expectedArchive_2021_10, archive_2021_10)
+	assert.Equal(t, expectedArchive_2021_10, *archive_2021_10)
 
 	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
-	archive_2021_11, err := downloader.getArchiveRecord(userId, archiveId_2021_11)
+	archive_2021_11, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_11)
 	assert.NoError(t, err)
+	assert.NotNil(t, archive_2021_11)
 
 	expectedArchive_2021_11 := archives.ArchiveRecord{
 		UserId:       userId,
@@ -186,11 +204,12 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 		Downloaded:   0,
 	}
 
-	assert.Equal(t, expectedArchive_2021_11, archive_2021_11)
+	assert.Equal(t, expectedArchive_2021_11, *archive_2021_11)
 
 	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
-	archive_2021_12, err := downloader.getArchiveRecord(userId, archiveId_2021_12)
+	archive_2021_12, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_12)
 	assert.NoError(t, err)
+	assert.NotNil(t, archive_2021_12)
 
 	expectedArchive_2021_12 := archives.ArchiveRecord{
 		UserId:       userId,
@@ -202,7 +221,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 		Downloaded:   0,
 	}
 
-	assert.Equal(t, expectedArchive_2021_12, archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
+	assert.Equal(t, expectedArchive_2021_12, *archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
 
 	actualCommands, err := downloader.getCommands()
 	assert.NoError(t, err)
@@ -249,7 +268,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
 
 	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
-
 	existingArchive_2021_10 := archives.ArchiveRecord{
 		UserId:       userId,
 		ArchiveId:    archiveId_2021_10,
@@ -259,9 +277,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		Downloaded:   0,
 		DownloadedAt: nil,
 	}
-
-	err = downloader.persistArchiveRecord(existingArchive_2021_10)
-	assert.NoError(t, err)
 
 	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
 	archive_2021_11_downloadedAt := db.Zuludatetime(time.Date(2021, 11, 1, 11, 30, 17, 123000000, time.UTC))
@@ -275,12 +290,8 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		DownloadedAt: &archive_2021_11_downloadedAt,
 	}
 
-	err = downloader.persistArchiveRecord(existingArchive_2021_11)
-	assert.NoError(t, err)
-
 	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
 	archive_2021_12_downloadedAt := db.Zuludatetime(time.Date(2022, 1, 1, 11, 30, 17, 123000000, time.UTC))
-
 	existingArchive_2021_12 := archives.ArchiveRecord{
 		UserId:       userId,
 		ArchiveId:    archiveId_2021_12,
@@ -291,7 +302,12 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		DownloadedAt: &archive_2021_12_downloadedAt,
 	}
 
-	err = downloader.persistArchiveRecord(existingArchive_2021_12)
+	allArchives := []archives.ArchiveRecord{
+		existingArchive_2021_10,
+		existingArchive_2021_11,
+		existingArchive_2021_12,
+	}
+	err = archivesTable.PutArchiveRecords(allArchives)
 	assert.NoError(t, err)
 
 	usersProfileReponseBody := fmt.Sprintf(
@@ -364,8 +380,9 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	downloadId := actualDownloadResponse.DownloadId
 
-	actualDownloadRecord, err := downloader.getDownloadRecord(downloadId)
+	actualDownloadRecord, err := downloadsTable.GetDownloadRecord(downloadId)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualDownloadRecord)
 
 	expectedDownloadRecord := downloads.DownloadRecord{
 		DownloadId: downloadId,
@@ -376,7 +393,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		Total:      2,
 	}
 
-	assert.Equal(t, expectedDownloadRecord, actualDownloadRecord)
+	assert.Equal(t, expectedDownloadRecord, *actualDownloadRecord)
 
 	verifyGetUsersProfileStub, err := wiremockClient.Verify(getUsersProfileStub.Request(), 1)
 	assert.NoError(t, err)
@@ -387,8 +404,9 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
 
-	actualUserRecord, err := downloader.getUserRecord(username)
+	actualUserRecord, err := usersTable.GetUserRecord(username, users.ChessDotCom)
 	assert.NoError(t, err)
+	assert.NotNil(t, actualUserRecord)
 
 	expectedUser := users.UserRecord{
 		UserId:   userId,
@@ -396,7 +414,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 		Username: username,
 	}
 
-	assert.Equal(t, expectedUser, actualUserRecord)
+	assert.Equal(t, expectedUser, *actualUserRecord)
 
 	actualCommands, err := downloader.getCommands()
 	assert.NoError(t, err)
@@ -424,104 +442,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	assert.Equal(t, expectedCommands, actualCommands, "Commands are not equal!")
 
-}
-
-func (archviveDownloader ArchiveDownloader) getUserRecord(userId string) (user users.UserRecord, err error) {
-
-	userRecordQuery := &dynamodb.GetItemInput{
-		TableName: aws.String(archviveDownloader.usersTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"username": {
-				S: aws.String(userId),
-			},
-			"platform": {
-				S: aws.String("CHESS_DOT_COM"),
-			},
-		},
-	}
-
-	userItem, err := dynamodbClient.GetItem(userRecordQuery)
-	if err != nil {
-		return
-	}
-
-	err = dynamodbattribute.UnmarshalMap(userItem.Item, &user)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func (downloader ArchiveDownloader) getArchiveRecord(userId string, archiveId string) (archive archives.ArchiveRecord, err error) {
-
-	archiveRecordQuery := &dynamodb.GetItemInput{
-		TableName: aws.String(downloader.archivesTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"user_id": {
-				S: aws.String(userId),
-			},
-			"archive_id": {
-				S: aws.String(archiveId),
-			},
-		},
-	}
-
-	archiveItem, err := dynamodbClient.GetItem(archiveRecordQuery)
-	if err != nil {
-		return
-	}
-
-	err = dynamodbattribute.UnmarshalMap(archiveItem.Item, &archive)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func (downloader ArchiveDownloader) getDownloadRecord(downloadId string) (downloadRecord downloads.DownloadRecord, err error) {
-
-	downloadRecordQuery := &dynamodb.GetItemInput{
-		TableName: aws.String(downloader.downloadsTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"download_id": {
-				S: aws.String(downloadId),
-			},
-		},
-	}
-
-	downloadRecordItem, err := dynamodbClient.GetItem(downloadRecordQuery)
-	if err != nil {
-		return
-	}
-
-	err = dynamodbattribute.UnmarshalMap(downloadRecordItem.Item, &downloadRecord)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func (downloader ArchiveDownloader) persistArchiveRecord(archive archives.ArchiveRecord) (err error) {
-
-	archiveItem, err := dynamodbattribute.MarshalMap(archive)
-	if err != nil {
-		return
-	}
-
-	putArchiveRecordRequest := &dynamodb.PutItemInput{
-		TableName: aws.String(downloader.archivesTableName),
-		Item:      archiveItem,
-	}
-
-	_, err = dynamodbClient.PutItem(putArchiveRecordRequest)
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 func (downloader ArchiveDownloader) getCommands() (commands []queue.DownloadGamesCommand, err error) {
