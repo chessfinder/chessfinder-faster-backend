@@ -14,12 +14,12 @@ import chessfinder.core.SearchFen
 import cats.data.Validated.Valid
 import cats.data.Validated.Invalid
 import chess.format.pgn.PgnStr
-import chessfinder.core.{ Finder, PgnReader}
+import chessfinder.core.{ Finder, PgnReader }
 
 object Lambda extends RequestStreamHandler:
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
-    val allBytes  = input.readAllBytes()
+    val allBytes = input.readAllBytes()
     input.close()
     val inputStr  = new String(allBytes, StandardCharsets.UTF_8)
     val outputStr = handleStringRequest(inputStr, context)
@@ -32,18 +32,18 @@ object Lambda extends RequestStreamHandler:
     writing.get
 
   private def handleStringRequest(input: String, context: Context): String =
-    val searchCommand = decode[SearchCommand](input).toTry.get
+    val searchCommand           = decode[SearchCommand](input).toTry.get
     val maybeProbabilisticBoard = SearchFen.read(SearchFen(searchCommand.board))
     val probabilisticBoard = maybeProbabilisticBoard match {
-      case Valid(board) => board
+      case Valid(board)    => board
       case Invalid(errors) => throw new RuntimeException(errors.toNonEmptyList.toList.mkString(", "))
     }
-    
+
     val machedGameIds = for
       gameInfo <- searchCommand.games
-      gamePgn = PgnStr(gameInfo.pgn)
+      gamePgn   = PgnStr(gameInfo.pgn)
       maybeGame = PgnReader.read(gamePgn)
-      isFound = maybeGame.map(g => Finder.find(g, probabilisticBoard)).getOrElse(false)
+      isFound   = maybeGame.map(g => Finder.find(g, probabilisticBoard)).getOrElse(false)
       if isFound
     yield gameInfo.id
 

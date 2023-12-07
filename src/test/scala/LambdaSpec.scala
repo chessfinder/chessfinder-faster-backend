@@ -12,8 +12,9 @@ import io.circe.parser
 class LambdaSpec extends FunSuite {
 
   test("Lambda should find all mathces from the given games") {
-    
-    val inputStr = """
+
+    val inputStr =
+      """
         |{
         |"requestId": "123",
         |"board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????",
@@ -45,10 +46,10 @@ class LambdaSpec extends FunSuite {
         |]
         |}
     """.stripMargin
-    val inputStream = new ByteArrayInputStream(inputStr.getBytes(StandardCharsets.UTF_8))
+    val inputStream  = new ByteArrayInputStream(inputStr.getBytes(StandardCharsets.UTF_8))
     val outputStream = new ByteArrayOutputStream()
 
-    val context = new Context{
+    val context = new Context {
 
       override def getLogStreamName(): String = ???
 
@@ -74,12 +75,13 @@ class LambdaSpec extends FunSuite {
 
     }
 
-    Lambda.handleRequest(input = inputStream, output = outputStream, context = context)  
-    
-    val actualResposneStr = outputStream.toString(StandardCharsets.UTF_8)
+    Lambda.handleRequest(input = inputStream, output = outputStream, context = context)
+
+    val actualResposneStr  = outputStream.toString(StandardCharsets.UTF_8)
     val actualResponseJson = parser.parse(actualResposneStr).toTry.get
-    
-    val expectedResponseStr = """
+
+    val expectedResponseStr =
+      """
         |{
         |  "requestId" : "123",
         |  "machedGameIds" : [ "https://www.chess.com/game/live/52671679953", "https://www.chess.com/game/live/52671679954" ]
@@ -89,5 +91,5 @@ class LambdaSpec extends FunSuite {
 
     assertEquals(actualResponseJson, expectedResponseJson)
   }
-  
+
 }
