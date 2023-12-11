@@ -61,6 +61,7 @@ Resources:
         TheStackName: !Ref AWS::StackName
 
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+        ChessfinderCoreFunctionName: !GetAtt Core.Outputs.ChessfinderCoreFunctionName
         DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
         SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
         DownloadsTableName: !GetAtt DynamoDB.Outputs.DownloadsTableName
