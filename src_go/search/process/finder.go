@@ -13,7 +13,6 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/search/process/searcher"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -25,7 +24,7 @@ type BoardFinder struct {
 	searchesTableName string
 	gamesTableName    string
 	awsConfig         *aws.Config
-	searcher          searcher.BoardSearcher
+	searcher          BoardSearcher
 }
 
 func (finder *BoardFinder) Find(commands events.SQSEvent) (commandsProcessed events.SQSEventResponse, err error) {
@@ -128,21 +127,23 @@ func (finder *BoardFinder) processSingle(
 			return
 		}
 
-		for _, gameRecord := range gameRecords {
-			isFound, errFromSearch := finder.searcher.SearchBoard(command.Board, gameRecord.Pgn)
-			totalExamined++
-			if errFromSearch != nil {
-				logger.Error("impossible to search the board", zap.Error(errFromSearch))
-				isFound = false
-			}
-			if isFound {
-				totalMatched = append(totalMatched, gameRecord.Resource)
-			}
-			if len(totalMatched) >= StopSearchIfFound {
-				logger.Info("stopping the search because of the limit")
-				break
+		gamePgn := make([]GamePgn, len(gameRecords))
+		for i, gameRecord := range gameRecords {
+			gamePgn[i] = GamePgn{
+				Resource: gameRecord.GameId,
+				Pgn:      gameRecord.Pgn,
 			}
 		}
+
+		matchedGames, examined, errFromSearch := finder.searcher.Match(command.SearchId, command.Board, gamePgn, logger)
+		totalExamined += examined
+		if errFromSearch != nil {
+			logger.Error("impossible to match the board", zap.Error(err))
+		}
+		if len(matchedGames) > 0 {
+			totalMatched = append(totalMatched, matchedGames...)
+		}
+
 		logger = logger.With(zap.Int("examined", totalExamined))
 		logger.Info("updating the search record")
 
@@ -163,17 +164,19 @@ func (finder *BoardFinder) processSingle(
 
 	round := 0
 	examined := 0
-	var errOfSerach error
+	var errOfSearch error
+	isStopped := false
 
 	for {
 		logger := logger.With(zap.Int("round", round+1))
-		matchedGames, lastKey, examined, errOfSerach = getGamesAnalyseAndUpdateStatus(logger, lastKey, examined, matchedGames)
-		if errOfSerach != nil {
+		matchedGames, lastKey, examined, errOfSearch = getGamesAnalyseAndUpdateStatus(logger, lastKey, examined, matchedGames)
+		if errOfSearch != nil {
 			break
 		}
 
 		if len(matchedGames) >= StopSearchIfFound {
 			logger.Info("stopping the whole search because of the limit")
+			isStopped = true
 			break
 		}
 
@@ -187,7 +190,7 @@ func (finder *BoardFinder) processSingle(
 	logger.Info("search finished")
 
 	searchStatus := searches.SearchedAll
-	if len(matchedGames) >= 10 || errOfSerach != nil {
+	if isStopped || errOfSearch != nil {
 		searchStatus = searches.SearchedPartially
 	}
 

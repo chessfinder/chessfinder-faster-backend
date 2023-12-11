@@ -13,7 +13,7 @@ object SearchCommand:
   given Decoder[SearchCommand] = deriveDecoder[SearchCommand]
 
 case class Game(
-    id: String,
+    resource: String,
     pgn: String
 )
 
@@ -22,7 +22,8 @@ object Game:
 
 case class SearchResult(
     requestId: String,
-    machedGameIds: List[String]
+    examined: Int,
+    matchedGameResources: List[String]
 )
 
 object SearchResult:

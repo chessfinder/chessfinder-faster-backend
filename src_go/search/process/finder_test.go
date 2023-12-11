@@ -15,7 +15,6 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/search/process/searcher"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/wiremock/go-wiremock"
@@ -36,7 +35,7 @@ var finder = BoardFinder{
 var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
 var wiremockClient = wiremock.NewClient("http://0.0.0.0:18443")
-var searchers = []searcher.BoardSearcher{searcher.DefaultBoardSearcher{}}
+var searchers = []BoardSearcher{DirectBoardSearcher{}}
 
 var searchesTable = searches.SearchesTable{
 	Name:           finder.searchesTableName,
@@ -54,9 +53,9 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 		func() {
 			defer wiremockClient.Reset()
 
-			if !testing.Short() {
-				t.Skip("skipping test in short mode.")
-			}
+			// if !testing.Short() {
+			// 	t.Skip("skipping test in short mode.")
+			// }
 
 			startOfTest := time.Now().UTC()
 
@@ -161,9 +160,9 @@ func Test_when_there_is_no_registered_search_BoardFinder_should_skip(t *testing.
 		func() {
 			defer wiremockClient.Reset()
 
-			if !testing.Short() {
-				t.Skip("skipping test in short mode.")
-			}
+			// if !testing.Short() {
+			// 	t.Skip("skipping test in short mode.")
+			// }
 
 			var err error
 			userId := uuid.New().String()
@@ -207,9 +206,9 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 		func() {
 			defer wiremockClient.Reset()
 
-			if !testing.Short() {
-				t.Skip("skipping test in short mode.")
-			}
+			// if !testing.Short() {
+			// 	t.Skip("skipping test in short mode.")
+			// }
 
 			startOfTest := time.Now().UTC()
 

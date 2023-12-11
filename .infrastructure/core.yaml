@@ -27,3 +27,9 @@ Resources:
         LogFormat: JSON
         LogGroup: !Ref ChessfinderCoreLogs
     Type: AWS::Serverless::Function
+
+
+Outputs:
+  ChessfinderCoreFunctionName:
+    Value: !Ref ChessfinderCoreFunction
+    

@@ -45,7 +45,9 @@ object Lambda extends RequestStreamHandler:
       maybeGame = PgnReader.read(gamePgn)
       isFound   = maybeGame.map(g => Finder.find(g, probabilisticBoard)).getOrElse(false)
       if isFound
-    yield gameInfo.id
+    yield gameInfo.resource
 
-    val result = SearchResult(searchCommand.requestId, machedGameIds)
+    val examined = searchCommand.games.size
+
+    val result = SearchResult(searchCommand.requestId, examined, machedGameIds)
     Encoder[SearchResult].apply(result).noSpaces
