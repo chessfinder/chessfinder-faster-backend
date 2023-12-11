@@ -105,5 +105,6 @@ func (searcher DelegatedBoardSearcher) Match(requestId string, board string, gam
 	}
 
 	matchingResult = response.MatchedGameResources
+	examined = response.Examined
 	return
 }
