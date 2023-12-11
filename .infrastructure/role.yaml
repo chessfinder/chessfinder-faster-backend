@@ -25,6 +25,19 @@ Resources:
         - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
         - "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
         - "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+      Policies:
+        - PolicyName: LambdaInvokesOtherLambdas
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+                - Sid: LambdaToLambda
+                  Effect: Allow
+                  Action:
+                    - 'lambda:ListFunctions',
+                    - 'lambda:InvokeFunction',
+                    - 'lambda:ListAliases',
+                    - 'lambda:InvokeAsync',
+                  Resource: '*'
       MaxSessionDuration: 43200
       Path: "/chessfinder/"
       RoleName: !Sub "${TheStackName}-RoleForChessfinderLambda"
