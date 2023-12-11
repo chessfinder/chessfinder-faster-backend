@@ -33,10 +33,10 @@ Resources:
                 - Sid: LambdaToLambda
                   Effect: Allow
                   Action:
-                    - 'lambda:ListFunctions',
-                    - 'lambda:InvokeFunction',
-                    - 'lambda:ListAliases',
-                    - 'lambda:InvokeAsync',
+                    - 'lambda:ListFunctions'
+                    - 'lambda:InvokeFunction'
+                    - 'lambda:ListAliases'
+                    - 'lambda:InvokeAsync'
                   Resource: '*'
       MaxSessionDuration: 43200
       Path: "/chessfinder/"
