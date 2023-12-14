@@ -12,12 +12,14 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -31,6 +33,7 @@ type ArchiveDownloader struct {
 	archivesTableName     string
 	downloadsTableName    string
 	downloadGamesQueueUrl string
+	namespace             metrics.Namespace
 }
 
 func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCommands(
@@ -58,6 +61,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	}
 	dynamodbClient := dynamodb.New(awsSession)
 	svc := sqs.New(awsSession)
+	cloudWatchClient := cloudwatch.New(awsSession)
 	chessDotComClient := &http.Client{}
 
 	method := event.RequestContext.HTTP.Method
@@ -76,14 +80,19 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 
 	logger = logger.With(zap.String("username", downloadRequest.Username), zap.String("platform", downloadRequest.Platform))
 
-	profile, err := downloader.getAndPersistUser(dynamodbClient, chessDotComClient, logger, downloadRequest)
+	chessDotComMeter := metrics.ChessDotComMeter{
+		Namespace:        downloader.namespace,
+		CloudWatchClient: cloudWatchClient,
+	}
+
+	profile, err := downloader.getAndPersistUser(dynamodbClient, chessDotComClient, chessDotComMeter, logger, downloadRequest)
 	if err != nil {
 		return
 	}
 
 	logger = logger.With(zap.String("userId", profile.UserId))
 
-	archivesFromChessDotCom, err := downloader.getArchivesFromChessDotCom(logger, profile)
+	archivesFromChessDotCom, err := downloader.getArchivesFromChessDotCom(chessDotComClient, chessDotComMeter, logger, profile)
 	if err != nil {
 		return
 	}
@@ -150,6 +159,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 func (downloader ArchiveDownloader) getAndPersistUser(
 	dynamodbClient *dynamodb.DynamoDB,
 	chessDotComClient *http.Client,
+	chessDotComMeter metrics.ChessDotComMeter,
 	logger *zap.Logger,
 	downloadRequest DownloadRequest,
 ) (userRecord users.UserRecord, err error) {
@@ -170,6 +180,11 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 	}
 
 	defer response.Body.Close()
+
+	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetGames, response.StatusCode)
+	if errFromMetricRegistration != nil {
+		logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
+	}
 
 	responseBodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -221,6 +236,8 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 }
 
 func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
+	chessDotComClient *http.Client,
+	chessDotComMeter metrics.ChessDotComMeter,
 	logger *zap.Logger,
 	user users.UserRecord,
 ) (archives ChessDotComArchives, err error) {
@@ -233,13 +250,18 @@ func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 		return
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := chessDotComClient.Do(request)
 	if err != nil {
 		logger.Error("impossible to request chess.com!")
 		return
 	}
 
 	defer response.Body.Close()
+
+	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetGames, response.StatusCode)
+	if errFromMetricRegistration != nil {
+		logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
+	}
 
 	responseBodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {

@@ -38,6 +38,15 @@ Resources:
                     - 'lambda:ListAliases'
                     - 'lambda:InvokeAsync'
                   Resource: '*'
+        - PolicyName: LambdaRegsitersMetrics
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+                - Sid: CanWriteMetrics
+                  Effect: Allow
+                  Action:
+                    - 'cloudwatch:PutMetricData'
+                  Resource: '*'
       MaxSessionDuration: 43200
       Path: "/chessfinder/"
       RoleName: !Sub "${TheStackName}-RoleForChessfinderLambda"

@@ -67,6 +67,7 @@ Resources:
       Handler: bootstrap
       Environment:
         Variables:
+          THE_STACK_NAME: !Ref TheStackName
           CHESS_DOT_COM_URL: !Ref ChessDotComUrl
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName

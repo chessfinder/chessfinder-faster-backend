@@ -12,11 +12,13 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -28,6 +30,7 @@ type GameDownloader struct {
 	archivesTableName            string
 	gamesTableName               string
 	gamesByEndTimestampIndexName string
+	namespace                    metrics.Namespace
 	awsConfig                    *aws.Config
 }
 
@@ -51,11 +54,12 @@ func (downloader *GameDownloader) Download(commands events.SQSEvent) (commandsPr
 	}
 	dynamodbClient := dynamodb.New(awsSession)
 	chessDotComClient := &http.Client{}
+	cloudWatchClient := cloudwatch.New(awsSession)
 
 	logger.Info("Processing commands in total", zap.Int("commands", len(commands.Records)))
 
 	for _, message := range commands.Records {
-		_, _ = downloader.processSingle(&message, dynamodbClient, chessDotComClient, logger)
+		_, _ = downloader.processSingle(&message, dynamodbClient, cloudWatchClient, chessDotComClient, logger)
 	}
 	return
 }
@@ -63,6 +67,7 @@ func (downloader *GameDownloader) Download(commands events.SQSEvent) (commandsPr
 func (downloader *GameDownloader) processSingle(
 	message *events.SQSMessage,
 	dynamodbClient *dynamodb.DynamoDB,
+	cloudWatchClient *cloudwatch.CloudWatch,
 	chessDotComClient *http.Client,
 	logger *zap.Logger,
 ) (commandProcessed *events.SQSBatchItemFailure, err error) {
@@ -184,6 +189,16 @@ func (downloader *GameDownloader) processSingle(
 			return
 		}
 		defer response.Body.Close()
+
+		chessDotComMeter := metrics.ChessDotComMeter{
+			Namespace:        downloader.namespace,
+			CloudWatchClient: cloudWatchClient,
+		}
+
+		errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetGames, response.StatusCode)
+		if errFromMetricRegistration != nil {
+			logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
+		}
 
 		responseBodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
