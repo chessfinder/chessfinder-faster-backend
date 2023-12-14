@@ -130,6 +130,7 @@ Resources:
       Handler: bootstrap
       Environment:
         Variables:
+          THE_STACK_NAME: !Ref TheStackName
           DOWNLOAD_GAMES_QUEUE_URL: !Ref DownloadGamesQueueUrl
           CHESS_DOT_COM_URL: !Ref ChessDotComUrl
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName

@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 )
 
 func main() {
@@ -36,6 +37,21 @@ func main() {
 		panic(errors.New("DOWNLOAD_GAMES_QUEUE_URL is missing"))
 	}
 
+	theStackName, theStackNameExists := os.LookupEnv("THE_STACK_NAME")
+	if !theStackNameExists {
+		panic(errors.New("THE_STACK_NAME is missing"))
+	}
+
+	var namespace metrics.Namespace
+	switch theStackName {
+	case "chessfinder-qa":
+		namespace = metrics.QA
+	case "chessfinder-prod":
+		namespace = metrics.PrOD
+	default:
+		panic(errors.New("impossible to get the namespace"))
+	}
+
 	awsRegion, awsRegionExists := os.LookupEnv("AWS_REGION")
 	if !awsRegionExists {
 		panic(errors.New("AWS_REGION is missing"))
@@ -47,6 +63,7 @@ func main() {
 		archivesTableName:     archivesTableName,
 		downloadGamesQueueUrl: downloadGamesQueueUrl,
 		chessDotComUrl:        chessDotComUrl,
+		namespace:             namespace,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},

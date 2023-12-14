@@ -71,7 +71,7 @@ func (finder *BoardFinder) processSingle(
 
 	logger = logger.With(zap.String("searchId", command.SearchId))
 	logger = logger.With(zap.String("userId", command.UserId))
-	logger = logger.With(zap.String("archiveId", command.Board))
+	logger = logger.With(zap.String("board", command.Board))
 	logger.Info("Processing command")
 
 	logger.Info("getting the search record")
