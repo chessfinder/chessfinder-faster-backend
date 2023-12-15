@@ -181,7 +181,7 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 
 	defer response.Body.Close()
 
-	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetGames, response.StatusCode)
+	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetProfile, response.StatusCode)
 	if errFromMetricRegistration != nil {
 		logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
 	}
@@ -258,7 +258,7 @@ func (downloader ArchiveDownloader) getArchivesFromChessDotCom(
 
 	defer response.Body.Close()
 
-	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetGames, response.StatusCode)
+	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetArchives, response.StatusCode)
 	if errFromMetricRegistration != nil {
 		logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
 	}
