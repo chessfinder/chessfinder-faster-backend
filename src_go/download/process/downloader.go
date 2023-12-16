@@ -30,7 +30,7 @@ type GameDownloader struct {
 	archivesTableName            string
 	gamesTableName               string
 	gamesByEndTimestampIndexName string
-	namespace                    metrics.Namespace
+	metricsNamespace             string
 	awsConfig                    *aws.Config
 }
 
@@ -191,7 +191,7 @@ func (downloader *GameDownloader) processSingle(
 		defer response.Body.Close()
 
 		chessDotComMeter := metrics.ChessDotComMeter{
-			Namespace:        downloader.namespace,
+			Namespace:        downloader.metricsNamespace,
 			CloudWatchClient: cloudWatchClient,
 		}
 

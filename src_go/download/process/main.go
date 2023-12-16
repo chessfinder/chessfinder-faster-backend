@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 )
 
 func main() {
@@ -42,16 +41,6 @@ func main() {
 		panic(errors.New("THE_STACK_NAME is missing"))
 	}
 
-	var namespace metrics.Namespace
-	switch theStackName {
-	case "chessfinder-qa":
-		namespace = metrics.QA
-	case "chessfinder-prod":
-		namespace = metrics.PrOD
-	default:
-		panic(errors.New("impossible to get the namespace"))
-	}
-
 	awsRegion, awsRegionExists := os.LookupEnv("AWS_REGION")
 	if !awsRegionExists {
 		panic(errors.New("AWS_REGION is missing"))
@@ -63,7 +52,7 @@ func main() {
 		archivesTableName:            archivesTableName,
 		gamesTableName:               gamesTableName,
 		gamesByEndTimestampIndexName: gamesByEndTimestampIndexName,
-		namespace:                    namespace,
+		metricsNamespace:             theStackName,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
