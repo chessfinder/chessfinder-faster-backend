@@ -33,7 +33,7 @@ type ArchiveDownloader struct {
 	archivesTableName     string
 	downloadsTableName    string
 	downloadGamesQueueUrl string
-	namespace             metrics.Namespace
+	metricsNamespace      string
 }
 
 func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCommands(
@@ -81,7 +81,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	logger = logger.With(zap.String("username", downloadRequest.Username), zap.String("platform", downloadRequest.Platform))
 
 	chessDotComMeter := metrics.ChessDotComMeter{
-		Namespace:        downloader.namespace,
+		Namespace:        downloader.metricsNamespace,
 		CloudWatchClient: cloudWatchClient,
 	}
 

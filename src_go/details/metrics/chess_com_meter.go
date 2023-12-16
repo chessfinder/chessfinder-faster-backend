@@ -8,7 +8,7 @@ import (
 )
 
 type ChessDotComMeter struct {
-	Namespace        Namespace
+	Namespace        string
 	CloudWatchClient *cloudwatch.CloudWatch
 }
 
@@ -16,7 +16,7 @@ type ChessDotComAction string
 
 const (
 	GetProfile  ChessDotComAction = "GetProfile"
-	GetArchives ChessDotComAction = "GetClubs"
+	GetArchives ChessDotComAction = "GetArchives"
 	GetGames    ChessDotComAction = "GetGames"
 )
 
