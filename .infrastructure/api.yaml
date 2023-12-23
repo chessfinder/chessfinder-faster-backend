@@ -75,7 +75,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/CheckDownload"
-      RetentionInDays: 30
+      RetentionInDays: 7
 
   CheckDownloadFunction:
     Properties:
@@ -108,7 +108,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/InitiateDownload"
-      RetentionInDays: 30
+      RetentionInDays: 7
 
   InitiateDownloadFunction:
     Properties:
@@ -146,7 +146,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/CheckSearch"
-      RetentionInDays: 30
+      RetentionInDays: 7
   
   CheckSearchFunction:
     Properties:
@@ -179,7 +179,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/InitiateSearch"
-      RetentionInDays: 30
+      RetentionInDays: 7
   
   InitiateSearchFunction:
     Properties:

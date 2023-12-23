@@ -48,7 +48,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/DownloadGames"
-      RetentionInDays: 30
+      RetentionInDays: 7
     
   DownloadGamesFunction:
     Properties:
@@ -83,7 +83,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/SearchBoard"
-      RetentionInDays: 30
+      RetentionInDays: 7
   
   SearchBoardFunction:
     Properties:

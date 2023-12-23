@@ -120,3 +120,12 @@ Resources:
         HostedZoneId: !GetAtt Api.Outputs.ChessfinderApiRegionalHostedZoneId
         EvaluateTargetHealth: false
     DependsOn: Api
+
+  ChessfinderAlarms:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/alarm.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
+    DependsOn: 
+      - Api

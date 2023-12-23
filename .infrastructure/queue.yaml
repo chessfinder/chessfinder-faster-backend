@@ -13,13 +13,17 @@ Resources:
       QueueName: !Sub "${TheStackName}-DownloadGames.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
+      MessageRetentionPeriod: 1899
+      ContentBasedDeduplication: false
 
-  SearchBoard: 
+  SearchBoard:
     Type: AWS::SQS::Queue
     Properties: 
       QueueName: !Sub "${TheStackName}-SearchBoard.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
+      MessageRetentionPeriod: 1899
+      ContentBasedDeduplication: false
 
 Outputs:
   DownloadGamesQueueUrl: 

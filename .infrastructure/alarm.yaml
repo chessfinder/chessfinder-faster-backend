@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+
+Resources:
+  AlarmQueue: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: !Sub "${TheStackName}-Alarms.fifo"
+      FifoQueue: true
+      VisibilityTimeout: 900
+      ContentBasedDeduplication: false
+  
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${TheStackName}-Alarms"
+      ContentBasedDeduplication: false
+      # DeliveryStatusLogging: 
+      #   - LoggingConfig
+      FifoTopic: true
+  
+  AlarmTopicCanWriteIntoQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AlarmQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Allow-SNS-SendMessage
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AlarmQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref AlarmTopic
+  
+  AlarmTopicToQueueBinding:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt AlarmQueue.Arn
+      Protocol: sqs
+      RawMessageDelivery: true
+      TopicArn: !Ref AlarmTopic
+    DependsOn: 
+      - AlarmTopicCanWriteToQueuePolicy
+
+  ProfileFoundSuccessfully:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions: 
+        - !Ref AlarmTopic
+      AlarmDescription: 'Profile found successfully in chess.com'
+      AlarmName: ProfileFoundSuccessfully
+      ComparisonOperator: 'GreaterThanThreshold'
+      DatapointsToAlarm: 2
+      Dimensions: 
+        - Name: Action
+          Value: GetProfile
+        - Name: StatusCode
+          Value: 200
+      EvaluationPeriods: 3
+      MetricName: ChessDotComMeter
+      Namespace: !Ref TheStackName
+      OKActions: 
+        - !Ref AlarmTopic
+      Period: 300
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: 'notBreaching'
+      Unit: Count
