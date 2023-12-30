@@ -223,7 +223,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 	assert.Equal(t, expectedArchive_2021_12, *archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
 
-	lastThreeCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 2)
+	lastThreeCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 3)
 	assert.NoError(t, err)
 
 	actualCommands := make([]queue.DownloadGamesCommand, len(lastThreeCommands))
