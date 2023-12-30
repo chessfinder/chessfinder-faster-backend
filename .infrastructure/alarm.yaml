@@ -5,12 +5,15 @@ Parameters:
   TheStackName:
     Type: String
     Description: The name of the stack
+  ChessfinderLambdaRoleArn:
+    Type: String
+    Description: The ARN of the role that allows the lambda to execute
 
 Resources:
   AlarmQueue: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: !Sub "${TheStackName}-Alarms.fifo"
+      QueueName: !Sub "${TheStackName}-Alarms-X.fifo"
       FifoQueue: true
       VisibilityTimeout: 900
       ContentBasedDeduplication: false
@@ -18,7 +21,7 @@ Resources:
   AlarmTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub "${TheStackName}-Alarms"
+      TopicName: !Sub "${TheStackName}-Alarms-X.fifo"
       ContentBasedDeduplication: false
       # DeliveryStatusLogging: 
       #   - LoggingConfig
@@ -51,7 +54,7 @@ Resources:
       RawMessageDelivery: true
       TopicArn: !Ref AlarmTopic
     DependsOn: 
-      - AlarmTopicCanWriteToQueuePolicy
+      - AlarmTopicCanWriteIntoQueuePolicy
 
   ProfileFoundSuccessfully:
     Type: AWS::CloudWatch::Alarm
@@ -70,7 +73,8 @@ Resources:
           Value: 200
       EvaluationPeriods: 3
       MetricName: ChessDotComMeter
-      Namespace: !Ref TheStackName
+      # Namespace: !Ref TheStackName
+      Namespace: 'chessfinder-qa'
       OKActions: 
         - !Ref AlarmTopic
       Period: 300
@@ -78,3 +82,85 @@ Resources:
       Threshold: 1
       TreatMissingData: 'notBreaching'
       Unit: Count
+
+  TelegramBotApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/bot-api-key"
+      Tier: Standard
+      Type: String
+      Value: ""
+  
+  TelegramChatId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/chat-id"
+      Tier: Standard
+      Type: String
+      Value: ""
+  
+  TelegramInsightsTopicId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/insights-topic-id"
+      Tier: Standard
+      Type: String
+      Value: ""
+
+  TelegramHealthTopicId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/health-topic-id"
+      Tier: Standard
+      Type: String
+      Value: ""
+
+  NotifierLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/Notifier"
+      RetentionInDays: 7
+
+  NotifierFunction:
+    Properties:
+      FunctionName: !Sub ${TheStackName}-Notifier
+      MemorySize: 256
+      Events:
+        NotificationCommand:
+          Properties:
+            Queue: !GetAtt AlarmQueue.Arn
+            BatchSize: 10
+          Type: SQS
+      Timeout: 60
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/details/notification/notification.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          THE_STACK_NAME: !Ref TheStackName
+          TELEGRAM_URL: "https://api.telegram.org"
+          TELEGRAM_BOT_API_KEY: !Sub '{{resolve:ssm:${TelegramBotApiKey}}}'
+          TELEGRAM_CHAT_ID: !Sub '{{resolve:ssm:${TelegramChatId}}}'
+          TELEGRAM_INSIGHTS_TOPIC_ID: !Sub '{{resolve:ssm:${TelegramInsightsTopicId}}}'
+          TELEGRAM_INSIGHTS_ALARMS: !Join [";", [!Ref ProfileFoundSuccessfully]]
+          TELEGRAM_HEALTH_TOPIC_ID: !Sub '{{resolve:ssm:${TelegramHealthTopicId}}}'
+          TELEGRAM_HEALTH_ALARMS: "nothing"
+      Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref NotifierLogs
+    Type: AWS::Serverless::Function
+    DependsOn: 
+      - AlarmTopicToQueueBinding
+      - TelegramBotApiKey
+      - TelegramChatId
+      - TelegramInsightsTopicId
+      - TelegramHealthTopicId
+      - NotifierLogs
+
+  

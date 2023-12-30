@@ -19,11 +19,11 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type ArchiveDownloader struct {
@@ -39,18 +39,7 @@ type ArchiveDownloader struct {
 func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCommands(
 	event *events.APIGatewayV2HTTPRequest,
 ) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{"stdout"}
-	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.UTC().Format("2006-01-02T15:04:05.000Z"))
-	} // Log to stdout
-	config.EncoderConfig.EncodeTime = timeEncoder
-
-	// Create the logger from the configuration
-	logger, err := config.Build()
-	if err != nil {
-		panic(err)
-	}
+	logger := logging.MustCreateZuluTimeLogger()
 	logger = logger.With(zap.String("requestId", event.RequestContext.RequestID))
 	defer logger.Sync()
 

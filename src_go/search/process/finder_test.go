@@ -131,7 +131,7 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 					MessageId: "1",
 				}
 
-			actualCommandsProcessed, err := finder.Find(events.SQSEvent{Records: []events.SQSMessage{command}})
+			actualCommandsProcessed := finder.Find(events.SQSEvent{Records: []events.SQSMessage{command}})
 			assert.NoError(t, err)
 			expectedCommandsProcessed := events.SQSEventResponse{
 				BatchItemFailures: nil,
@@ -189,7 +189,7 @@ func Test_when_there_is_no_registered_search_BoardFinder_should_skip(t *testing.
 					MessageId: "1",
 				}
 
-			actualCommandsProcessed, err := finder.Find(events.SQSEvent{Records: []events.SQSMessage{command}})
+			actualCommandsProcessed := finder.Find(events.SQSEvent{Records: []events.SQSMessage{command}})
 			assert.NoError(t, err)
 			assert.Nil(t, actualCommandsProcessed.BatchItemFailures)
 
@@ -263,7 +263,7 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 					MessageId: "1",
 				}
 
-			actualCommandsProcessed, err := finder.Find(events.SQSEvent{Records: []events.SQSMessage{command}})
+			actualCommandsProcessed := finder.Find(events.SQSEvent{Records: []events.SQSMessage{command}})
 			assert.NoError(t, err)
 			expectedCommandsProcessed := events.SQSEventResponse{
 				BatchItemFailures: nil,

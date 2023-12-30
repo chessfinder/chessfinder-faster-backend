@@ -173,8 +173,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
-	assert.NoError(t, err)
+	actualCommandsProcessed := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -345,8 +344,7 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
-	assert.NoError(t, err)
+	actualCommandsProcessed := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -463,8 +461,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
-	assert.NoError(t, err)
+	actualCommandsProcessed := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -545,8 +542,7 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
-	assert.NoError(t, err)
+	actualCommandsProcessed := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}

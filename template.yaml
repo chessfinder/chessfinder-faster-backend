@@ -127,5 +127,6 @@ Resources:
       Location: .infrastructure/alarm.yaml
       Parameters:
         TheStackName: !Ref AWS::StackName
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
     DependsOn: 
       - Api

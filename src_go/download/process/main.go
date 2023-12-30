@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 )
@@ -58,13 +57,6 @@ func main() {
 		},
 	}
 
-	lambda.Start(sealErrors(downloader.Download))
+	lambda.Start(downloader.Download)
 
-}
-
-func sealErrors(unsafeHandling func(events.SQSEvent) (events.SQSEventResponse, error)) func(events.SQSEvent) (events.SQSEventResponse, error) {
-	return func(commands events.SQSEvent) (commandsProcessed events.SQSEventResponse, err error) {
-		_, _ = unsafeHandling(commands)
-		return
-	}
 }

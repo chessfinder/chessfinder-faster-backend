@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Chessfinder - application for finding chessgame having only partial information about the game.
+
+Resources:
+  
+  ChessfinderAlarms:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/alarm.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName

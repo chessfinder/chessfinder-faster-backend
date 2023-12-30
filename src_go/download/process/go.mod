@@ -9,6 +9,7 @@ require (
 	github.com/chessfinder/chessfinder-faster-backend/src_go/details/db v0.0.0-20231013195809-b1378607bcce
 	github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue v0.0.0-20231013195809-b1378607bcce
   github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics v0.0.0-00010101000000-000000000000
+  github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging v0.0.0-00010101000000-000000000000
   github.com/google/uuid v1.3.1
 	github.com/stretchr/testify v1.8.4
 	github.com/wiremock/go-wiremock v1.8.0
@@ -32,3 +33,5 @@ replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher
 replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/db => ../../details/db
 
 replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics => ../../details/metrics
+
+replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging => ../../details/logging
