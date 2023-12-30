@@ -223,7 +223,18 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 	assert.Equal(t, expectedArchive_2021_12, *archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
 
-	actualCommands, err := downloader.getCommands()
+	lastThreeCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 3)
+	assert.NoError(t, err)
+
+	actualCommands := make([]queue.DownloadGamesCommand, len(lastThreeCommands))
+	for i, message := range lastThreeCommands {
+		var command queue.DownloadGamesCommand
+		err = json.Unmarshal([]byte(*message.Body), &command)
+		if err != nil {
+			return
+		}
+		actualCommands[i] = command
+	}
 	assert.NoError(t, err)
 
 	command_2021_10 := queue.DownloadGamesCommand{
@@ -416,7 +427,18 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	assert.Equal(t, expectedUser, *actualUserRecord)
 
-	actualCommands, err := downloader.getCommands()
+	lastTwoCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 2)
+	assert.NoError(t, err)
+
+	actualCommands := make([]queue.DownloadGamesCommand, len(lastTwoCommands))
+	for i, message := range lastTwoCommands {
+		var command queue.DownloadGamesCommand
+		err = json.Unmarshal([]byte(*message.Body), &command)
+		if err != nil {
+			return
+		}
+		actualCommands[i] = command
+	}
 	assert.NoError(t, err)
 
 	command_2021_10 := queue.DownloadGamesCommand{
@@ -442,37 +464,4 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 
 	assert.Equal(t, expectedCommands, actualCommands, "Commands are not equal!")
 
-}
-
-func (downloader ArchiveDownloader) getCommands() (commands []queue.DownloadGamesCommand, err error) {
-	resp, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl:            &downloader.downloadGamesQueueUrl,
-		MaxNumberOfMessages: aws.Int64(10), // You can adjust this number
-		VisibilityTimeout:   aws.Int64(30), // 30 seconds timeout for processing
-		WaitTimeSeconds:     aws.Int64(0),  // Long polling
-	})
-	if err != nil {
-		fmt.Printf("Failed to fetch message with error%v", err)
-		return
-	}
-	for _, message := range resp.Messages {
-		_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
-			QueueUrl:      &downloader.downloadGamesQueueUrl,
-			ReceiptHandle: message.ReceiptHandle,
-		})
-		if err != nil {
-			fmt.Printf("Failed to delete message with error%v", err)
-			return
-		}
-		body := message.Body
-		command := queue.DownloadGamesCommand{}
-		err = json.Unmarshal([]byte(*body), &command)
-		if err != nil {
-			fmt.Printf("Failed to unmarshal message with error%v", err)
-			return
-		}
-
-		commands = append(commands, command)
-	}
-	return
 }

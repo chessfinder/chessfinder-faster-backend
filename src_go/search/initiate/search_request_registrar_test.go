@@ -130,8 +130,14 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	assert.Equal(t, int(40), actualSearchRecord.Total, "Total is not equal!")
 	assert.Nil(t, actualSearchRecord.Matched, "Matched is not equal!")
 
-	actualCommand, err := getTheLastCommand(svc, registrar)
+	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
 	assert.NoError(t, err)
+
+	actualCommand := queue.SearchBoardCommand{}
+	err = json.Unmarshal([]byte(*lastCommand[0].Body), &actualCommand)
+	if err != nil {
+		return
+	}
 
 	expectedCommand := queue.SearchBoardCommand{
 		UserId:   userId,
@@ -139,7 +145,7 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 		Board:    "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????",
 	}
 
-	assert.Equal(t, expectedCommand, *actualCommand, "Commands are not equal!")
+	assert.Equal(t, expectedCommand, actualCommand, "Commands are not equal!")
 
 }
 
@@ -257,51 +263,6 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
-}
-
-func getTheLastCommand(svc *sqs.SQS, registrar SearchRegistrar) (command *queue.SearchBoardCommand, err error) {
-	count, err := countCommands(svc, registrar)
-	if err != nil {
-		fmt.Printf("Failed to count commands with error%v", err)
-	}
-	fmt.Printf("Amount of commands: %v", count)
-
-	defer func() {
-
-		fmt.Println("Closing the connection to the queue")
-		fmt.Printf("Alo, ALo, ALOOOO")
-	}()
-
-	resp, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl:            &registrar.searchBoardQueueUrl,
-		MaxNumberOfMessages: aws.Int64(10), // You can adjust this number
-		VisibilityTimeout:   aws.Int64(1),  // 30 seconds timeout for processing
-		WaitTimeSeconds:     aws.Int64(0),  // Long polling
-	})
-	if err != nil {
-		fmt.Printf("Failed to fetch message with error%v", err)
-		return
-	}
-	for _, message := range resp.Messages {
-		_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
-			QueueUrl:      &registrar.searchBoardQueueUrl,
-			ReceiptHandle: message.ReceiptHandle,
-		})
-		if err != nil {
-			fmt.Printf("Failed to delete message with error%v", err)
-			return
-		}
-		currentCommand := queue.SearchBoardCommand{}
-		body := message.Body
-		err = json.Unmarshal([]byte(*body), &currentCommand)
-		if err != nil {
-			fmt.Printf("Failed to unmarshal message with error%v", err)
-			return
-		}
-
-		command = &currentCommand
-	}
-	return
 }
 
 func countCommands(svc *sqs.SQS, registrar SearchRegistrar) (count int, err error) {

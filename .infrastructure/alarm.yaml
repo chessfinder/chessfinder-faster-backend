@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+  ChessfinderLambdaRoleArn:
+    Type: String
+    Description: The ARN of the role that allows the lambda to execute
+
+Resources:
+  AlarmQueue: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: !Sub "${TheStackName}-Alarms.fifo"
+      FifoQueue: true
+      VisibilityTimeout: 900
+      ContentBasedDeduplication: false
+  
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${TheStackName}-Alarms.fifo"
+      ContentBasedDeduplication: false
+      # DeliveryStatusLogging: 
+      #   - LoggingConfig
+      FifoTopic: true
+  
+  AlarmTopicCanWriteIntoQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AlarmQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Allow-SNS-SendMessage
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt AlarmQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref AlarmTopic
+  
+  AlarmTopicToQueueBinding:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt AlarmQueue.Arn
+      Protocol: sqs
+      RawMessageDelivery: true
+      TopicArn: !Ref AlarmTopic
+    DependsOn: 
+      - AlarmTopicCanWriteIntoQueuePolicy
+
+  ProfileNotFound:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions: 
+        - !Ref AlarmTopic
+      AlarmDescription: 'Profile not found in chess.com'
+      AlarmName: ProfileNotFound
+      ComparisonOperator: 'GreaterThanThreshold'
+      DatapointsToAlarm: 2
+      Dimensions: 
+        - Name: Action
+          Value: GetProfile
+        - Name: StatusCode
+          Value: 404
+      EvaluationPeriods: 3
+      MetricName: ChessDotComMeter
+      Namespace: !Ref TheStackName
+      OKActions: 
+        - !Ref AlarmTopic
+      Period: 300
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: 'notBreaching'
+      Unit: Count
+
+  TelegramBotApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/bot-api-key"
+      Tier: Standard
+      Type: String
+      Value: "x"
+  
+  TelegramChatId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/chat-id"
+      Tier: Standard
+      Type: String
+      Value: "x"
+  
+  TelegramInsightsTopicId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/insights-topic-id"
+      Tier: Standard
+      Type: String
+      Value: "x"
+
+  TelegramHealthTopicId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Name: !Sub "/${TheStackName}/notification/telegram/health-topic-id"
+      Tier: Standard
+      Type: String
+      Value: "x"
+
+  NotifierLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/Notifier"
+      RetentionInDays: 7
+
+  NotifierFunction:
+    Properties:
+      FunctionName: !Sub ${TheStackName}-Notifier
+      MemorySize: 256
+      Events:
+        NotificationCommand:
+          Properties:
+            Queue: !GetAtt AlarmQueue.Arn
+            BatchSize: 10
+          Type: SQS
+      Timeout: 60
+      Architectures: ["arm64"]
+      Runtime: "provided.al2"
+      CodeUri: ../src_go/details/notification/notification.zip
+      Handler: bootstrap
+      Environment:
+        Variables:
+          THE_STACK_NAME: !Ref TheStackName
+          TELEGRAM_URL: "https://api.telegram.org"
+          TELEGRAM_BOT_API_KEY: !Sub '{{resolve:ssm:${TelegramBotApiKey}}}'
+          TELEGRAM_CHAT_ID: !Sub '{{resolve:ssm:${TelegramChatId}}}'
+          TELEGRAM_INSIGHTS_TOPIC_ID: !Sub '{{resolve:ssm:${TelegramInsightsTopicId}}}'
+          TELEGRAM_INSIGHTS_ALARMS: !Join [";", [!Ref ProfileNotFound]]
+          TELEGRAM_HEALTH_TOPIC_ID: !Sub '{{resolve:ssm:${TelegramHealthTopicId}}}'
+          TELEGRAM_HEALTH_ALARMS: "nothing"
+      Role: !Ref ChessfinderLambdaRoleArn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref NotifierLogs
+    Type: AWS::Serverless::Function
+    DependsOn: 
+      - TelegramBotApiKey
+      - TelegramChatId
+      - TelegramInsightsTopicId
+      - TelegramHealthTopicId
+
+  

@@ -18,10 +18,10 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type GameDownloader struct {
@@ -34,19 +34,18 @@ type GameDownloader struct {
 	awsConfig                    *aws.Config
 }
 
-func (downloader *GameDownloader) Download(commands events.SQSEvent) (commandsProcessed events.SQSEventResponse, err error) {
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{"stdout"}
-	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.UTC().Format("2006-01-02T15:04:05.000Z"))
-	}
-	config.EncoderConfig.EncodeTime = timeEncoder
-
-	logger, err := config.Build()
-	if err != nil {
-		return
-	}
+func (downloader *GameDownloader) Download(commands events.SQSEvent) events.SQSEventResponse {
+	logger := logging.MustCreateZuluTimeLogger()
 	defer logger.Sync()
+	failedEvents := queue.ProcessMultiple(commands, downloader, logger)
+	return failedEvents
+}
+
+func (downloader *GameDownloader) ProcessSingle(
+	message *events.SQSMessage,
+	logger *zap.Logger,
+) (commandProcessed *events.SQSBatchItemFailure, err error) {
+
 	awsSession, err := session.NewSession(downloader.awsConfig)
 	if err != nil {
 		logger.Error("impossible to create an AWS session!")
@@ -56,21 +55,6 @@ func (downloader *GameDownloader) Download(commands events.SQSEvent) (commandsPr
 	chessDotComClient := &http.Client{}
 	cloudWatchClient := cloudwatch.New(awsSession)
 
-	logger.Info("Processing commands in total", zap.Int("commands", len(commands.Records)))
-
-	for _, message := range commands.Records {
-		_, _ = downloader.processSingle(&message, dynamodbClient, cloudWatchClient, chessDotComClient, logger)
-	}
-	return
-}
-
-func (downloader *GameDownloader) processSingle(
-	message *events.SQSMessage,
-	dynamodbClient *dynamodb.DynamoDB,
-	cloudWatchClient *cloudwatch.CloudWatch,
-	chessDotComClient *http.Client,
-	logger *zap.Logger,
-) (commandProcessed *events.SQSBatchItemFailure, err error) {
 	command := queue.DownloadGamesCommand{}
 	err = json.Unmarshal([]byte(message.Body), &command)
 	if err != nil {

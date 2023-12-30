@@ -12,7 +12,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/${TheStackName}/ChessfinderCore"
-      RetentionInDays: 30
+      RetentionInDays: 7
     
   ChessfinderCoreFunction:
     Properties:

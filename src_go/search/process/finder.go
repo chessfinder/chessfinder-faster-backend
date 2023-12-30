@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -12,9 +11,9 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 const MaxGamesPerRequest = 100
@@ -27,41 +26,25 @@ type BoardFinder struct {
 	searcher          BoardSearcher
 }
 
-func (finder *BoardFinder) Find(commands events.SQSEvent) (commandsProcessed events.SQSEventResponse, err error) {
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{"stdout"}
-	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.UTC().Format("2006-01-02T15:04:05.000Z"))
-	}
-	config.EncoderConfig.EncodeTime = timeEncoder
-
-	logger, err := config.Build()
-	if err != nil {
-		return
-	}
+func (finder *BoardFinder) Find(commands events.SQSEvent) events.SQSEventResponse {
+	logger := logging.MustCreateZuluTimeLogger()
 	defer logger.Sync()
+	failedEvents := queue.ProcessMultiple(commands, finder, logger)
+	return failedEvents
+}
+
+func (finder *BoardFinder) ProcessSingle(
+	message *events.SQSMessage,
+	logger *zap.Logger,
+) (commandProcessed *events.SQSBatchItemFailure, err error) {
+
 	awsSession, err := session.NewSession(finder.awsConfig)
 	if err != nil {
 		logger.Error("impossible to create an AWS session!")
 		return
 	}
 	dynamodbClient := dynamodb.New(awsSession)
-	chessDotComClient := &http.Client{}
 
-	logger.Info("Processing commands in total", zap.Int("commands", len(commands.Records)))
-
-	for _, message := range commands.Records {
-		_, _ = finder.processSingle(&message, dynamodbClient, chessDotComClient, logger)
-	}
-	return
-}
-
-func (finder *BoardFinder) processSingle(
-	message *events.SQSMessage,
-	dynamodbClient *dynamodb.DynamoDB,
-	chessDotComClient *http.Client,
-	logger *zap.Logger,
-) (commandProcessed *events.SQSBatchItemFailure, err error) {
 	command := queue.SearchBoardCommand{}
 	err = json.Unmarshal([]byte(message.Body), &command)
 	if err != nil {

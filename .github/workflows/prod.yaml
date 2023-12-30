@@ -116,6 +116,11 @@ jobs:
 
       - name: GO - Install dependencies
         run: |
+          cd src_go/details/notification
+          go get .
+          go mod tidy
+          cd ../../../
+
           cd src_go/download/check_status
           go get .
           go mod tidy
@@ -149,6 +154,11 @@ jobs:
       - name: GO - Build
         shell: bash
         run: |
+          cd ./src_go/details/notification
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
+          zip notification.zip bootstrap
+          cd ../../../
+
           cd ./src_go/download/check_status
           GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
           zip check_status.zip bootstrap

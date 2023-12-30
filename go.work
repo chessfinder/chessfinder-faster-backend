@@ -6,11 +6,12 @@ use (
 	./src_go/details/queue
   ./src_go/details/batcher
   ./src_go/details/metrics
+  ./src_go/details/notification
+  ./src_go/details/logging
 	./src_go/download/check_status
 	./src_go/download/initiate
   ./src_go/download/process
 	./src_go/search/check_status
   ./src_go/search/initiate
   ./src_go/search/process
-  ./src_go/experiment
 )

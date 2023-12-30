@@ -9,7 +9,8 @@ require (
 	github.com/aws/aws-sdk-go v1.45.24
 	github.com/chessfinder/chessfinder-faster-backend/src_go/details/api v0.0.0-20230921201148-2f6c15cfb0c9
 	github.com/chessfinder/chessfinder-faster-backend/src_go/details/db v0.0.0-00010101000000-000000000000
-	github.com/google/uuid v1.3.1
+	github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging v0.0.0-00010101000000-000000000000
+  github.com/google/uuid v1.3.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
 )
@@ -29,3 +30,5 @@ replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue =
 replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/batcher => ../../details/batcher
 
 replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/db => ../../details/db
+
+replace github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging => ../../details/logging

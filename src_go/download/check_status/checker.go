@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,8 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type DownloadStatusChecker struct {
@@ -21,18 +20,7 @@ type DownloadStatusChecker struct {
 
 func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{"stdout"}
-	timeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.UTC().Format("2006-01-02T15:04:05.000Z"))
-	} // Log to stdout
-	config.EncoderConfig.EncodeTime = timeEncoder
-
-	// Create the logger from the configuration
-	logger, err := config.Build()
-	if err != nil {
-		panic(err)
-	}
+	logger := logging.MustCreateZuluTimeLogger()
 	logger = logger.With(zap.String("requestId", event.RequestContext.RequestID))
 	defer logger.Sync()
 
