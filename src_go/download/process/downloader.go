@@ -34,11 +34,11 @@ type GameDownloader struct {
 	awsConfig                    *aws.Config
 }
 
-func (downloader *GameDownloader) Download(commands events.SQSEvent) events.SQSEventResponse {
+func (downloader *GameDownloader) Download(commands events.SQSEvent) (events.SQSEventResponse, error) {
 	logger := logging.MustCreateZuluTimeLogger()
 	defer logger.Sync()
 	failedEvents := queue.ProcessMultiple(commands, downloader, logger)
-	return failedEvents
+	return failedEvents, nil
 }
 
 func (downloader *GameDownloader) ProcessSingle(

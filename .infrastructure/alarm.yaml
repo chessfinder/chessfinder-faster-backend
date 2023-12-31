@@ -15,7 +15,8 @@ Resources:
     Properties: 
       QueueName: !Sub "${TheStackName}-Alarms.fifo"
       FifoQueue: true
-      VisibilityTimeout: 900
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 129
       ContentBasedDeduplication: false
   
   AlarmTopic:
