@@ -8,28 +8,50 @@ Parameters:
     Type: String
 
 Resources:
-  ChessfinderCoreLogs:
+  ChessfinderSearchCoreLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/${TheStackName}/ChessfinderCore"
+      LogGroupName: !Sub "/${TheStackName}/ChessfinderSearchCore"
       RetentionInDays: 7
     
-  ChessfinderCoreFunction:
+  ChessfinderSearchCoreFunction:
     Properties:
-      FunctionName: !Sub "${TheStackName}-ChessfinderCore"
+      FunctionName: !Sub "${TheStackName}-ChessfinderSearchCore"
       Timeout: 29
       MemorySize: 1024
       Runtime: java17
       CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
-      Handler: chessfinder.api.Lambda::handleRequest
+      Handler: chessfinder.api.SearchLambda::handleRequest
       Role: !Ref 'ChessfinderLambdaRoleArn'
       LoggingConfig:
         LogFormat: JSON
-        LogGroup: !Ref ChessfinderCoreLogs
+        LogGroup: !Ref ChessfinderSearchCoreLogs
     Type: AWS::Serverless::Function
+
+  ChessfinderValidationCoreLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${TheStackName}/ChessfinderValidationCore"
+      RetentionInDays: 7
+    
+  ChessfinderValidationCoreFunction:
+    Properties:
+      FunctionName: !Sub "${TheStackName}-ChessfinderValidationCore"
+      Timeout: 29
+      MemorySize: 1024
+      Runtime: java17
+      CodeUri: ../target/scala-3.3.0/chessfinder-lambda.jar
+      Handler: chessfinder.api.ValidationLambda::handleRequest
+      Role: !Ref 'ChessfinderLambdaRoleArn'
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref ChessfinderValidationCoreLogs
+    Type: AWS::Serverless::Function  
 
 
 Outputs:
-  ChessfinderCoreFunctionName:
-    Value: !Ref ChessfinderCoreFunction
-    
+  ChessfinderSearchCoreFunctionName:
+    Value: !Ref ChessfinderSearchCoreFunction
+
+  ChessfinderValidationCoreFunctionName:
+    Value: !Ref ChessfinderValidationCoreFunction   

@@ -16,7 +16,7 @@ import cats.data.Validated.Invalid
 import chess.format.pgn.PgnStr
 import chessfinder.core.{ Finder, PgnReader }
 
-object Lambda extends RequestStreamHandler:
+object ValidationLambda extends RequestStreamHandler:
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
     val allBytes = input.readAllBytes()
@@ -32,22 +32,12 @@ object Lambda extends RequestStreamHandler:
     writing.get
 
   private def handleStringRequest(input: String, context: Context): String =
-    val searchCommand           = decode[SearchCommand](input).toTry.get
-    val maybeProbabilisticBoard = SearchFen.read(SearchFen(searchCommand.board))
-    val probabilisticBoard = maybeProbabilisticBoard match {
-      case Valid(board)    => board
-      case Invalid(errors) => throw new RuntimeException(errors.toNonEmptyList.toList.mkString(", "))
-    }
+    val validationCommand       = decode[ValidationCommand](input).toTry.get
+    val maybeProbabilisticBoard = SearchFen.read(SearchFen(validationCommand.board))
 
-    val machedGameIds = for
-      gameInfo <- searchCommand.games
-      gamePgn   = PgnStr(gameInfo.pgn)
-      maybeGame = PgnReader.read(gamePgn)
-      isFound   = maybeGame.map(g => Finder.find(g, probabilisticBoard)).getOrElse(false)
-      if isFound
-    yield gameInfo.resource
-
-    val examined = searchCommand.games.size
-
-    val result = SearchResult(searchCommand.requestId, examined, machedGameIds)
-    Encoder[SearchResult].apply(result).noSpaces
+    val result = ValidationResult(
+      requestId = validationCommand.requestId,
+      isValid = maybeProbabilisticBoard.isValid,
+      comment = None
+    )
+    Encoder[ValidationResult].apply(result).noSpaces

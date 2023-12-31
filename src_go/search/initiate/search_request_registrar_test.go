@@ -21,12 +21,21 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 var awsConfig = aws.Config{
 	Region:     aws.String("us-east-1"),
 	Endpoint:   aws.String("http://localhost:4566"), // this is the LocalStack endpoint for all services
 	DisableSSL: aws.Bool(true),
+}
+
+type MockedValidator struct {
+	isAlwaysValid bool
+}
+
+func (s MockedValidator) Validate(requestId string, board string, logger *zap.Logger) (isValid bool, comment *string, err error) {
+	return s.isAlwaysValid, nil, nil
 }
 
 var registrar = SearchRegistrar{
@@ -57,9 +66,8 @@ var searchesTable = searches.SearchesTable{
 
 func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_and_there_are_cached_archives(t *testing.T) {
 	var err error
-	if !testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
+
+	registrar.validator = MockedValidator{isAlwaysValid: true}
 
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
@@ -152,9 +160,7 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_user_if_there_are_no_cached_archives(t *testing.T) {
 	var err error
 
-	if !testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
+	registrar.validator = MockedValidator{isAlwaysValid: true}
 
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
@@ -198,9 +204,7 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_searchfen(t *testing.T) {
 	var err error
 
-	if !testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
+	registrar.validator = MockedValidator{isAlwaysValid: false}
 
 	username := uuid.New().String()
 
@@ -234,6 +238,8 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_sear
 
 func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_user(t *testing.T) {
 	var err error
+
+	registrar.validator = MockedValidator{isAlwaysValid: true}
 
 	username := uuid.New().String()
 

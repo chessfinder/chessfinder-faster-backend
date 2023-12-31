@@ -53,15 +53,26 @@ Resources:
       Parameters:
         TheStackName: !Ref AWS::StackName
 
+  Core:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/core.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+    DependsOn: 
+      - Roles
+      - DynamoDB
+      - SQS
+  
   Async:
     Type: AWS::Serverless::Application
     Properties:
       Location: .infrastructure/async.yaml
       Parameters:
         TheStackName: !Ref AWS::StackName
-
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-        ChessfinderCoreFunctionName: !GetAtt Core.Outputs.ChessfinderCoreFunctionName
+        ChessfinderSearchCoreFunctionName: !GetAtt Core.Outputs.ChessfinderSearchCoreFunctionName
         DownloadGamesQueueArn: !GetAtt SQS.Outputs.DownloadGamesQueueArn
         SearchBoardQueueArn: !GetAtt SQS.Outputs.SearchBoardQueueArn
         DownloadsTableName: !GetAtt DynamoDB.Outputs.DownloadsTableName
@@ -70,18 +81,6 @@ Resources:
         GamesByEndTimestampIndexName: !GetAtt DynamoDB.Outputs.GamesByEndTimestampIndexName
         SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
         ChessDotComUrl: "https://api.chess.com"
-    DependsOn: 
-      - Roles
-      - DynamoDB
-      - SQS
-
-  Core:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: .infrastructure/core.yaml
-      Parameters:
-        TheStackName: !Ref AWS::StackName
-        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
     DependsOn: 
       - Roles
       - DynamoDB
@@ -96,6 +95,7 @@ Resources:
         ChessfinderCertificateArn: !Ref ChessfinderCertificate
         ChessfinderApiDomainName: !If [IsProd, "api.chessfinder.org", "api-qa.chessfinder.org"]
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+        ChessfinderValidationCoreFunctionName: !GetAtt Core.Outputs.ChessfinderValidationCoreFunctionName
         DownloadGamesQueueUrl: !GetAtt SQS.Outputs.DownloadGamesQueueUrl
         SearchBoardQueueUrl: !GetAtt SQS.Outputs.SearchBoardQueueUrl
         DownloadsTableName: !GetAtt DynamoDB.Outputs.DownloadsTableName

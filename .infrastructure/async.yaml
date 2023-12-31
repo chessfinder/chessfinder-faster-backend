@@ -9,9 +9,9 @@ Parameters:
     Type: String
     Description: Lambda role for basic execution and permissions
 
-  ChessfinderCoreFunctionName:
+  ChessfinderSearchCoreFunctionName:
     Type: String
-    Description: Lambda function for core processing
+    Description: Lambda function for searching
   
   ChessDotComUrl:
     Type: String
@@ -103,7 +103,7 @@ Resources:
       Environment:
         Variables:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
-          CHESSFINDER_CORE_FUNCTION_NAME: !Ref ChessfinderCoreFunctionName
+          CHESSFINDER_SEARCH_CORE_FUNCTION_NAME: !Ref ChessfinderSearchCoreFunctionName
           GAMES_TABLE_NAME: !Ref GamesTableName
       Role: !Ref ChessfinderLambdaRoleArn
       LoggingConfig:

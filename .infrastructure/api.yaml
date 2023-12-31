@@ -32,6 +32,9 @@ Parameters:
   SearchesTableName:
     Type: String
 
+  ChessfinderValidationCoreFunctionName:
+    Type: String
+
   ChessDotComUrl:
     Type: String
   
@@ -202,6 +205,7 @@ Resources:
       Environment:
         Variables:
           USERS_TABLE_NAME: !Ref UsersTableName
+          CHESSFINDER_VALIDATION_CORE_FUNCTION_NAME: !Ref ChessfinderValidationCoreFunctionName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
