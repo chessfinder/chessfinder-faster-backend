@@ -26,11 +26,11 @@ type BoardFinder struct {
 	searcher          BoardSearcher
 }
 
-func (finder *BoardFinder) Find(commands events.SQSEvent) events.SQSEventResponse {
+func (finder *BoardFinder) Find(commands events.SQSEvent) (events.SQSEventResponse, error) {
 	logger := logging.MustCreateZuluTimeLogger()
 	defer logger.Sync()
 	failedEvents := queue.ProcessMultiple(commands, finder, logger)
-	return failedEvents
+	return failedEvents, nil
 }
 
 func (finder *BoardFinder) ProcessSingle(

@@ -22,11 +22,11 @@ type Notifier struct {
 	telegramHealthAlarms    []string
 }
 
-func (notifier *Notifier) Notify(commands events.SQSEvent) events.SQSEventResponse {
+func (notifier *Notifier) Notify(commands events.SQSEvent) (events.SQSEventResponse, error) {
 	logger := logging.MustCreateZuluTimeLogger()
 	defer logger.Sync()
 	failedEvents := queue.ProcessMultiple(commands, notifier, logger)
-	return failedEvents
+	return failedEvents, nil
 }
 
 func (notifier *Notifier) ProcessSingle(

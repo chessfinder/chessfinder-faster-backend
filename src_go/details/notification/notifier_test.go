@@ -68,7 +68,9 @@ func Test_when_notifier_gets_ALARM_insight_sends_it_to_the_insights_topic_as_att
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	actualCommandsProcessed, err := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	assert.NoError(t, err)
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -125,7 +127,9 @@ func Test_when_notifier_gets_OK_insight_sends_it_to_the_insights_topic_as_calmin
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	actualCommandsProcessed, err := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	assert.NoError(t, err)
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -182,7 +186,9 @@ func Test_when_notifier_gets_ALARM_health_notification_sends_it_to_the_health_to
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	actualCommandsProcessed, err := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	assert.NoError(t, err)
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -239,7 +245,8 @@ func Test_when_notifier_gets_OK_health_notification_sends_it_to_the_insights_top
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	actualCommandsProcessed, err := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	assert.NoError(t, err)
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -295,7 +302,9 @@ func Test_when_notifier_get_OK_for_unknown_notification_sends_it_to_the_general_
 			MessageId: "1",
 		}
 
-	actualCommandsProcessed := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	actualCommandsProcessed, err := notifier.Notify(events.SQSEvent{Records: []events.SQSMessage{command}})
+	assert.NoError(t, err)
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
