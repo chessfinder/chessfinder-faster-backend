@@ -20,9 +20,9 @@ func main() {
 		panic(errors.New("SEARCHES_TABLE_NAME is missing"))
 	}
 
-	chessfinderCoreFunctionName, chessfinderCoreFunctionNameExists := os.LookupEnv("CHESSFINDER_CORE_FUNCTION_NAME")
-	if !chessfinderCoreFunctionNameExists {
-		panic(errors.New("CHESSFINDER_CORE_FUNCTION_NAME is missing"))
+	chessfinderSearchCoreFunctionName, chessfinderSearchCoreFunctionNameExists := os.LookupEnv("CHESSFINDER_SEARCH_CORE_FUNCTION_NAME")
+	if !chessfinderSearchCoreFunctionNameExists {
+		panic(errors.New("CHESSFINDER_SEARCH_CORE_FUNCTION_NAME is missing"))
 	}
 
 	awsRegion, awsRegionExists := os.LookupEnv("AWS_REGION")
@@ -39,7 +39,7 @@ func main() {
 		gamesTableName:    gamesTableName,
 		awsConfig:         awsConfig,
 		searcher: DelegatedBoardSearcher{
-			FunctionName: chessfinderCoreFunctionName,
+			FunctionName: chessfinderSearchCoreFunctionName,
 			AwsConfig:    awsConfig,
 		},
 	}

@@ -31,9 +31,18 @@ func main() {
 		panic(errors.New("SEARCH_BOARD_QUEUE_URL is missing"))
 	}
 
+	chessfinderValidationCoreFunctionName, chessfinderValidationCoreFunctionNameExists := os.LookupEnv("CHESSFINDER_VALIDATION_CORE_FUNCTION_NAME")
+	if !chessfinderValidationCoreFunctionNameExists {
+		panic(errors.New("CHESSFINDER_VALIDATION_CORE_FUNCTION_NAME is missing"))
+	}
+
 	awsRegion, awsRegionExists := os.LookupEnv("AWS_REGION")
 	if !awsRegionExists {
 		panic(errors.New("AWS_REGION is missing"))
+	}
+
+	awsConfig := &aws.Config{
+		Region: &awsRegion,
 	}
 
 	registrar := SearchRegistrar{
@@ -41,8 +50,10 @@ func main() {
 		archivesTableName:   archivesTableName,
 		searchesTableName:   searchesTableName,
 		searchBoardQueueUrl: searchBoardQueueUrl,
-		awsConfig: &aws.Config{
-			Region: &awsRegion,
+		awsConfig:           awsConfig,
+		validator: DelegatedBoardValidator{
+			FunctionName: chessfinderValidationCoreFunctionName,
+			AwsConfig:    awsConfig,
 		},
 	}
 

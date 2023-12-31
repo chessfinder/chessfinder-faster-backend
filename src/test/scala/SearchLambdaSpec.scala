@@ -6,12 +6,12 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.CognitoIdentity
 import com.amazonaws.services.lambda.runtime.ClientContext
-import chessfinder.api.Lambda
+import chessfinder.api.SearchLambda
 import io.circe.parser
 
-class LambdaSpec extends FunSuite {
+class SearchLambdaSpec extends FunSuite {
 
-  test("Lambda should find all mathces from the given games") {
+  test("SearchLambda should find all mathces from the given games") {
 
     val inputStr =
       """
@@ -75,7 +75,7 @@ class LambdaSpec extends FunSuite {
 
     }
 
-    Lambda.handleRequest(input = inputStream, output = outputStream, context = context)
+    SearchLambda.handleRequest(input = inputStream, output = outputStream, context = context)
 
     val actualResposneStr  = outputStream.toString(StandardCharsets.UTF_8)
     val actualResponseJson = parser.parse(actualResposneStr).toTry.get

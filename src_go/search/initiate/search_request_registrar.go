@@ -17,8 +17,6 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/search/initiate/validation"
 )
 
 type SearchRegistrar struct {
@@ -27,6 +25,7 @@ type SearchRegistrar struct {
 	searchesTableName   string
 	searchBoardQueueUrl string
 	awsConfig           *aws.Config
+	validator           BoardValidator
 }
 
 func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGatewayV2HTTPRequest) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
@@ -63,7 +62,7 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	logger = logger.With(zap.String("board", searchRequest.Board))
 
 	logger.Info("validating board")
-	if isValid, strangeError := validation.ValidateBoard(searchRequest.Board); !isValid || strangeError != nil {
+	if isValid, _, strangeError := registrar.validator.Validate(event.RequestContext.RequestID, searchRequest.Board, logger); !isValid || strangeError != nil {
 		logger.Info("invalid board")
 		if strangeError != nil {
 			logger.Error("error while validating board", zap.Error(strangeError))
