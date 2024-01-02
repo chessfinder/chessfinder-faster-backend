@@ -51,8 +51,180 @@ var archivesTable = archives.ArchivesTable{
 	DynamodbClient: dynamodbClient,
 }
 
+func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_only_the_moves_of_the_pgn(t *testing.T) {
+	defer wiremockClient.Reset()
+	downloader.pgnFilter = TagAndCommentPgnFilter{}
+
+	startOfTest := time.Now().UTC()
+
+	var err error
+	username := uuid.New().String()
+	userId := uuid.New().String()
+	archiveId := uuid.New().String()
+	archiveResource := uuid.New().String()
+
+	archiveRecord := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		Resource:     archiveResource,
+		Year:         2022,
+		Month:        8,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	err = archivesTable.PutArchiveRecord(archiveRecord)
+	assert.NoError(t, err)
+
+	newGame1 := games.GameRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		GameId:       "https://www.chess.com/game/live/53168947271",
+		Resource:     "https://www.chess.com/game/live/53168947271",
+		Pgn:          "\n1. d4 b5 2. Nc3 Bb7 3. Nxb5 a6 4. Nc3 c6 5. e3 Qb6 6. Nf3 e6 7. Bd3 Bb4 8. Bd2 1-0",
+		EndTimestamp: 1659429921,
+	}
+
+	newGame2 := games.GameRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		GameId:       "https://www.chess.com/game/live/53168974013",
+		Resource:     "https://www.chess.com/game/live/53168974013",
+		Pgn:          "\n1. d4 d5 2. c4 e6 3. Nc3 dxc4 4. e3 Nf6 5. Bxc4 b6 6. Nf3 Be7 7. O-O O-O 8. b3 Nc6 9. Nb1 a5 10. a4 Ba6 11. Nbd2 Bxc4 12. Nxc4 Nb4 13. Ba3 Ne4 14. Nfd2 Nxd2 15. Nxd2 Qd5 16. Nf3 Rfe8 17. Ne1 Nc6 18. Nd3 Bxa3 19. Rxa3 Ne7 20. Nf4 Qd6 21. Qd3 Qxa3  0-1",
+		EndTimestamp: 1659430140,
+	}
+
+	newGame3 := games.GameRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		GameId:       "https://www.chess.com/game/live/53169013011",
+		Resource:     "https://www.chess.com/game/live/53169013011",
+		Pgn:          "\n1. d4 g6 2. Nc3 Bg7 3. Nf3 Nc6 4. e3 d6 5. Bb5 Bd7 6. O-O a6 7. Bxc6 Bxc6 8. d5 Bxc3 9. dxc6 Bxb2 10. Bxb2 Nf6 11. Bxf6 exf6 12. cxb7 Rb8 13. Rb1 O-O 14. Rb3 Qd7 15. Qd4 c5 16. Qxf6 Rxb7 17. Rxb7 Qxb7 18. Qxd6 Rb8 19. h3 c4 20. c3 Qb2 21. Qd2 Qb6 22. Qd4 Qb2 23. Qxc4 a5 24. Ne5 Qc2 25. Qxf7+ Kh8 26. Qf6+ Kg8 27. Qe6+ Kh8 28. Nf7+ Kg8 29. Nh6+ Kg7 30. Qe5+ Kxh6 31. Qxb8 Qxa2 32. Rb1 a4 33. Rb5 Qc2 34. Qf8# 1-0",
+		EndTimestamp: 1659430643,
+	}
+
+	newGame4 := games.GameRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		GameId:       "https://www.chess.com/game/live/53169604577",
+		Resource:     "https://www.chess.com/game/live/53169604577",
+		Pgn:          "\n1. e4 e5 2. f4 exf4 3. Nf3 Nf6 4. e5 Ng4 5. d4 Be7 6. Bc4 O-O 7. Bxf4 d5 8. Bd3 f6 9. O-O fxe5 10. Bxe5 Nxe5 11. Nxe5 Nd7 12. Nc3 Nxe5 13. dxe5 Bc5+ 14. Kh1 b6 15. Nxd5 Bb7 16. Nf4 Rxf4 17. Rxf4 Qg5 18. Qf1 Rf8 19. Rxf8+ Bxf8 20. Bc4+ Kh8 21. Qxf8# 1-0",
+		EndTimestamp: 1659431044,
+	}
+
+	newGame5 := games.GameRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		GameId:       "https://www.chess.com/game/live/53170160741",
+		Resource:     "https://www.chess.com/game/live/53170160741",
+		Pgn:          "\n1. e4 e5 2. Qh5 Nf6 3. Qxe5+ Qe7 4. Qxe7+ Bxe7 5. d3 O-O 6. Bg5 h6 7. Bxf6 Bxf6 8. c3 c6 9. Nf3 d5 10. e5 Re8 11. d4 Bg4 12. Be2 Bxf3 13. Bxf3 Bg5 14. Na3 f6 15. O-O fxe5 16. dxe5 Rxe5 17. Rfe1 Rxe1+ 18. Rxe1 Nd7 19. Nc2 Nb6 20. Nd4 c5 21. Ne6 Bd2 22. Re2 Re8 23. Kf1 d4 24. cxd4 cxd4 25. Nxd4 Rxe2 26. Bxe2 Nd5 27. Bc4 1-0",
+		EndTimestamp: 1659431342,
+	}
+
+	newGame6 := games.GameRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId,
+		GameId:       "https://www.chess.com/game/live/53170213967",
+		Resource:     "https://www.chess.com/game/live/53170213967",
+		Pgn:          "\n1. e4 e5 2. Bc4 Nf6 3. Nf3 h6 4. d4 exd4 5. Nxd4 Bc5 6. O-O O-O 7. e5 Bxd4 8. Qxd4 Nc6 9. Qf4 Ng4 10. Qxg4 d5 11. Bxh6 Bxg4  0-1",
+		EndTimestamp: 1659431445,
+	}
+
+	downloadId := uuid.New().String()
+	downloadRecord := downloads.DownloadRecord{
+		DownloadId: downloadId,
+		Succeed:    3,
+		Failed:     0,
+		Done:       3,
+		Pending:    2,
+		Total:      5,
+	}
+
+	err = downloadsTable.PutDownloadRecord(downloadRecord)
+	assert.NoError(t, err)
+
+	stubDownload, err := downloader.stubChessDotCom(username, "2022", "08")
+	assert.NoError(t, err)
+
+	err = wiremockClient.StubFor(stubDownload)
+	assert.NoError(t, err)
+
+	command :=
+		events.SQSMessage{
+			Body: fmt.Sprintf(
+				`
+				{
+					"username": "%s",
+					"userId": "%s",
+					"platform": "CHESS_DOT_COM",
+					"archiveId": "%s",
+					"downloadId": "%s",
+					"hehe": "💣"
+				}
+			`,
+				username,
+				userId,
+				archiveId,
+				downloadId,
+			),
+			MessageId: "1",
+		}
+
+	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
+	assert.NoError(t, err)
+
+	expectedCommandsProcessed := events.SQSEventResponse{
+		BatchItemFailures: nil,
+	}
+	assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
+
+	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive)
+
+	startOfChecking := time.Now().UTC()
+
+	assert.Equal(t, 6, actualArchive.Downloaded)
+	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Before(actualArchive.DownloadedAt.ToTime()))
+
+	var noKey map[string]*dynamodb.AttributeValue
+	actualGames, _, err := gamesTable.QueryGames(userId, noKey, 1000)
+	assert.NoError(t, err)
+
+	expectedGames := []games.GameRecord{
+		newGame1,
+		newGame2,
+		newGame3,
+		newGame4,
+		newGame5,
+		newGame6,
+	}
+
+	assert.ElementsMatch(t, expectedGames, actualGames)
+
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualDownload)
+
+	expectedDownload := downloads.DownloadRecord{
+		DownloadId: downloadId,
+		Succeed:    4,
+		Failed:     0,
+		Done:       4,
+		Pending:    1,
+		Total:      5,
+	}
+
+	assert.Equal(t, expectedDownload, *actualDownload)
+
+	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
+	assert.NoError(t, err)
+	assert.True(t, verifyDownloadedCall)
+}
 func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_remaining_games(t *testing.T) {
 	defer wiremockClient.Reset()
+	downloader.pgnFilter = IdentityPgnFilter{}
 
 	startOfTest := time.Now().UTC()
 
@@ -229,6 +401,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 
 func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should_download_all_games_even_those_that_have_been_downloaded(t *testing.T) {
 	defer wiremockClient.Reset()
+	downloader.pgnFilter = IdentityPgnFilter{}
 
 	startOfTest := time.Now().UTC()
 
@@ -430,6 +603,7 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 
 func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_games(t *testing.T) {
 	defer wiremockClient.Reset()
+	downloader.pgnFilter = IdentityPgnFilter{}
 
 	startOfTest := time.Now().UTC()
 
@@ -601,6 +775,7 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 
 func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_process(t *testing.T) {
 	defer wiremockClient.Reset()
+	downloader.pgnFilter = IdentityPgnFilter{}
 
 	var err error
 	username := uuid.New().String()
@@ -702,6 +877,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 
 func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(t *testing.T) {
 	defer wiremockClient.Reset()
+	downloader.pgnFilter = IdentityPgnFilter{}
 
 	var err error
 	username := uuid.New().String()
