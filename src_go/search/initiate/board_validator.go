@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/search/initiate/validation"
 	"go.uber.org/zap"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,13 +13,6 @@ import (
 
 type BoardValidator interface {
 	Validate(requestId string, board string, logger *zap.Logger) (bool, *string, error)
-}
-
-type DirectBoardValidator struct{}
-
-func (s DirectBoardValidator) Validate(requestId string, board string, logger *zap.Logger) (isValid bool, comment *string, err error) {
-	isValid, err = validation.ValidateBoard(board)
-	return
 }
 
 type DelegatedBoardValidator struct {
@@ -39,10 +31,10 @@ type ValidationResponse struct {
 	Comment   *string `json:"comment"`
 }
 
-func (searcher DelegatedBoardValidator) Validate(requestId string, board string, logger *zap.Logger) (isValid bool, comment *string, err error) {
-	logger = logger.With(zap.String("functionName", searcher.FunctionName))
+func (validator DelegatedBoardValidator) Validate(requestId string, board string, logger *zap.Logger) (isValid bool, comment *string, err error) {
+	logger = logger.With(zap.String("functionName", validator.FunctionName))
 
-	awsSession, err := session.NewSession(searcher.AwsConfig)
+	awsSession, err := session.NewSession(validator.AwsConfig)
 	if err != nil {
 		logger.Error("impossible to create an AWS session!")
 		return
@@ -61,7 +53,7 @@ func (searcher DelegatedBoardValidator) Validate(requestId string, board string,
 	}
 
 	invokeOutput, err := lambdaClient.Invoke(&lambda.InvokeInput{
-		FunctionName: aws.String(searcher.FunctionName),
+		FunctionName: aws.String(validator.FunctionName),
 		Payload:      payload,
 	})
 	if err != nil {

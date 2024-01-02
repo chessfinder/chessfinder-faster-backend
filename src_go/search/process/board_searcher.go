@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/chessfinder/chessfinder-faster-backend/src_go/search/process/searcher"
 	"go.uber.org/zap"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,28 +18,6 @@ type BoardSearcher interface {
 type GamePgn struct {
 	Resource string `json:"resource"`
 	Pgn      string `json:"pgn"`
-}
-
-type DirectBoardSearcher struct{}
-
-func (s DirectBoardSearcher) Match(requestId string, board string, games []GamePgn, logger *zap.Logger) (result []string, examined int, err error) {
-	examined = 0
-	for _, game := range games {
-		isFound := false
-		isFound, err = searcher.SearchBoard(board, game.Pgn)
-		if err != nil {
-			return
-		}
-		examined++
-		if isFound {
-			result = append(result, game.Resource)
-		}
-		if len(result) >= StopSearchIfFound {
-			break
-		}
-	}
-
-	return
 }
 
 type DelegatedBoardSearcher struct {
