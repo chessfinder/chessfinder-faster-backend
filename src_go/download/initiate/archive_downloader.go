@@ -74,7 +74,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 		CloudWatchClient: cloudWatchClient,
 	}
 
-	profile, err := downloader.getAndPersistUser(dynamodbClient, chessDotComClient, chessDotComMeter, logger, downloadRequest)
+	profile, err := downloader.getUser(dynamodbClient, chessDotComClient, chessDotComMeter, logger, downloadRequest)
 	if err != nil {
 		return
 	}
@@ -87,27 +87,40 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	}
 
 	logger.Info("requesting dynamodb for archives")
-	archivesFromDb, err := archives.ArchivesTable{
-		Name:           downloader.archivesTableName,
-		DynamodbClient: dynamodbClient,
-	}.GetArchiveRecords(profile.UserId)
+	var partaillyDownloadedArchives []archives.ArchiveRecord
+	var missingArchiveUrls []string
 
-	if err != nil {
-		logger.Error("impossible to get archives!", zap.Error(err))
-		return
+	if profile.DownloadFromScratch {
+		logger.Info("downloading from scratch is enabled. all archives will be downloaded. archives from database will be ignored")
+
+		missingArchiveUrls = archivesFromChessDotCom.Archives
+		partaillyDownloadedArchives = []archives.ArchiveRecord{}
+	} else {
+		var archivesFromDb []archives.ArchiveRecord
+
+		archivesFromDb, err = archives.ArchivesTable{
+			Name:           downloader.archivesTableName,
+			DynamodbClient: dynamodbClient,
+		}.GetArchiveRecords(profile.UserId)
+
+		if err != nil {
+			logger.Error("impossible to get archives!", zap.Error(err))
+			return
+		}
+
+		logger.Info("archives found from database", zap.Int("totalArchivesCount", len(archivesFromDb)))
+
+		missingArchiveUrls = resolveMissingArchives(archivesFromChessDotCom, archivesFromDb)
+		partaillyDownloadedArchives = resolvePartiallyDownloadedArchives(archivesFromDb)
 	}
 
-	logger.Info("archives found from database", zap.Int("totalArchivesCount", len(archivesFromDb)))
-
-	missingArchiveUrls := resolveMissingArchives(archivesFromChessDotCom, archivesFromDb)
 	missingArchives, err := downloader.persistMissingArchives(dynamodbClient, logger, profile, missingArchiveUrls)
 	if err != nil {
 		return
 	}
 
-	archivesToDownload := resolveArchivesToDownload(archivesFromDb)
 	downloadId := uuid.New().String()
-	downloadRecord := downloads.NewDownloadRecord(downloadId, len(missingArchives)+len(archivesToDownload))
+	downloadRecord := downloads.NewDownloadRecord(downloadId, len(missingArchives)+len(partaillyDownloadedArchives))
 
 	err = downloads.DownloadsTable{
 		Name:           downloader.downloadsTableName,
@@ -119,8 +132,18 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 		return
 	}
 
-	err = downloader.publishDownloadGameCommands(logger, svc, profile, downloadRecord, missingArchives, archivesToDownload)
+	err = downloader.publishDownloadGameCommands(logger, svc, profile, downloadRecord, missingArchives, partaillyDownloadedArchives)
 	if err != nil {
+		return
+	}
+
+	err = users.UsersTable{
+		Name:           downloader.usersTableName,
+		DynamodbClient: dynamodbClient,
+	}.DownloadInitiated(profile.Username, profile.Platform)
+
+	if err != nil {
+		logger.Error("impossible to update the user record!", zap.Error(err))
 		return
 	}
 
@@ -145,7 +168,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	return
 }
 
-func (downloader ArchiveDownloader) getAndPersistUser(
+func (downloader ArchiveDownloader) getUser(
 	dynamodbClient *dynamodb.DynamoDB,
 	chessDotComClient *http.Client,
 	chessDotComMeter metrics.ChessDotComMeter,
@@ -202,24 +225,41 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 		return
 	}
 
-	logger.Info("profile found!")
+	logger.Info("profile found in chess.com")
 
-	userRecord = users.UserRecord{
-		Username: downloadRequest.Username,
-		UserId:   profile.UserId,
-		Platform: users.ChessDotCom,
-	}
-
-	err = users.UsersTable{
+	usersTable := users.UsersTable{
 		Name:           downloader.usersTableName,
 		DynamodbClient: dynamodbClient,
-	}.PutUserRecord(userRecord)
+	}
+
+	userAlreadyInDb, err := usersTable.GetUserRecord(downloadRequest.Username, users.ChessDotCom)
 
 	if err != nil {
-		logger.Error("impossible to persist the user!", zap.Error(err))
+		logger.Error("impossible to get the user from the database", zap.Error(err))
 		return
 	}
-	logger.Info("user persisted")
+
+	if userAlreadyInDb != nil {
+		logger.Info("user found in the database")
+		userRecord = *userAlreadyInDb
+		return
+	}
+
+	logger.Info("user not found in the database")
+
+	userRecord = users.UserRecord{
+		Username:            downloadRequest.Username,
+		UserId:              profile.UserId,
+		Platform:            users.ChessDotCom,
+		DownloadFromScratch: true,
+	}
+
+	logger.Info("persisting the user record in the database")
+
+	err = usersTable.PutUserRecord(userRecord)
+	if err != nil {
+		logger.Error("impossible to persist the user record in the database", zap.Error(err))
+	}
 
 	return
 }
@@ -296,7 +336,7 @@ func resolveMissingArchives(
 	return
 }
 
-func resolveArchivesToDownload(
+func resolvePartiallyDownloadedArchives(
 	archivesFromDb []archives.ArchiveRecord,
 ) (archivesToDownload []archives.ArchiveRecord) {
 	archivesToDownload = make([]archives.ArchiveRecord, 0)

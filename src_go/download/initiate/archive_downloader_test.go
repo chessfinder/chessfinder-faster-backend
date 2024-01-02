@@ -59,7 +59,7 @@ var archivesTable = archives.ArchivesTable{
 	DynamodbClient: dynamodbClient,
 }
 
-func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_archives(t *testing.T) {
+func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_archives_for_a_new_user(t *testing.T) {
 	var err error
 	defer wiremockClient.Reset()
 
@@ -165,9 +165,10 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.NotNil(t, actualUserRecord)
 
 	expectedUserRecord := users.UserRecord{
-		UserId:   userId,
-		Platform: "CHESS_DOT_COM",
-		Username: username,
+		UserId:              userId,
+		Platform:            "CHESS_DOT_COM",
+		Username:            username,
+		DownloadFromScratch: false,
 	}
 
 	assert.Equal(t, expectedUserRecord, *actualUserRecord)
@@ -271,12 +272,497 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 }
 
-func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downloaded_archives(t *testing.T) {
+func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_archives_as_a_process_from_scratch(t *testing.T) {
 	var err error
 	defer wiremockClient.Reset()
 
 	username := uuid.New().String()
 	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
+
+	existingUserRecord := users.UserRecord{
+		UserId:              userId,
+		Platform:            "CHESS_DOT_COM",
+		Username:            username,
+		DownloadFromScratch: true,
+	}
+
+	err = usersTable.PutUserRecord(existingUserRecord)
+	assert.NoError(t, err)
+
+	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
+	existingArchive_2021_10 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_10,
+		Resource:     archiveId_2021_10,
+		Year:         2021,
+		Month:        10,
+		Downloaded:   0,
+		DownloadedAt: nil,
+	}
+
+	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
+	archive_2021_11_downloadedAt := db.Zuludatetime(time.Date(2021, 11, 1, 11, 30, 17, 123000000, time.UTC))
+	existingArchive_2021_11 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_11,
+		Resource:     archiveId_2021_11,
+		Year:         2021,
+		Month:        11,
+		Downloaded:   15,
+		DownloadedAt: &archive_2021_11_downloadedAt,
+	}
+
+	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
+	archive_2021_12_downloadedAt := db.Zuludatetime(time.Date(2022, 1, 1, 11, 30, 17, 123000000, time.UTC))
+	existingArchive_2021_12 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_12,
+		Resource:     archiveId_2021_12,
+		Year:         2021,
+		Month:        12,
+		Downloaded:   1111,
+		DownloadedAt: &archive_2021_12_downloadedAt,
+	}
+
+	allArchives := []archives.ArchiveRecord{
+		existingArchive_2021_10,
+		existingArchive_2021_11,
+		existingArchive_2021_12,
+	}
+	err = archivesTable.PutArchiveRecords(allArchives)
+	assert.NoError(t, err)
+
+	usersProfileReponseBody := fmt.Sprintf(
+		`{
+      "player_id": 191338281,
+      "@id": "%v",
+      "url": "https://www.chess.com/member/%v",
+      "username": "%v",
+      "followers": 10,
+      "country": "https://api.chess.com/pub/country/AM",
+      "last_online": 1678264516,
+      "joined": 1658920370,
+      "status": "premium",
+      "is_streamer": false,
+      "verified": false,
+      "league": "Champion"
+    }`,
+		userId,
+		username,
+		username,
+	)
+
+	getUsersProfileStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v", username))).
+		WillReturnResponse(
+			wiremock.NewResponse().
+				WithBody(usersProfileReponseBody).
+				WithHeader("Content-Type", "application/json").
+				WithStatus(http.StatusOK),
+		)
+	err = wiremockClient.StubFor(getUsersProfileStub)
+	assert.NoError(t, err)
+
+	archivesResponseBody := fmt.Sprintf(
+		`{
+			"archives": [
+				"https://api.chess.com/pub/player/%v/games/2021/10",
+				"https://api.chess.com/pub/player/%v/games/2021/11",
+				"https://api.chess.com/pub/player/%v/games/2021/12"
+			]
+		}`, username, username, username,
+	)
+
+	getArchivesStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v/games/archives", username))).
+		WillReturnResponse(
+			wiremock.NewResponse().
+				WithBody(archivesResponseBody).
+				WithHeader("Content-Type", "application/json").
+				WithStatus(http.StatusOK),
+		)
+	err = wiremockClient.StubFor(getArchivesStub)
+	assert.NoError(t, err)
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/game",
+			},
+		},
+	}
+
+	actualResponse, err := downloader.DownloadArchiveAndDistributeDonwloadGameCommands(&event)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
+
+	actualDownloadResponse := DownloadResponse{}
+	err = json.Unmarshal([]byte(actualResponse.Body), &actualDownloadResponse)
+	assert.NoError(t, err)
+
+	downloadId := actualDownloadResponse.DownloadId
+
+	actualDownloadRecord, err := downloadsTable.GetDownloadRecord(downloadId)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualDownloadRecord)
+
+	expectedDownloadRecord := downloads.DownloadRecord{
+		DownloadId: downloadId,
+		Failed:     0,
+		Succeed:    0,
+		Done:       0,
+		Pending:    3,
+		Total:      3,
+	}
+
+	assert.Equal(t, expectedDownloadRecord, *actualDownloadRecord, "Download request status is not equal!")
+
+	verifyGetUsersProfileStub, err := wiremockClient.Verify(getUsersProfileStub.Request(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verifyGetUsersProfileStub, fmt.Sprintf("Stub of getting user profile %v was not called!", username))
+
+	verifyGetArchivesStub, err := wiremockClient.Verify(getArchivesStub.Request(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
+
+	actualUserRecord, err := usersTable.GetUserRecord(username, users.ChessDotCom)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualUserRecord)
+
+	expectedUserRecord := existingUserRecord
+	expectedUserRecord.DownloadFromScratch = false
+
+	assert.Equal(t, expectedUserRecord, *actualUserRecord)
+
+	actualArchive_2021_10, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_10)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive_2021_10)
+
+	expectedArchive_2021_10 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_10,
+		Resource:     archiveId_2021_10,
+		Year:         2021,
+		Month:        10,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	assert.Equal(t, expectedArchive_2021_10, *actualArchive_2021_10)
+
+	actualArchive_2021_11, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_11)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive_2021_11)
+
+	expectedArchive_2021_11 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_11,
+		Resource:     archiveId_2021_11,
+		Year:         2021,
+		Month:        11,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	assert.Equal(t, expectedArchive_2021_11, *actualArchive_2021_11)
+
+	actualArchive_2021_12, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_12)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualArchive_2021_12)
+
+	expectedArchive_2021_12 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_12,
+		Resource:     archiveId_2021_12,
+		Year:         2021,
+		Month:        12,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	assert.Equal(t, expectedArchive_2021_12, *actualArchive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
+
+	lastThreeCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 3)
+	assert.NoError(t, err)
+
+	actualCommands := make([]queue.DownloadGamesCommand, len(lastThreeCommands))
+	for i, message := range lastThreeCommands {
+		var command queue.DownloadGamesCommand
+		err = json.Unmarshal([]byte(*message.Body), &command)
+		if err != nil {
+			return
+		}
+		actualCommands[i] = command
+	}
+	assert.NoError(t, err)
+
+	command_2021_10 := queue.DownloadGamesCommand{
+		Username:   username,
+		Platform:   queue.Platform("CHESS_DOT_COM"),
+		UserId:     userId,
+		ArchiveId:  archiveId_2021_10,
+		DownloadId: downloadId,
+	}
+
+	command_2021_11 := queue.DownloadGamesCommand{
+		Username:   username,
+		Platform:   queue.Platform("CHESS_DOT_COM"),
+		UserId:     userId,
+		ArchiveId:  archiveId_2021_11,
+		DownloadId: downloadId,
+	}
+
+	command_2021_12 := queue.DownloadGamesCommand{
+		Username:   username,
+		Platform:   queue.Platform("CHESS_DOT_COM"),
+		UserId:     userId,
+		ArchiveId:  archiveId_2021_12,
+		DownloadId: downloadId,
+	}
+
+	expectedCommands := []queue.DownloadGamesCommand{
+		command_2021_10,
+		command_2021_11,
+		command_2021_12,
+	}
+
+	assert.Equal(t, expectedCommands, actualCommands, "Commands are not equal!")
+}
+
+func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_archives_as_continuation_for_the_previous_downloading_process(t *testing.T) {
+	var err error
+	defer wiremockClient.Reset()
+
+	username := uuid.New().String()
+	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
+
+	existingUserRecord := users.UserRecord{
+		UserId:              userId,
+		Platform:            "CHESS_DOT_COM",
+		Username:            username,
+		DownloadFromScratch: false,
+	}
+
+	err = usersTable.PutUserRecord(existingUserRecord)
+	assert.NoError(t, err)
+
+	usersProfileReponseBody := fmt.Sprintf(
+		`{
+      "player_id": 191338281,
+      "@id": "%v",
+      "url": "https://www.chess.com/member/%v",
+      "username": "%v",
+      "followers": 10,
+      "country": "https://api.chess.com/pub/country/AM",
+      "last_online": 1678264516,
+      "joined": 1658920370,
+      "status": "premium",
+      "is_streamer": false,
+      "verified": false,
+      "league": "Champion"
+    }`,
+		userId,
+		username,
+		username,
+	)
+
+	getUsersProfileStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v", username))).
+		WillReturnResponse(
+			wiremock.NewResponse().
+				WithBody(usersProfileReponseBody).
+				WithHeader("Content-Type", "application/json").
+				WithStatus(http.StatusOK),
+		)
+	err = wiremockClient.StubFor(getUsersProfileStub)
+	assert.NoError(t, err)
+
+	archivesResponseBody := fmt.Sprintf(
+		`{
+			"archives": [
+				"https://api.chess.com/pub/player/%v/games/2021/10",
+				"https://api.chess.com/pub/player/%v/games/2021/11",
+				"https://api.chess.com/pub/player/%v/games/2021/12"
+			]
+		}`, username, username, username,
+	)
+
+	getArchivesStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v/games/archives", username))).
+		WillReturnResponse(
+			wiremock.NewResponse().
+				WithBody(archivesResponseBody).
+				WithHeader("Content-Type", "application/json").
+				WithStatus(http.StatusOK),
+		)
+	err = wiremockClient.StubFor(getArchivesStub)
+	assert.NoError(t, err)
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/game",
+			},
+		},
+	}
+
+	actualResponse, err := downloader.DownloadArchiveAndDistributeDonwloadGameCommands(&event)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
+
+	actualDownloadResponse := DownloadResponse{}
+	err = json.Unmarshal([]byte(actualResponse.Body), &actualDownloadResponse)
+	assert.NoError(t, err)
+
+	downloadId := actualDownloadResponse.DownloadId
+
+	actualDownloadRecord, err := downloadsTable.GetDownloadRecord(downloadId)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualDownloadRecord)
+
+	expectedDownloadRecord := downloads.DownloadRecord{
+		DownloadId: downloadId,
+		Failed:     0,
+		Succeed:    0,
+		Done:       0,
+		Pending:    3,
+		Total:      3,
+	}
+
+	assert.Equal(t, expectedDownloadRecord, *actualDownloadRecord, "Download request status is not equal!")
+
+	verifyGetUsersProfileStub, err := wiremockClient.Verify(getUsersProfileStub.Request(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verifyGetUsersProfileStub, fmt.Sprintf("Stub of getting user profile %v was not called!", username))
+
+	verifyGetArchivesStub, err := wiremockClient.Verify(getArchivesStub.Request(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
+
+	actualUserRecord, err := usersTable.GetUserRecord(username, users.ChessDotCom)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualUserRecord)
+
+	expectedUserRecord := existingUserRecord
+
+	assert.Equal(t, expectedUserRecord, *actualUserRecord)
+
+	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
+	archive_2021_10, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_10)
+	assert.NoError(t, err)
+	assert.NotNil(t, archive_2021_10)
+
+	expectedArchive_2021_10 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_10,
+		Resource:     archiveId_2021_10,
+		Year:         2021,
+		Month:        10,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	assert.Equal(t, expectedArchive_2021_10, *archive_2021_10)
+
+	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
+	archive_2021_11, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_11)
+	assert.NoError(t, err)
+	assert.NotNil(t, archive_2021_11)
+
+	expectedArchive_2021_11 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_11,
+		Resource:     archiveId_2021_11,
+		Year:         2021,
+		Month:        11,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	assert.Equal(t, expectedArchive_2021_11, *archive_2021_11)
+
+	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
+	archive_2021_12, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_12)
+	assert.NoError(t, err)
+	assert.NotNil(t, archive_2021_12)
+
+	expectedArchive_2021_12 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archiveId_2021_12,
+		Resource:     archiveId_2021_12,
+		Year:         2021,
+		Month:        12,
+		DownloadedAt: nil,
+		Downloaded:   0,
+	}
+
+	assert.Equal(t, expectedArchive_2021_12, *archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
+
+	lastThreeCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 3)
+	assert.NoError(t, err)
+
+	actualCommands := make([]queue.DownloadGamesCommand, len(lastThreeCommands))
+	for i, message := range lastThreeCommands {
+		var command queue.DownloadGamesCommand
+		err = json.Unmarshal([]byte(*message.Body), &command)
+		if err != nil {
+			return
+		}
+		actualCommands[i] = command
+	}
+	assert.NoError(t, err)
+
+	command_2021_10 := queue.DownloadGamesCommand{
+		Username:   username,
+		Platform:   queue.Platform("CHESS_DOT_COM"),
+		UserId:     userId,
+		ArchiveId:  archiveId_2021_10,
+		DownloadId: downloadId,
+	}
+
+	command_2021_11 := queue.DownloadGamesCommand{
+		Username:   username,
+		Platform:   queue.Platform("CHESS_DOT_COM"),
+		UserId:     userId,
+		ArchiveId:  archiveId_2021_11,
+		DownloadId: downloadId,
+	}
+
+	command_2021_12 := queue.DownloadGamesCommand{
+		Username:   username,
+		Platform:   queue.Platform("CHESS_DOT_COM"),
+		UserId:     userId,
+		ArchiveId:  archiveId_2021_12,
+		DownloadId: downloadId,
+	}
+
+	expectedCommands := []queue.DownloadGamesCommand{
+		command_2021_10,
+		command_2021_11,
+		command_2021_12,
+	}
+
+	assert.Equal(t, expectedCommands, actualCommands, "Commands are not equal!")
+
+}
+
+func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downloaded_archives_as_continuation_for_the_previous_downloading_process(t *testing.T) {
+	var err error
+	defer wiremockClient.Reset()
+
+	username := uuid.New().String()
+	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
+
+	existingUserRecord := users.UserRecord{
+		UserId:              userId,
+		Platform:            "CHESS_DOT_COM",
+		Username:            username,
+		DownloadFromScratch: false,
+	}
+
+	err = usersTable.PutUserRecord(existingUserRecord)
+	assert.NoError(t, err)
 
 	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
 	existingArchive_2021_10 := archives.ArchiveRecord{
@@ -419,11 +905,7 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 	assert.NoError(t, err)
 	assert.NotNil(t, actualUserRecord)
 
-	expectedUser := users.UserRecord{
-		UserId:   userId,
-		Platform: "CHESS_DOT_COM",
-		Username: username,
-	}
+	expectedUser := existingUserRecord
 
 	assert.Equal(t, expectedUser, *actualUserRecord)
 

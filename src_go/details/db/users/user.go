@@ -1,9 +1,10 @@
 package users
 
 type UserRecord struct {
-	Username string   `dynamodbav:"username"`
-	Platform Platform `dynamodbav:"platform"`
-	UserId   string   `dynamodbav:"user_id"`
+	Username            string   `dynamodbav:"username"`
+	Platform            Platform `dynamodbav:"platform"`
+	UserId              string   `dynamodbav:"user_id"`
+	DownloadFromScratch bool     `dynamodbav:"download_from_scratch"`
 }
 
 type Platform string
