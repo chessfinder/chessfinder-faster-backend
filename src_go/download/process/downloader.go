@@ -31,6 +31,7 @@ type GameDownloader struct {
 	gamesTableName               string
 	gamesByEndTimestampIndexName string
 	metricsNamespace             string
+	pgnFilter                    PgnFilter
 	awsConfig                    *aws.Config
 }
 
@@ -234,7 +235,11 @@ func (downloader *GameDownloader) ProcessSingle(
 		for _, chessDotComGame := range chessDotComGames.Games {
 			isGameMissing := latestDownloadedGameRecord == nil || (latestDownloadedGameRecord != nil && chessDotComGame.EndTime > latestDownloadedGameRecord.EndTimestamp)
 			if isGameMissing {
-				pgnString := string(chessDotComGame.Pgn)
+				pgnString, errFromFiltering := downloader.pgnFilter.Filter(chessDotComGame.Pgn)
+				if errFromFiltering != nil {
+					logger.Warn("impossible to filter the pgn", zap.Error(errFromFiltering))
+					pgnString = chessDotComGame.Pgn
+				}
 				gameRecord := games.GameRecord{
 					UserId:       command.UserId,
 					ArchiveId:    command.ArchiveId,
