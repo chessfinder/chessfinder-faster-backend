@@ -215,16 +215,19 @@ func (downloader *GameDownloader) ProcessSingle(
 			return
 		}
 
-		latestDownloadedGameRecord, err :=
-			games.LatestGameIndex{
-				Name:           downloader.gamesByEndTimestampIndexName,
-				TableName:      downloader.gamesTableName,
-				DynamodbClient: dynamodbClient,
-			}.QueryByEndTimestamp(command.ArchiveId)
+		var latestDownloadedGameRecord *games.GameRecord
+		if archiveRecord.Downloaded > 0 {
+			latestDownloadedGameRecord, err =
+				games.LatestGameIndex{
+					Name:           downloader.gamesByEndTimestampIndexName,
+					TableName:      downloader.gamesTableName,
+					DynamodbClient: dynamodbClient,
+				}.QueryByEndTimestamp(command.ArchiveId)
 
-		if err != nil {
-			logger.Error("impossible to get the latest downloaded game", zap.Error(err))
-			return
+			if err != nil {
+				logger.Error("impossible to get the latest downloaded game", zap.Error(err))
+				return
+			}
 		}
 
 		missingGameRecords := []games.GameRecord{}

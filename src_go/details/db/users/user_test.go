@@ -17,9 +17,10 @@ func Test_UserRecord_should_be_stored_in_correct_form(t *testing.T) {
 	userId := "userId"
 
 	user := UserRecord{
-		Username: username,
-		Platform: platform,
-		UserId:   userId,
+		Username:            username,
+		Platform:            platform,
+		UserId:              userId,
+		DownloadFromScratch: true,
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(user)
@@ -34,6 +35,9 @@ func Test_UserRecord_should_be_stored_in_correct_form(t *testing.T) {
 		},
 		"user_id": {
 			S: aws.String(userId),
+		},
+		"download_from_scratch": {
+			BOOL: aws.Bool(true),
 		},
 	}
 
