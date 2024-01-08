@@ -2,6 +2,7 @@ package searches
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -55,7 +56,7 @@ func (table SearchesTable) GetSearchRecord(searchId string) (searchRecord *Searc
 	return
 }
 
-func (table SearchesTable) UpdateMatchings(searchId string, examined int, matched []string, now db.ZuluDateTime) (err error) {
+func (table SearchesTable) UpdateMatchings(searchId string, examined int, matched []string, now db.ZuluDateTime, expiresIn time.Duration) (err error) {
 	var matchedAttributes *dynamodb.AttributeValue
 	if len(matched) > 0 {
 		matchedAttributes = &dynamodb.AttributeValue{
@@ -80,9 +81,12 @@ func (table SearchesTable) UpdateMatchings(searchId string, examined int, matche
 			":lastExaminedAt": {
 				S: aws.String(now.String()),
 			},
+			":expiresAt": {
+				N: aws.String(strconv.FormatInt(now.ToTime().Add(expiresIn).Unix(), 10)),
+			},
 			":matched": matchedAttributes,
 		},
-		UpdateExpression: aws.String("SET examined = :examined, last_examined_at = :lastExaminedAt, matched = :matched"),
+		UpdateExpression: aws.String("SET examined = :examined, last_examined_at = :lastExaminedAt, matched = :matched, expires_at = :expiresAt"),
 	})
 
 	return

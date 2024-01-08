@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
@@ -33,6 +34,7 @@ var downloader = GameDownloader{
 	archivesTableName:            "chessfinder_dynamodb-archives",
 	gamesTableName:               "chessfinder_dynamodb-games",
 	gamesByEndTimestampIndexName: "chessfinder_dynamodb-gamesByEndTimestamp",
+	downloadInfoExpiresIn:        24 * time.Hour,
 	awsConfig:                    &awsConfig,
 }
 var awsSession = session.Must(session.NewSession(&awsConfig))
@@ -131,13 +133,21 @@ func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_
 	}
 
 	downloadId := uuid.New().String()
+	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
+	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
+	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    3,
-		Failed:     0,
-		Done:       3,
-		Pending:    2,
-		Total:      5,
+		DownloadId:           downloadId,
+		ConsistentDownloadId: consistentDownloadId,
+		StartAt:              startedAt,
+		LastDownloadedAt:     lastArchiveDownloadedAt,
+		Succeed:              3,
+		Failed:               0,
+		Done:                 3,
+		Pending:              2,
+		Total:                5,
+		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -173,6 +183,8 @@ func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_
 	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	assert.NoError(t, err)
 
+	startOfChecking := time.Now().UTC()
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -181,8 +193,6 @@ func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_
 	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
 	assert.NotNil(t, actualArchive)
-
-	startOfChecking := time.Now().UTC()
 
 	assert.Equal(t, 6, actualArchive.Downloaded)
 	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
@@ -207,16 +217,15 @@ func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
-	expectedDownload := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    4,
-		Failed:     0,
-		Done:       4,
-		Pending:    1,
-		Total:      5,
-	}
-
-	assert.Equal(t, expectedDownload, *actualDownload)
+	assert.Equal(t, 0, actualDownload.Failed)
+	assert.Equal(t, 4, actualDownload.Succeed)
+	assert.Equal(t, 4, actualDownload.Done)
+	assert.Equal(t, 1, actualDownload.Pending)
+	assert.Equal(t, 5, actualDownload.Total)
+	assert.True(t, startOfTest.Before(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfChecking.After(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownload.ExpiresAt)))
+	assert.True(t, startOfChecking.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownload.ExpiresAt)))
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
 	assert.NoError(t, err)
@@ -306,13 +315,21 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	assert.NoError(t, err)
 
 	downloadId := uuid.New().String()
+	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
+	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
+	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    3,
-		Failed:     0,
-		Done:       3,
-		Pending:    2,
-		Total:      5,
+		DownloadId:           downloadId,
+		ConsistentDownloadId: consistentDownloadId,
+		StartAt:              startedAt,
+		LastDownloadedAt:     lastArchiveDownloadedAt,
+		Succeed:              3,
+		Failed:               0,
+		Done:                 3,
+		Pending:              2,
+		Total:                5,
+		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -347,6 +364,9 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 
 	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	assert.NoError(t, err)
+
+	startOfChecking := time.Now().UTC()
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -355,11 +375,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
 	assert.NotNil(t, actualArchive)
-
 	assert.Equal(t, 6, actualArchive.Downloaded)
-
-	startOfChecking := time.Now().UTC()
-
 	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
 	assert.True(t, startOfTest.Before(actualArchive.DownloadedAt.ToTime()))
 
@@ -383,16 +399,15 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
-	expectedDownload := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    4,
-		Failed:     0,
-		Done:       4,
-		Pending:    1,
-		Total:      5,
-	}
-
-	assert.Equal(t, expectedDownload, *actualDownload)
+	assert.Equal(t, 0, actualDownload.Failed)
+	assert.Equal(t, 4, actualDownload.Succeed)
+	assert.Equal(t, 4, actualDownload.Done)
+	assert.Equal(t, 1, actualDownload.Pending)
+	assert.Equal(t, 5, actualDownload.Total)
+	assert.True(t, startOfTest.Before(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfChecking.After(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownload.ExpiresAt)))
+	assert.True(t, startOfChecking.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownload.ExpiresAt)))
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
 	assert.NoError(t, err)
@@ -508,13 +523,21 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 	assert.NoError(t, err)
 
 	downloadId := uuid.New().String()
+	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
+	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
+	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    3,
-		Failed:     0,
-		Done:       3,
-		Pending:    2,
-		Total:      5,
+		DownloadId:           downloadId,
+		ConsistentDownloadId: consistentDownloadId,
+		StartAt:              startedAt,
+		LastDownloadedAt:     lastArchiveDownloadedAt,
+		Succeed:              3,
+		Failed:               0,
+		Done:                 3,
+		Pending:              2,
+		Total:                5,
+		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -549,6 +572,8 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 
 	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	assert.NoError(t, err)
+	startOfChecking := time.Now().UTC()
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -557,11 +582,7 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
 	assert.NotNil(t, actualArchive)
-
 	assert.Equal(t, 6, actualArchive.Downloaded)
-
-	startOfChecking := time.Now().UTC()
-
 	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
 	assert.True(t, startOfTest.Before(actualArchive.DownloadedAt.ToTime()))
 
@@ -585,16 +606,15 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
-	expectedDownload := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    4,
-		Failed:     0,
-		Done:       4,
-		Pending:    1,
-		Total:      5,
-	}
-
-	assert.Equal(t, expectedDownload, *actualDownload)
+	assert.Equal(t, 0, actualDownload.Failed)
+	assert.Equal(t, 4, actualDownload.Succeed)
+	assert.Equal(t, 4, actualDownload.Done)
+	assert.Equal(t, 1, actualDownload.Pending)
+	assert.Equal(t, 5, actualDownload.Total)
+	assert.True(t, startOfTest.Before(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfChecking.After(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownload.ExpiresAt)))
+	assert.True(t, startOfChecking.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownload.ExpiresAt)))
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
 	assert.NoError(t, err)
@@ -681,13 +701,21 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	}
 
 	downloadId := uuid.New().String()
+	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
+	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
+	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    3,
-		Failed:     0,
-		Done:       3,
-		Pending:    2,
-		Total:      5,
+		DownloadId:           downloadId,
+		ConsistentDownloadId: consistentDownloadId,
+		StartAt:              startedAt,
+		LastDownloadedAt:     lastArchiveDownloadedAt,
+		Succeed:              3,
+		Failed:               0,
+		Done:                 3,
+		Pending:              2,
+		Total:                5,
+		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -723,6 +751,8 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	assert.NoError(t, err)
 
+	startOfChecking := time.Now().UTC()
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -731,9 +761,6 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	actualArchive, err := archivesTable.GetArchiveRecord(userId, archiveId)
 	assert.NoError(t, err)
 	assert.NotNil(t, actualArchive)
-
-	startOfChecking := time.Now().UTC()
-
 	assert.Equal(t, 6, actualArchive.Downloaded)
 	assert.True(t, startOfChecking.After(actualArchive.DownloadedAt.ToTime()))
 	assert.True(t, startOfTest.Before(actualArchive.DownloadedAt.ToTime()))
@@ -757,16 +784,15 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
-	expectedDownload := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    4,
-		Failed:     0,
-		Done:       4,
-		Pending:    1,
-		Total:      5,
-	}
-
-	assert.Equal(t, expectedDownload, *actualDownload)
+	assert.Equal(t, 0, actualDownload.Failed)
+	assert.Equal(t, 4, actualDownload.Succeed)
+	assert.Equal(t, 4, actualDownload.Done)
+	assert.Equal(t, 1, actualDownload.Pending)
+	assert.Equal(t, 5, actualDownload.Total)
+	assert.True(t, startOfTest.Before(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfChecking.After(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownload.ExpiresAt)))
+	assert.True(t, startOfChecking.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownload.ExpiresAt)))
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 1)
 	assert.NoError(t, err)
@@ -775,6 +801,9 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 
 func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_process(t *testing.T) {
 	defer wiremockClient.Reset()
+
+	startOfTest := time.Now().UTC()
+
 	downloader.pgnFilter = IdentityPgnFilter{}
 
 	var err error
@@ -801,13 +830,21 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 	assert.NoError(t, err)
 
 	downloadId := uuid.New().String()
+	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
+	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
+	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    3,
-		Failed:     0,
-		Done:       3,
-		Pending:    2,
-		Total:      5,
+		DownloadId:           downloadId,
+		ConsistentDownloadId: consistentDownloadId,
+		StartAt:              startedAt,
+		LastDownloadedAt:     lastArchiveDownloadedAt,
+		Succeed:              3,
+		Failed:               0,
+		Done:                 3,
+		Pending:              2,
+		Total:                5,
+		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -842,6 +879,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 
 	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	assert.NoError(t, err)
+	startOfChecking := time.Now().UTC()
 
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
@@ -859,16 +897,15 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
-	expectedDownload := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    4,
-		Failed:     0,
-		Done:       4,
-		Pending:    1,
-		Total:      5,
-	}
-
-	assert.Equal(t, expectedDownload, *actualDownload)
+	assert.Equal(t, 0, actualDownload.Failed)
+	assert.Equal(t, 4, actualDownload.Succeed)
+	assert.Equal(t, 4, actualDownload.Done)
+	assert.Equal(t, 1, actualDownload.Pending)
+	assert.Equal(t, 5, actualDownload.Total)
+	assert.True(t, startOfTest.Before(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfChecking.After(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownload.ExpiresAt)))
+	assert.True(t, startOfChecking.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownload.ExpiresAt)))
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 0)
 	assert.NoError(t, err)
@@ -877,6 +914,9 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 
 func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(t *testing.T) {
 	defer wiremockClient.Reset()
+
+	startOfTest := time.Now().UTC()
+
 	downloader.pgnFilter = IdentityPgnFilter{}
 
 	var err error
@@ -885,13 +925,21 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 	archiveId := uuid.New().String()
 
 	downloadId := uuid.New().String()
+	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
+	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
+	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    3,
-		Failed:     0,
-		Done:       3,
-		Pending:    2,
-		Total:      5,
+		DownloadId:           downloadId,
+		ConsistentDownloadId: consistentDownloadId,
+		StartAt:              startedAt,
+		LastDownloadedAt:     lastArchiveDownloadedAt,
+		Succeed:              3,
+		Failed:               0,
+		Done:                 3,
+		Pending:              2,
+		Total:                5,
+		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -927,6 +975,8 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 	actualCommandsProcessed, err := downloader.Download(events.SQSEvent{Records: []events.SQSMessage{command}})
 	assert.NoError(t, err)
 
+	startOfChecking := time.Now().UTC()
+
 	expectedCommandsProcessed := events.SQSEventResponse{
 		BatchItemFailures: nil,
 	}
@@ -936,16 +986,15 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
-	expectedDownload := downloads.DownloadRecord{
-		DownloadId: downloadId,
-		Succeed:    4,
-		Failed:     0,
-		Done:       4,
-		Pending:    1,
-		Total:      5,
-	}
-
-	assert.Equal(t, expectedDownload, *actualDownload)
+	assert.Equal(t, 0, actualDownload.Failed)
+	assert.Equal(t, 4, actualDownload.Succeed)
+	assert.Equal(t, 4, actualDownload.Done)
+	assert.Equal(t, 1, actualDownload.Pending)
+	assert.Equal(t, 5, actualDownload.Total)
+	assert.True(t, startOfTest.Before(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfChecking.After(actualDownload.LastDownloadedAt.ToTime()))
+	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownload.ExpiresAt)))
+	assert.True(t, startOfChecking.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownload.ExpiresAt)))
 
 	verifyDownloadedCall, err := wiremockClient.Verify(stubDownload.Request(), 0)
 	assert.NoError(t, err)

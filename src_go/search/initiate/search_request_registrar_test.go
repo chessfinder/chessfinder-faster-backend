@@ -43,6 +43,7 @@ var registrar = SearchRegistrar{
 	archivesTableName:   "chessfinder_dynamodb-archives",
 	searchesTableName:   "chessfinder_dynamodb-searches",
 	searchBoardQueueUrl: "http://localhost:4566/000000000000/chessfinder_sqs-SearchBoard.fifo",
+	searchInfoExpiresIn: 24 * time.Hour,
 	awsConfig:           &awsConfig,
 }
 var awsSession = session.Must(session.NewSession(&awsConfig))
@@ -66,6 +67,7 @@ var searchesTable = searches.SearchesTable{
 
 func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_and_there_are_cached_archives(t *testing.T) {
 	var err error
+	startOfTest := time.Now()
 
 	registrar.validator = MockedValidator{isAlwaysValid: true}
 
@@ -123,6 +125,8 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	actualResponse, err := registrar.RegisterSearchRequest(&event)
 	assert.NoError(t, err)
 
+	startOfCheck := time.Now()
+
 	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
 
 	actualSearchResultResponse := SearchResponse{}
@@ -131,12 +135,19 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 
 	actualSearchRecord, err := searchesTable.GetSearchRecord(actualSearchResultResponse.SearchId)
 	assert.NoError(t, err)
-	assert.NotNil(t, actualSearchRecord, "Search record is nil!")
+	assert.NotNil(t, actualSearchRecord)
 
-	assert.Equal(t, searches.InProgress, actualSearchRecord.Status, "Search status is not equal!")
-	assert.Equal(t, int(0), actualSearchRecord.Examined, "Examined is not equal!")
-	assert.Equal(t, int(40), actualSearchRecord.Total, "Total is not equal!")
-	assert.Nil(t, actualSearchRecord.Matched, "Matched is not equal!")
+	assert.Equal(t, searches.InProgress, actualSearchRecord.Status)
+	assert.Equal(t, 0, actualSearchRecord.Examined)
+	assert.Equal(t, 40, actualSearchRecord.Total)
+	assert.Nil(t, actualSearchRecord.Matched)
+	assert.True(t, startOfTest.Before(actualSearchRecord.StartAt.ToTime()))
+	assert.True(t, startOfCheck.After(actualSearchRecord.StartAt.ToTime()))
+	assert.True(t, startOfTest.Before(actualSearchRecord.LastExaminedAt.ToTime()))
+	assert.True(t, startOfCheck.After(actualSearchRecord.LastExaminedAt.ToTime()))
+
+	assert.True(t, startOfTest.Add(registrar.searchInfoExpiresIn-time.Second).Before(time.Time(actualSearchRecord.ExpiresAt)))
+	assert.True(t, startOfCheck.Add(registrar.searchInfoExpiresIn+time.Second).After(time.Time(actualSearchRecord.ExpiresAt)))
 
 	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
 	assert.NoError(t, err)

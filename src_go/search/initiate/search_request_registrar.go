@@ -24,6 +24,7 @@ type SearchRegistrar struct {
 	archivesTableName   string
 	searchesTableName   string
 	searchBoardQueueUrl string
+	searchInfoExpiresIn time.Duration
 	awsConfig           *aws.Config
 	validator           BoardValidator
 }
@@ -117,7 +118,8 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	logger = logger.With(zap.String("searchResultId", searchId))
 	now := time.Now()
 
-	searchResult := searches.NewSearchRecord(searchId, now, downloadedGames)
+	consistentSearchId := searches.NewConsistentSearchId(user.UserId, searchId, searchRequest.Board)
+	searchResult := searches.NewSearchRecord(searchId, consistentSearchId, now, downloadedGames, registrar.searchInfoExpiresIn)
 
 	logger.Info("putting search result")
 	err = searches.SearchesTable{

@@ -32,6 +32,7 @@ type GameDownloader struct {
 	gamesByEndTimestampIndexName string
 	metricsNamespace             string
 	pgnFilter                    PgnFilter
+	downloadInfoExpiresIn        time.Duration
 	awsConfig                    *aws.Config
 }
 
@@ -76,6 +77,9 @@ func (downloader *GameDownloader) ProcessSingle(
 		DynamodbClient: dynamodbClient,
 	}
 
+	now := time.Now()
+	nowInZulu := db.Zuludatetime(now)
+
 	incrementDownloadStatus := func(incrementSuccess bool) (err error) {
 
 		logger.Info("incrementing the download status")
@@ -96,18 +100,14 @@ func (downloader *GameDownloader) ProcessSingle(
 			return
 		}
 
-		downloadRecord.Pending--
 		if incrementSuccess {
-			downloadRecord.Succeed++
+			err = downloadsTable.IncrementSuccess(*downloadRecord, nowInZulu, downloader.downloadInfoExpiresIn)
 		} else {
-			downloadRecord.Failed++
+			err = downloadsTable.IncrementFailure(*downloadRecord, nowInZulu, downloader.downloadInfoExpiresIn)
 		}
-		downloadRecord.Done++
-
-		err = downloadsTable.PutDownloadRecord(*downloadRecord)
 
 		if err != nil {
-			logger.Error("impossible to marshal the download record", zap.Error(err))
+			logger.Error("impossible to update download record", zap.Error(err))
 			return
 		}
 
@@ -146,7 +146,6 @@ func (downloader *GameDownloader) ProcessSingle(
 			return
 		}
 
-		now := time.Now()
 		chessDotComGames := ChessDotComGames{}
 		// make this validation while reading envarionment variables
 		requestUrl, err := url.ParseRequestURI(downloader.chessDotComUrl)
@@ -265,7 +264,6 @@ func (downloader *GameDownloader) ProcessSingle(
 			return
 		}
 
-		nowInZulu := db.Zuludatetime(now)
 		archiveRecord.DownloadedAt = &nowInZulu
 		archiveRecord.Downloaded += int(len(missingGameRecords))
 

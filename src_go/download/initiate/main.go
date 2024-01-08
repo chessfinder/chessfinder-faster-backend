@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -36,6 +37,16 @@ func main() {
 		panic(errors.New("DOWNLOAD_GAMES_QUEUE_URL is missing"))
 	}
 
+	downloadInfoExpiresInCadidate, downloadInfoExpiresInExists := os.LookupEnv("DOWNLOAD_INFO_EXPIRES_IN_SECONDS")
+	if !downloadInfoExpiresInExists {
+		panic(errors.New("DOWNLOAD_INFO_EXPIRES_IN_SECONDS is missing"))
+	}
+
+	downloadInfoExpiresIn, err := time.ParseDuration(downloadInfoExpiresInCadidate + "s")
+	if err != nil {
+		panic(err)
+	}
+
 	theStackName, theStackNameExists := os.LookupEnv("THE_STACK_NAME")
 	if !theStackNameExists {
 		panic(errors.New("THE_STACK_NAME is missing"))
@@ -53,10 +64,11 @@ func main() {
 		downloadGamesQueueUrl: downloadGamesQueueUrl,
 		chessDotComUrl:        chessDotComUrl,
 		metricsNamespace:      theStackName,
+		downloadInfoExpiresIn: downloadInfoExpiresIn,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
 	}
 
-	lambda.Start(api.WithRecover(checker.DownloadArchiveAndDistributeDonwloadGameCommands))
+	lambda.Start(api.WithRecover(checker.DownloadArchiveAndDistributeDownloadGameCommands))
 }
