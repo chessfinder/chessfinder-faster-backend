@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const MaxGamesPerRequest = 100
+const MaxGamesPerRequest = 500
 const StopSearchIfFound = 10
 
 type BoardFinder struct {

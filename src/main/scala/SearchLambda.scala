@@ -15,8 +15,11 @@ import cats.data.Validated.Valid
 import cats.data.Validated.Invalid
 import chess.format.pgn.PgnStr
 import chessfinder.core.{ Finder, PgnReader }
+import scala.annotation.tailrec
 
 object SearchLambda extends RequestStreamHandler:
+
+  val StopSearchIfFound = 10
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit =
     val allBytes = input.readAllBytes()
@@ -39,15 +42,25 @@ object SearchLambda extends RequestStreamHandler:
       case Invalid(errors) => throw new RuntimeException(errors.toNonEmptyList.toList.mkString(", "))
     }
 
-    val machedGameIds = for
-      gameInfo <- searchCommand.games
-      gamePgn   = PgnStr(gameInfo.pgn)
-      maybeGame = PgnReader.read(gamePgn)
-      isFound   = maybeGame.map(g => Finder.find(g, probabilisticBoard)).getOrElse(false)
-      if isFound
-    yield gameInfo.resource
+    @tailrec()
+    def searchGames(
+        games: List[Game],
+        found: List[Game],
+        examined: Int,
+        remains: Int
+    ): (List[Game], Int) =
+      games match
+        case game :: tail if remains > 0 =>
+          val gamePgn   = PgnStr(game.pgn)
+          val maybeGame = PgnReader.read(gamePgn)
+          val isFound   = maybeGame.map(g => Finder.find(g, probabilisticBoard)).getOrElse(false)
+          if isFound
+          then searchGames(tail, game :: found, examined + 1, remains - 1)
+          else searchGames(tail, found, examined + 1, remains)
+        case _ => (found, examined)
 
-    val examined = searchCommand.games.size
+    val (machedGame, examined) = searchGames(searchCommand.games, Nil, 0, StopSearchIfFound)
+    val machedGameIds          = machedGame.map(_.resource).reverse
 
     val result = SearchResult(searchCommand.requestId, examined, machedGameIds)
     Encoder[SearchResult].apply(result).noSpaces
