@@ -66,13 +66,15 @@ func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPReques
 
 	downloadRecord := *downloadRecordCandidate
 
-	downloadStatusResponse := DownloadStatusResponse{
-		DownloadId: downloadRecord.DownloadId,
-		Failed:     downloadRecord.Failed,
-		Succeed:    downloadRecord.Succeed,
-		Done:       downloadRecord.Done,
-		Pending:    downloadRecord.Pending,
-		Total:      downloadRecord.Total,
+	downloadStatusResponse := DownloadResultResponse{
+		DownloadId:       downloadRecord.DownloadId,
+		StartAt:          downloadRecord.StartAt.ToTime(),
+		LastDownloadedAt: downloadRecord.LastDownloadedAt.ToTime(),
+		Failed:           downloadRecord.Failed,
+		Succeed:          downloadRecord.Succeed,
+		Done:             downloadRecord.Done,
+		Pending:          downloadRecord.Pending,
+		Total:            downloadRecord.Total,
 	}
 
 	responseBody, err := json.Marshal(downloadStatusResponse)
