@@ -81,6 +81,8 @@ Resources:
         GamesByEndTimestampIndexName: !GetAtt DynamoDB.Outputs.GamesByEndTimestampIndexName
         SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
         ChessDotComUrl: "https://api.chess.com"
+        DownloadInfoExpiresInSeconds: 900
+        SearchInfoExpiresInSeconds: 900
     DependsOn: 
       - Roles
       - DynamoDB
@@ -103,6 +105,8 @@ Resources:
         ArchivesTableName: !GetAtt DynamoDB.Outputs.ArchivesTableName
         SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
         ChessDotComUrl: "https://api.chess.com"
+        DownloadInfoExpiresInSeconds: 900
+        SearchInfoExpiresInSeconds: 900
     DependsOn: 
       - ChessfinderCertificate
       - Roles
