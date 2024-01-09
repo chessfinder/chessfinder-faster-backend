@@ -11,9 +11,6 @@ ThisBuild / organization := "eudemonia"
 ThisBuild / git.useGitDescribe := true
 ThisBuild / scalaVersion       := "3.3.0"
 ThisBuild / semanticdbEnabled  := true // enable SemanticDB
-ThisBuild / testFrameworks ++= List(
-  new TestFramework("munit.Framework")
-)
 
 fork := true
 
@@ -59,6 +56,9 @@ lazy val root = (project in file("."))
     buildInfoObject  := "ChessfinderBuildInfo",
     git.useGitDescribe := true,
     scalacOptions := commonScalaOptions,
+    testFrameworks ++= List(
+      new TestFramework("munit.Framework")
+    )
   )
   .settings(
     assembly / assemblyJarName := "chessfinder-lambda.jar",
