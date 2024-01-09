@@ -32,6 +32,12 @@ Parameters:
   SearchesTableName:
     Type: String
 
+  DownloadInfoExpiresInSeconds:
+    Type: String
+  
+  SearchInfoExpiresInSeconds:
+    Type: String
+
   ChessfinderValidationCoreFunctionName:
     Type: String
 
@@ -139,6 +145,7 @@ Resources:
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
           USERS_TABLE_NAME: !Ref UsersTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
+          DOWNLOAD_INFO_EXPIRES_IN_SECONDS: !Ref DownloadInfoExpiresInSeconds
       Role: !Ref ChessfinderLambdaRoleArn
       LoggingConfig:
         LogFormat: JSON
@@ -209,6 +216,7 @@ Resources:
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
+          SEARCH_INFO_EXPIRES_IN_SECONDS: !Ref SearchInfoExpiresInSeconds
       Role: !Ref ChessfinderLambdaRoleArn
       LoggingConfig:
         LogFormat: JSON

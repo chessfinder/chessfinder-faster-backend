@@ -36,6 +36,14 @@ Parameters:
   SearchesTableName:
     Type: String
     Description: DynamoDB table for searches
+
+  DownloadInfoExpiresInSeconds:
+    Type: String
+    Description: TTL for download info
+  
+  SearchInfoExpiresInSeconds:
+    Type: String
+    Description: TTL for search info
     
   DownloadGamesQueueArn:
     Type: String
@@ -72,6 +80,7 @@ Resources:
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
           GAMES_TABLE_NAME: !Ref GamesTableName
+          DOWNLOAD_INFO_EXPIRES_IN_SECONDS: !Ref DownloadInfoExpiresInSeconds
           GAMES_BY_END_TIMESTAMP_INDEX_NAME: !Ref GamesByEndTimestampIndexName
       Role: !Ref ChessfinderLambdaRoleArn
       LoggingConfig:
@@ -105,6 +114,7 @@ Resources:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           CHESSFINDER_SEARCH_CORE_FUNCTION_NAME: !Ref ChessfinderSearchCoreFunctionName
           GAMES_TABLE_NAME: !Ref GamesTableName
+          SEARCH_INFO_EXPIRES_IN_SECONDS: !Ref SearchInfoExpiresInSeconds
       Role: !Ref ChessfinderLambdaRoleArn
       LoggingConfig:
         LogFormat: JSON
