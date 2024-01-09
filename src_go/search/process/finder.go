@@ -20,10 +20,11 @@ const MaxGamesPerRequest = 100
 const StopSearchIfFound = 10
 
 type BoardFinder struct {
-	searchesTableName string
-	gamesTableName    string
-	awsConfig         *aws.Config
-	searcher          BoardSearcher
+	searchesTableName   string
+	gamesTableName      string
+	searchInfoExpiresIn time.Duration
+	awsConfig           *aws.Config
+	searcher            BoardSearcher
 }
 
 func (finder *BoardFinder) Find(commands events.SQSEvent) (events.SQSEventResponse, error) {
@@ -133,7 +134,7 @@ func (finder *BoardFinder) ProcessSingle(
 		err = searches.SearchesTable{
 			Name:           finder.searchesTableName,
 			DynamodbClient: dynamodbClient,
-		}.UpdateMatchings(command.SearchId, totalExamined, totalMatched, now)
+		}.UpdateMatchings(command.SearchId, totalExamined, totalMatched, now, finder.searchInfoExpiresIn)
 
 		if err != nil {
 			logger.Error("impossible to update the search record", zap.Error(err))

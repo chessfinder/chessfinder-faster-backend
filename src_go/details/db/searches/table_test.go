@@ -15,6 +15,7 @@ import (
 func Test_SearchTable_should_persist_search_record_into_the_table(t *testing.T) {
 	var err error
 	seachId := uuid.New().String()
+	constistentSearchId := NewConsistentSearchId("user1", "download1", "board1")
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
@@ -23,14 +24,17 @@ func Test_SearchTable_should_persist_search_record_into_the_table(t *testing.T) 
 	matchedGame1 := uuid.New().String()
 	matchedGame2 := uuid.New().String()
 	matched := []string{matchedGame1, matchedGame2}
+	expiresAt := time.Date(2023, time.September, 6, 19, 45, 17, 0, time.UTC)
 	search := SearchRecord{
-		SearchId:       seachId,
-		StartAt:        startAt,
-		LastExaminedAt: lastExaminedAt,
-		Examined:       examined,
-		Status:         status,
-		Total:          total,
-		Matched:        matched,
+		SearchId:           seachId,
+		ConsistentSearchId: constistentSearchId,
+		StartAt:            startAt,
+		LastExaminedAt:     lastExaminedAt,
+		Examined:           examined,
+		Status:             status,
+		Total:              total,
+		Matched:            matched,
+		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = searchesTable.PutSearchRecord(search)
@@ -55,17 +59,20 @@ func Test_SearchTable_should_persist_search_record_into_the_table(t *testing.T) 
 
 	expectedSearch := search
 
+	assert.Equal(t, expectedSearch.ConsistentSearchId, actualSearch.ConsistentSearchId)
 	assert.Equal(t, expectedSearch.StartAt, actualSearch.StartAt)
 	assert.Equal(t, expectedSearch.LastExaminedAt, actualSearch.LastExaminedAt)
 	assert.Equal(t, expectedSearch.Examined, actualSearch.Examined)
 	assert.Equal(t, expectedSearch.Total, actualSearch.Total)
 	assert.ElementsMatch(t, expectedSearch.Matched, actualSearch.Matched)
 	assert.Equal(t, expectedSearch.Status, actualSearch.Status)
+	assert.Equal(t, time.Time(expectedSearch.ExpiresAt).UTC(), time.Time(actualSearch.ExpiresAt).UTC())
 }
 
 func Test_SearchTable_should_get_search_record_from_the_table(t *testing.T) {
 	var err error
 	seachId := uuid.New().String()
+	constistentSearchId := NewConsistentSearchId("user1", "download1", "board1")
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
@@ -74,14 +81,18 @@ func Test_SearchTable_should_get_search_record_from_the_table(t *testing.T) {
 	matchedGame1 := uuid.New().String()
 	matchedGame2 := uuid.New().String()
 	matched := []string{matchedGame1, matchedGame2}
+	expiresAt := time.Date(2023, time.September, 6, 19, 45, 17, 0, time.UTC)
+
 	search := SearchRecord{
-		SearchId:       seachId,
-		StartAt:        startAt,
-		LastExaminedAt: lastExaminedAt,
-		Examined:       examined,
-		Status:         status,
-		Total:          total,
-		Matched:        matched,
+		SearchId:           seachId,
+		ConsistentSearchId: constistentSearchId,
+		StartAt:            startAt,
+		LastExaminedAt:     lastExaminedAt,
+		Examined:           examined,
+		Status:             status,
+		Total:              total,
+		Matched:            matched,
+		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)
@@ -99,12 +110,14 @@ func Test_SearchTable_should_get_search_record_from_the_table(t *testing.T) {
 
 	expectedSearch := search
 
+	assert.Equal(t, expectedSearch.ConsistentSearchId, actualSearch.ConsistentSearchId)
 	assert.Equal(t, expectedSearch.StartAt, actualSearch.StartAt)
 	assert.Equal(t, expectedSearch.LastExaminedAt, actualSearch.LastExaminedAt)
 	assert.Equal(t, expectedSearch.Examined, actualSearch.Examined)
 	assert.Equal(t, expectedSearch.Total, actualSearch.Total)
 	assert.ElementsMatch(t, expectedSearch.Matched, actualSearch.Matched)
 	assert.Equal(t, expectedSearch.Status, actualSearch.Status)
+	assert.Equal(t, time.Time(expectedSearch.ExpiresAt).UTC(), time.Time(actualSearch.ExpiresAt).UTC())
 }
 
 func Test_SearchTable_should_return_nil_if_the_search_is_missing_from_the_table(t *testing.T) {
@@ -119,8 +132,10 @@ func Test_SearchTable_should_return_nil_if_the_search_is_missing_from_the_table(
 
 func Test_SearchTable_should_update_the_search_record_matchings_in_the_table(t *testing.T) {
 	var err error
+	expiresIn := 24 * time.Hour
 
 	seachId := uuid.New().String()
+	constistentSearchId := NewConsistentSearchId("user1", "download1", "board1")
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
@@ -129,14 +144,17 @@ func Test_SearchTable_should_update_the_search_record_matchings_in_the_table(t *
 	matchedGame1 := uuid.New().String()
 	matchedGame2 := uuid.New().String()
 	matched := []string{matchedGame1, matchedGame2}
+	expiresAt := time.Date(2023, time.September, 6, 19, 45, 17, 321000000, time.UTC)
 	search := SearchRecord{
-		SearchId:       seachId,
-		StartAt:        startAt,
-		LastExaminedAt: lastExaminedAt,
-		Examined:       examined,
-		Status:         status,
-		Total:          total,
-		Matched:        matched,
+		SearchId:           seachId,
+		ConsistentSearchId: constistentSearchId,
+		StartAt:            startAt,
+		LastExaminedAt:     lastExaminedAt,
+		Examined:           examined,
+		Status:             status,
+		Total:              total,
+		Matched:            matched,
+		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)
@@ -153,8 +171,9 @@ func Test_SearchTable_should_update_the_search_record_matchings_in_the_table(t *
 	newMatchedGame1 := uuid.New().String()
 	newMatchedGame2 := uuid.New().String()
 	newMatched := []string{newMatchedGame1, newMatchedGame2}
+	newExpiresAt := time.Date(2023, time.September, 7, 19, 45, 17, 0, time.UTC)
 
-	err = searchesTable.UpdateMatchings(seachId, newExamined, newMatched, newLastExaminedAt)
+	err = searchesTable.UpdateMatchings(seachId, newExamined, newMatched, newLastExaminedAt, expiresIn)
 	assert.NoError(t, err)
 
 	actualSearch, err := searchesTable.GetSearchRecord(seachId)
@@ -163,6 +182,7 @@ func Test_SearchTable_should_update_the_search_record_matchings_in_the_table(t *
 	assert.Equal(t, newExamined, actualSearch.Examined)
 	assert.Equal(t, newLastExaminedAt, actualSearch.LastExaminedAt)
 	assert.ElementsMatch(t, newMatched, actualSearch.Matched)
+	assert.Equal(t, time.Time(newExpiresAt).UTC(), time.Time(actualSearch.ExpiresAt).UTC())
 
 }
 
@@ -170,6 +190,7 @@ func Test_SearchTable_should_update_the_search_record_status_in_the_table(t *tes
 	var err error
 
 	seachId := uuid.New().String()
+	consistentSearchId := NewConsistentSearchId("user1", "download1", "board1")
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
@@ -178,14 +199,17 @@ func Test_SearchTable_should_update_the_search_record_status_in_the_table(t *tes
 	matchedGame1 := uuid.New().String()
 	matchedGame2 := uuid.New().String()
 	matched := []string{matchedGame1, matchedGame2}
+	expiresAt := time.Date(2023, time.September, 6, 19, 45, 17, 0, time.UTC)
 	search := SearchRecord{
-		SearchId:       seachId,
-		StartAt:        startAt,
-		LastExaminedAt: lastExaminedAt,
-		Examined:       examined,
-		Status:         status,
-		Total:          total,
-		Matched:        matched,
+		SearchId:           seachId,
+		ConsistentSearchId: consistentSearchId,
+		StartAt:            startAt,
+		LastExaminedAt:     lastExaminedAt,
+		Examined:           examined,
+		Status:             status,
+		Total:              total,
+		Matched:            matched,
+		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)

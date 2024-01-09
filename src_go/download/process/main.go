@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,6 +36,16 @@ func main() {
 		panic(errors.New("GAMES_BY_END_TIMESTAMP_INDEX_NAME is missing"))
 	}
 
+	downloadInfoExpiresInCadidate, downloadInfoExpiresInExists := os.LookupEnv("DOWNLOAD_INFO_EXPIRES_IN_SECONDS")
+	if !downloadInfoExpiresInExists {
+		panic(errors.New("DOWNLOAD_INFO_EXPIRES_IN_SECONDS is missing"))
+	}
+
+	downloadInfoExpiresIn, err := time.ParseDuration(downloadInfoExpiresInCadidate + "s")
+	if err != nil {
+		panic(err)
+	}
+
 	theStackName, theStackNameExists := os.LookupEnv("THE_STACK_NAME")
 	if !theStackNameExists {
 		panic(errors.New("THE_STACK_NAME is missing"))
@@ -53,6 +64,7 @@ func main() {
 		gamesByEndTimestampIndexName: gamesByEndTimestampIndexName,
 		metricsNamespace:             theStackName,
 		pgnFilter:                    TagAndCommentPgnFilter{},
+		downloadInfoExpiresIn:        downloadInfoExpiresIn,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},

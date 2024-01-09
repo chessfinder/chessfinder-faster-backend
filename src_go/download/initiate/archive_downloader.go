@@ -34,9 +34,10 @@ type ArchiveDownloader struct {
 	downloadsTableName    string
 	downloadGamesQueueUrl string
 	metricsNamespace      string
+	downloadInfoExpiresIn time.Duration
 }
 
-func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCommands(
+func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCommands(
 	event *events.APIGatewayV2HTTPRequest,
 ) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
 	logger := logging.MustCreateZuluTimeLogger()
@@ -120,7 +121,10 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDonwloadGameCom
 	}
 
 	downloadId := uuid.New().String()
-	downloadRecord := downloads.NewDownloadRecord(downloadId, len(missingArchives)+len(partaillyDownloadedArchives))
+	now := time.Now()
+	consistentDownloadId := downloads.NewConsistentDownloadId(profile.UserId)
+	total := len(missingArchives) + len(partaillyDownloadedArchives)
+	downloadRecord := downloads.NewDownloadRecord(downloadId, consistentDownloadId, total, now, downloader.downloadInfoExpiresIn)
 
 	err = downloads.DownloadsTable{
 		Name:           downloader.downloadsTableName,

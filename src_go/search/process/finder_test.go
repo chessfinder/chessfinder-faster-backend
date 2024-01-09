@@ -85,25 +85,6 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			searchId := uuid.New().String()
 			total := 0
 
-			// if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-07.json"); assert.NoError(t, err) {
-			// 	err = finder.persistGameRecords(gameRecords)
-			// 	assert.NoError(t, err)
-			// 	total += len(gameRecords)
-			// }
-
-			// if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-08.json"); assert.NoError(t, err) {
-			// 	err = finder.persistGameRecords(gameRecords)
-			// 	assert.NoError(t, err)
-			// 	total += len(gameRecords)
-			// }
-
-			// if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-09.json"); assert.NoError(t, err) {
-			// 	err = finder.persistGameRecords(gameRecords)
-			// 	assert.NoError(t, err)
-			// 	total += len(gameRecords)
-
-			// }
-
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-10.json"); assert.NoError(t, err) {
 				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
@@ -164,11 +145,13 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 
 			startOfChecking := time.Now().UTC()
 
-			assert.True(t, startOfChecking.After(actualSearchRecord.LastExaminedAt.ToTime()))
-			assert.True(t, startOfTest.Before(actualSearchRecord.LastExaminedAt.ToTime()))
 			assert.Equal(t, total, actualSearchRecord.Examined)
 			assert.Equal(t, total, actualSearchRecord.Total)
 			assert.Equal(t, searches.SearchedAll, actualSearchRecord.Status)
+			assert.True(t, startOfChecking.After(actualSearchRecord.LastExaminedAt.ToTime()))
+			assert.True(t, startOfTest.Before(actualSearchRecord.LastExaminedAt.ToTime()))
+			assert.True(t, startOfTest.Add(finder.searchInfoExpiresIn-time.Second).Before(time.Time(actualSearchRecord.ExpiresAt)))
+			assert.True(t, startOfChecking.Add(finder.searchInfoExpiresIn+time.Second).After(time.Time(actualSearchRecord.ExpiresAt)))
 
 			assert.ElementsMatch(t, []string{"https://www.chess.com/game/live/63025767719"}, actualSearchRecord.Matched)
 		}()
@@ -288,11 +271,13 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 
 			startOfChecking := time.Now().UTC()
 
-			assert.True(t, startOfChecking.After(actualSearchRecord.LastExaminedAt.ToTime()))
-			assert.True(t, startOfTest.Before(actualSearchRecord.LastExaminedAt.ToTime()))
 			assert.Equal(t, StopSearchIfFound, actualSearchRecord.Examined)
 			assert.Equal(t, total, actualSearchRecord.Total)
 			assert.Equal(t, searches.SearchedPartially, actualSearchRecord.Status)
+			assert.True(t, startOfChecking.After(actualSearchRecord.LastExaminedAt.ToTime()))
+			assert.True(t, startOfTest.Before(actualSearchRecord.LastExaminedAt.ToTime()))
+			assert.True(t, startOfTest.Add(finder.searchInfoExpiresIn-time.Second).Before(time.Time(actualSearchRecord.ExpiresAt)))
+			assert.True(t, startOfChecking.Add(finder.searchInfoExpiresIn+time.Second).After(time.Time(actualSearchRecord.ExpiresAt)))
 
 			expectedMatchedGames := []string{
 				"https://www.chess.com/game/live/52659611873",

@@ -36,9 +36,10 @@ Resources:
       KeySchema:
         - AttributeName: download_id
           KeyType: HASH
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 2
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
   GamesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -95,6 +96,9 @@ Resources:
         - AttributeName: search_id
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
 
 Outputs:
   UsersTableName:
