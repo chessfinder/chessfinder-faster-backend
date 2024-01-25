@@ -111,6 +111,7 @@ Resources:
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref CheckDownloadLogs
+      ReservedConcurrentExecutions: 5
     Type: AWS::Serverless::Function
   
   InitiateDownloadLogs:
@@ -150,6 +151,7 @@ Resources:
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref InitiateDownloadLogs
+      ReservedConcurrentExecutions: 5
     Type: AWS::Serverless::Function
 
   CheckSearchLogs:
@@ -183,6 +185,7 @@ Resources:
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref CheckSearchLogs
+      ReservedConcurrentExecutions: 5
     Type: AWS::Serverless::Function
 
   InitiateSearchLogs:
@@ -221,6 +224,7 @@ Resources:
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref InitiateSearchLogs
+      ReservedConcurrentExecutions: 5
     Type: AWS::Serverless::Function
 
 Outputs:

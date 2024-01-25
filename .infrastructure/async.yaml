@@ -86,6 +86,7 @@ Resources:
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref DownloadGamesLogs
+      ReservedConcurrentExecutions: 5
     Type: AWS::Serverless::Function
 
   SearchBoardLogs:
@@ -119,4 +120,5 @@ Resources:
       LoggingConfig:
         LogFormat: JSON
         LogGroup: !Ref SearchBoardLogs
+      ReservedConcurrentExecutions: 5
     Type: AWS::Serverless::Function
