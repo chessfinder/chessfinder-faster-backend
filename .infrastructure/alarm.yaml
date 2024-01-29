@@ -162,7 +162,7 @@ Resources:
       Timeout: 60
       Architectures: ["arm64"]
       Runtime: "provided.al2"
-      CodeUri: ../src_go/details/notification/notification.zip
+      CodeUri: ../src_go/details/notification/subscriber/notification.zip
       Handler: bootstrap
       Environment:
         Variables:
