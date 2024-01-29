@@ -63,8 +63,11 @@ func main() {
 		gamesTableName:               gamesTableName,
 		gamesByEndTimestampIndexName: gamesByEndTimestampIndexName,
 		metricsNamespace:             theStackName,
-		pgnFilter:                    TagAndCommentPgnFilter{},
-		downloadInfoExpiresIn:        downloadInfoExpiresIn,
+		pgnFilter: AlternatingPgnFilter{
+			PgnSqueezer:            PgnSqueezer{},
+			TagAndCommentPgnFilter: TagAndCommentPgnFilter{},
+		},
+		downloadInfoExpiresIn: downloadInfoExpiresIn,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
