@@ -83,7 +83,7 @@ Resources:
       TreatMissingData: 'notBreaching'
       Unit: Count
 
-  ProfileNotFound:
+  ProfileIsSearched:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
@@ -96,8 +96,6 @@ Resources:
       Dimensions: 
         - Name: Action
           Value: GetProfile
-        - Name: StatusCode
-          Value: 404
       EvaluationPeriods: 1
       MetricName: ChessDotComMeter
       Namespace: !Ref TheStackName
