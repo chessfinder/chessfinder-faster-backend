@@ -90,7 +90,7 @@ Resources:
       AlarmActions: 
         - !Ref AlarmTopic
       AlarmDescription: 'Profile not found in chess.com'
-      AlarmName: ProfileNotFound
+      AlarmName: ProfileIsSearched
       ComparisonOperator: 'GreaterThanThreshold'
       DatapointsToAlarm: 1
       Dimensions: 
