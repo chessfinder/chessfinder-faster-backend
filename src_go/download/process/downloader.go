@@ -179,6 +179,19 @@ func (downloader *GameDownloader) ProcessSingle(
 			CloudWatchClient: cloudWatchClient,
 		}
 
+		pgnFilterMeter := metrics.PgnFilterMeter{
+			Namespace:        downloader.metricsNamespace,
+			CloudWatchClient: cloudWatchClient,
+		}
+
+		if filter, ok := downloader.pgnFilter.(AlternatingPgnFilter); ok {
+			downloader.pgnFilter = AlternatingPgnFilter{
+				pgnFilterMeter:         &pgnFilterMeter,
+				TagAndCommentPgnFilter: filter.TagAndCommentPgnFilter,
+				PgnSqueezer:            filter.PgnSqueezer,
+			}
+		}
+
 		errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetGames, response.StatusCode)
 		if errFromMetricRegistration != nil {
 			logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))

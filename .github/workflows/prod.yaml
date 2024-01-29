@@ -100,11 +100,11 @@ jobs:
       - name: GO - Packaging Code
         shell: bash
         run: |
-          cd ./src_go/details/notification
+          cd ./src_go/details/notification/subscriber
           go get .
           GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v -o bootstrap -tags lambda.norpc .
           zip notification.zip bootstrap
-          cd ../../../
+          cd ../../../../
 
           cd ./src_go/download/check_status
           go get .
