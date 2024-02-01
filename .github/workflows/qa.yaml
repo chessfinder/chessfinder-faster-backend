@@ -132,6 +132,7 @@ jobs:
         run: |
           echo 2 | alternatives --config python
           python --version
+          ldd --version
       
       - name: Setup SAM
         uses: aws-actions/setup-sam@v2
