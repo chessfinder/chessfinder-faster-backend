@@ -74,7 +74,9 @@ jobs:
         shell: bash
         run: |
           curl -O https://dl.google.com/go/go1.21.1.linux-amd64.tar.gz
-          tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+          # no need if we don't use amazon linux 2
+          # tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
           rm go1.21.1.linux-amd64.tar.gz
           echo "/usr/local/go/bin" >> $GITHUB_PATH
         
