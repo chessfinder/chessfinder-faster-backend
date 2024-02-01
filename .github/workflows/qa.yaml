@@ -133,12 +133,13 @@ jobs:
           zip process.zip bootstrap
           cd ../../../
       
-      - name: Make Python 3 default
-        shell: bash
-        run: |
-          echo 2 | alternatives --config python
-          python --version
-          ldd --version
+      # no need if we don't use amazon linux 2
+      # - name: Make Python 3 default
+      #   shell: bash
+      #   run: |
+      #     echo 2 | alternatives --config python
+      #     python --version
+      #     ldd --version
       
       - name: Setup SAM
         uses: aws-actions/setup-sam@v2
