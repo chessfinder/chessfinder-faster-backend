@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -58,6 +59,8 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 		logger.Error("error while unmarshalling search request", zap.Error(err), zap.String("body", event.Body))
 		err = api.InvalidBody
 	}
+
+	searchRequest.Username = strings.ToLower(searchRequest.Username)
 
 	logger = logger.With(zap.String("username", searchRequest.Username), zap.String("platform", searchRequest.Platform))
 	logger = logger.With(zap.String("board", searchRequest.Board))

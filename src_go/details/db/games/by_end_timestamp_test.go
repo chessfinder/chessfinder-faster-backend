@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_IatestGameIndex_should_get_the_latest_downloaded_game_for_the_given_archive(t *testing.T) {
+func Test_LatestGameIndex_should_get_the_latest_downloaded_game_for_the_given_archive(t *testing.T) {
 
 	var err error
 	userId := uuid.New().String()
@@ -58,7 +58,7 @@ func Test_IatestGameIndex_should_get_the_latest_downloaded_game_for_the_given_ar
 
 }
 
-func Test_IatestGameIndex_should_return_nil_if_there_is_no_game_for_the_given_archive(t *testing.T) {
+func Test_LatestGameIndex_should_return_nil_if_there_is_no_game_for_the_given_archive(t *testing.T) {
 
 	var err error
 	archiveId := uuid.New().String()

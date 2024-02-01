@@ -17,6 +17,11 @@ func main() {
 		panic(errors.New("DOWNLOADS_TABLE_NAME is missing"))
 	}
 
+	downloadsByConsistentDownloadIdIndexName, downloadsByConsistentDownloadIdIndexNameExists := os.LookupEnv("DOWNLOADS_BY_CONSISTENT_DOWNLOAD_ID_INDEX_NAME")
+	if !downloadsByConsistentDownloadIdIndexNameExists {
+		panic(errors.New("DOWNLOADS_BY_CONSISTENT_DOWNLOAD_ID_INDEX_NAME is missing"))
+	}
+
 	archivesTableName, archivesTableNameExists := os.LookupEnv("ARCHIVES_TABLE_NAME")
 	if !archivesTableNameExists {
 		panic(errors.New("ARCHIVES_TABLE_NAME is missing"))
@@ -58,13 +63,14 @@ func main() {
 	}
 
 	checker := ArchiveDownloader{
-		downloadsTableName:    downloadsTableName,
-		usersTableName:        usersTableName,
-		archivesTableName:     archivesTableName,
-		downloadGamesQueueUrl: downloadGamesQueueUrl,
-		chessDotComUrl:        chessDotComUrl,
-		metricsNamespace:      theStackName,
-		downloadInfoExpiresIn: downloadInfoExpiresIn,
+		downloadsTableName:                       downloadsTableName,
+		downloadsByConsistentDownloadIdIndexName: downloadsByConsistentDownloadIdIndexName,
+		usersTableName:                           usersTableName,
+		archivesTableName:                        archivesTableName,
+		downloadGamesQueueUrl:                    downloadGamesQueueUrl,
+		chessDotComUrl:                           chessDotComUrl,
+		metricsNamespace:                         theStackName,
+		downloadInfoExpiresIn:                    downloadInfoExpiresIn,
 		awsConfig: &aws.Config{
 			Region: &awsRegion,
 		},
