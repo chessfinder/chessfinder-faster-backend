@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
@@ -32,6 +34,9 @@ var dynamodbClient = dynamodb.New(awsSession)
 
 func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testing.T) {
 	var err error
+
+	startOfTest := time.Now()
+
 	searchId := uuid.New().String()
 
 	event := events.APIGatewayV2HTTPRequest{
@@ -51,14 +56,17 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 	lastExaminedAt, err := db.ZuluDateTimeFromString("2021-02-01T00:11:24.000Z")
 	assert.NoError(t, err)
 
+	consistentSearchId := searches.NewConsistentSearchId("user1", "download1", "board1")
 	searchRecord := searches.SearchRecord{
-		SearchId:       searchId,
-		LastExaminedAt: lastExaminedAt,
-		StartAt:        startAt,
-		Examined:       15,
-		Total:          100,
-		Matched:        []string{"https://www.chess.com/game/live/88704743803", "https://www.chess.com/game/live/88624306385"},
-		Status:         "SEARCHED_ALL",
+		SearchId:           searchId,
+		ConsistentSearchId: searches.ConsistentSearchId(consistentSearchId),
+		LastExaminedAt:     lastExaminedAt,
+		StartAt:            startAt,
+		Examined:           15,
+		Total:              100,
+		Matched:            []string{"https://www.chess.com/game/live/88704743803", "https://www.chess.com/game/live/88624306385"},
+		Status:             "SEARCHED_ALL",
+		ExpiresAt:          dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
 	}
 
 	err = searches.SearchesTable{

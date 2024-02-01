@@ -26,15 +26,18 @@ import (
 	"go.uber.org/zap"
 )
 
+const DownloadInfoUpToNSecondsBeforeExpires = time.Second * 10
+
 type ArchiveDownloader struct {
-	chessDotComUrl        string
-	awsConfig             *aws.Config
-	usersTableName        string
-	archivesTableName     string
-	downloadsTableName    string
-	downloadGamesQueueUrl string
-	metricsNamespace      string
-	downloadInfoExpiresIn time.Duration
+	chessDotComUrl                           string
+	awsConfig                                *aws.Config
+	usersTableName                           string
+	archivesTableName                        string
+	downloadsTableName                       string
+	downloadsByConsistentDownloadIdIndexName string
+	downloadGamesQueueUrl                    string
+	metricsNamespace                         string
+	downloadInfoExpiresIn                    time.Duration
 }
 
 func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCommands(
@@ -50,7 +53,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 	dynamodbClient := dynamodb.New(awsSession)
-	svc := sqs.New(awsSession)
+	sqsClient := sqs.New(awsSession)
 	cloudWatchClient := cloudwatch.New(awsSession)
 	chessDotComClient := &http.Client{}
 
@@ -68,19 +71,79 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 
+	downloadRequest.Username = strings.ToLower(downloadRequest.Username)
+
 	logger = logger.With(zap.String("username", downloadRequest.Username), zap.String("platform", downloadRequest.Platform))
+
+	usersTable := users.UsersTable{
+		Name:           downloader.usersTableName,
+		DynamodbClient: dynamodbClient,
+	}
+
+	logger.Info("checking for existing user record...")
+
+	var profile users.UserRecord
+
+	profileCandidate, err := usersTable.GetUserRecord(downloadRequest.Username, users.ChessDotCom)
+
+	if err != nil {
+		logger.Error("impossible to get the user from the database", zap.Error(err))
+		return
+	}
 
 	chessDotComMeter := metrics.ChessDotComMeter{
 		Namespace:        downloader.metricsNamespace,
 		CloudWatchClient: cloudWatchClient,
 	}
 
-	profile, err := downloader.getUser(dynamodbClient, chessDotComClient, chessDotComMeter, logger, downloadRequest)
+	if profileCandidate == nil {
+		logger.Info("user not found in the database. Downloading from chess.com ...")
+		profileCandidate, err = downloader.getAndPersistUser(dynamodbClient, chessDotComClient, chessDotComMeter, logger, downloadRequest)
+		if err != nil {
+			return
+		}
+		if profileCandidate == nil {
+			logger.Error("impossible to get the user from chess.com!")
+			err = api.ServiceOverloaded
+			return
+		}
+	}
+
+	profile = *profileCandidate
+
+	logger = logger.With(zap.String("userId", profile.UserId))
+
+	logger.Info("checking for existing download record...")
+
+	existingDownloadRecord, err := downloads.DownloadsByConsistentDownloadIdIndex{
+		Name:           downloader.downloadsByConsistentDownloadIdIndexName,
+		TableName:      downloader.downloadsTableName,
+		DynamodbClient: dynamodbClient,
+	}.LatestDownload(downloads.NewConsistentDownloadId(profile.UserId))
+
 	if err != nil {
+		logger.Error("impossible to get the latest download record!", zap.Error(err))
 		return
 	}
 
-	logger = logger.With(zap.String("userId", profile.UserId))
+	now := time.Now()
+	if existingDownloadRecord != nil {
+		downloadInfoCanBeUsedUpTo := time.Time(existingDownloadRecord.ExpiresAt).Add(-DownloadInfoUpToNSecondsBeforeExpires)
+		logger.Info("download record found", zap.String("downloadId", existingDownloadRecord.DownloadId))
+		if now.Before(downloadInfoCanBeUsedUpTo) {
+			logger.Info("download record is still valid. Returning the existing download id")
+			responseEvent, err = downloadIdToResponseEvent(existingDownloadRecord.DownloadId)
+			if err != nil {
+				logger.Error("impossible to create the response event!", zap.Error(err))
+			}
+
+			return
+		}
+
+		logger.Info("download record is almost expired. Downloading again...", zap.Time("expiresAt", time.Time(existingDownloadRecord.ExpiresAt)))
+	}
+
+	logger.Info("no download record found. Downloading...")
 
 	archivesFromChessDotCom, err := downloader.getArchivesFromChessDotCom(chessDotComClient, chessDotComMeter, logger, profile)
 	if err != nil {
@@ -121,7 +184,6 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 	}
 
 	downloadId := uuid.New().String()
-	now := time.Now()
 	consistentDownloadId := downloads.NewConsistentDownloadId(profile.UserId)
 	total := len(missingArchives) + len(partaillyDownloadedArchives)
 	downloadRecord := downloads.NewDownloadRecord(downloadId, consistentDownloadId, total, now, downloader.downloadInfoExpiresIn)
@@ -136,7 +198,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 
-	err = downloader.publishDownloadGameCommands(logger, svc, profile, downloadRecord, missingArchives, partaillyDownloadedArchives)
+	err = downloader.publishDownloadGameCommands(logger, sqsClient, profile, downloadRecord, missingArchives, partaillyDownloadedArchives)
 	if err != nil {
 		return
 	}
@@ -151,34 +213,21 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 
-	downloadResponse := DownloadResponse{
-		DownloadId: downloadId,
-	}
-
-	jsonBody, err := json.Marshal(downloadResponse)
+	responseEvent, err = downloadIdToResponseEvent(downloadId)
 	if err != nil {
-		logger.Error("impossible to marshal the download response!", zap.Error(err))
-		return
-	}
-
-	responseEvent = events.APIGatewayV2HTTPResponse{
-		StatusCode: 200,
-		Body:       string(jsonBody),
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
+		logger.Error("impossible to create the response event!", zap.Error(err))
 	}
 
 	return
 }
 
-func (downloader ArchiveDownloader) getUser(
+func (downloader ArchiveDownloader) getAndPersistUser(
 	dynamodbClient *dynamodb.DynamoDB,
 	chessDotComClient *http.Client,
 	chessDotComMeter metrics.ChessDotComMeter,
 	logger *zap.Logger,
 	downloadRequest DownloadRequest,
-) (userRecord users.UserRecord, err error) {
+) (userRecord *users.UserRecord, err error) {
 	url := downloader.chessDotComUrl + "/pub/player/" + downloadRequest.Username
 	logger = logger.With(zap.String("url", url))
 
@@ -189,7 +238,6 @@ func (downloader ArchiveDownloader) getUser(
 		return
 	}
 
-	logger.Info("requesting chess.com for profile")
 	response, err := chessDotComClient.Do(request)
 	if err != nil {
 		return
@@ -199,7 +247,7 @@ func (downloader ArchiveDownloader) getUser(
 
 	errFromMetricRegistration := chessDotComMeter.ChessDotComStatistics(metrics.GetProfile, response.StatusCode)
 	if errFromMetricRegistration != nil {
-		logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
+		logger.Warn("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
 	}
 
 	responseBodyBytes, err := io.ReadAll(response.Body)
@@ -231,27 +279,15 @@ func (downloader ArchiveDownloader) getUser(
 
 	logger.Info("profile found in chess.com")
 
+	// why we get it from the table after making a request to chess.com?
 	usersTable := users.UsersTable{
 		Name:           downloader.usersTableName,
 		DynamodbClient: dynamodbClient,
 	}
 
-	userAlreadyInDb, err := usersTable.GetUserRecord(downloadRequest.Username, users.ChessDotCom)
-
-	if err != nil {
-		logger.Error("impossible to get the user from the database", zap.Error(err))
-		return
-	}
-
-	if userAlreadyInDb != nil {
-		logger.Info("user found in the database")
-		userRecord = *userAlreadyInDb
-		return
-	}
-
 	logger.Info("user not found in the database")
 
-	userRecord = users.UserRecord{
+	userRecordCandidate := users.UserRecord{
 		Username:            downloadRequest.Username,
 		UserId:              profile.UserId,
 		Platform:            users.ChessDotCom,
@@ -260,10 +296,13 @@ func (downloader ArchiveDownloader) getUser(
 
 	logger.Info("persisting the user record in the database")
 
-	err = usersTable.PutUserRecord(userRecord)
+	err = usersTable.PutUserRecord(userRecordCandidate)
 	if err != nil {
 		logger.Error("impossible to persist the user record in the database", zap.Error(err))
+		return
 	}
+
+	userRecord = &userRecordCandidate
 
 	return
 }
@@ -453,5 +492,26 @@ func (downloader ArchiveDownloader) publishDownloadGameCommands(
 	}
 
 	logger.Info("download game commands published")
+	return
+}
+
+func downloadIdToResponseEvent(downloadId string) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
+	downloadResponse := DownloadResponse{
+		DownloadId: downloadId,
+	}
+
+	jsonBody, err := json.Marshal(downloadResponse)
+	if err != nil {
+		return
+	}
+
+	responseEvent = events.APIGatewayV2HTTPResponse{
+		StatusCode: 200,
+		Body:       string(jsonBody),
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+	}
+
 	return
 }

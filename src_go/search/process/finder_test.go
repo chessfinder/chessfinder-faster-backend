@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/games"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
@@ -83,6 +84,7 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			var err error
 			userId := uuid.New().String()
 			searchId := uuid.New().String()
+			consistentSearchId := searches.NewConsistentSearchId(userId, searchId, "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????")
 			total := 0
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-10.json"); assert.NoError(t, err) {
@@ -101,13 +103,15 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			searchAtartAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 
 			searchRecord := searches.SearchRecord{
-				SearchId:       searchId,
-				StartAt:        searchAtartAt,
-				LastExaminedAt: searchAtartAt,
-				Examined:       0,
-				Total:          total,
-				Matched:        []string{},
-				Status:         searches.InProgress,
+				SearchId:           searchId,
+				ConsistentSearchId: searches.ConsistentSearchId(consistentSearchId),
+				StartAt:            searchAtartAt,
+				LastExaminedAt:     searchAtartAt,
+				Examined:           0,
+				Total:              total,
+				Matched:            []string{},
+				Status:             searches.InProgress,
+				ExpiresAt:          dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
 			}
 
 			err = searches.SearchesTable{
@@ -211,6 +215,7 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			var err error
 			userId := uuid.New().String()
 			searchId := uuid.New().String()
+			consistentSearchId := searches.NewConsistentSearchId(userId, searchId, "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????")
 			total := 0
 
 			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-07_repeating_games.json"); assert.NoError(t, err) {
@@ -228,13 +233,15 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			searchAtartAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 
 			searchRecord := searches.SearchRecord{
-				SearchId:       searchId,
-				StartAt:        searchAtartAt,
-				LastExaminedAt: searchAtartAt,
-				Examined:       0,
-				Total:          total,
-				Matched:        []string{},
-				Status:         searches.InProgress,
+				SearchId:           searchId,
+				ConsistentSearchId: searches.ConsistentSearchId(consistentSearchId),
+				StartAt:            searchAtartAt,
+				LastExaminedAt:     searchAtartAt,
+				Examined:           0,
+				Total:              total,
+				Matched:            []string{},
+				Status:             searches.InProgress,
+				ExpiresAt:          dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
 			}
 
 			err = searches.SearchesTable{
