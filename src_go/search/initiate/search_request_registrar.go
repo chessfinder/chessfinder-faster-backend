@@ -62,6 +62,12 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 		err = api.InvalidBody
 	}
 
+	if searchRequest.Username == "" {
+		logger.Info("username cannot be empty")
+		err = UserNameCannotBeEmpty
+		return
+	}
+
 	searchRequest.Username = strings.ToLower(searchRequest.Username)
 
 	logger = logger.With(zap.String("username", searchRequest.Username), zap.String("platform", searchRequest.Platform))

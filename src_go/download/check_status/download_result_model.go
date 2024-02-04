@@ -20,7 +20,7 @@ type DownloadResultResponse struct {
 
 func DownloadNotFound(downloadId string) api.BusinessError {
 	return api.BusinessError{
-		Msg:  fmt.Sprintf("Download request %v not found", downloadId),
-		Code: "DOWNLOAD_REQUEST_NOT_FOUND",
+		Message: fmt.Sprintf("Download request %v not found", downloadId),
+		Code:    "DOWNLOAD_REQUEST_NOT_FOUND",
 	}
 }

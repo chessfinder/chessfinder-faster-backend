@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
@@ -1375,6 +1376,109 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 	}
 
 	assert.Equal(t, expectedCommands, actualCommands, "Commands are not equal!")
+
+}
+
+func Test_ArchiveDownloader_should_return_error_if_the_username_if_empty(t *testing.T) {
+	var err error
+
+	err = deleteAllDownloads()
+	assert.NoError(t, err)
+
+	defer wiremockClient.Reset()
+
+	username := ""
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/game",
+			},
+		},
+	}
+
+	actualResponse, err := api.WithRecover(downloader.DownloadArchiveAndDistributeDownloadGameCommands)(&event)
+	assert.NoError(t, err)
+	expectedResponseBody := `{"code": "INVALID_USERNAME", "message":"Username cannot be empty!"}`
+
+	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
+	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Response body is not as expected!")
+}
+
+func Test_ArchiveDownloader_should_return_error_if_user_is_not_found_in_chess_com(t *testing.T) {
+	var err error
+
+	err = deleteAllDownloads()
+	assert.NoError(t, err)
+
+	defer wiremockClient.Reset()
+
+	username := uuid.New().String()
+
+	usersProfileReponseBody := `{
+		"message": "Profile not found or something like that!"
+	}`
+
+	getUsersProfileStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v", username))).
+		WillReturnResponse(
+			wiremock.NewResponse().
+				WithBody(usersProfileReponseBody).
+				WithHeader("Content-Type", "application/json").
+				WithStatus(http.StatusNotFound),
+		)
+	err = wiremockClient.StubFor(getUsersProfileStub)
+	assert.NoError(t, err)
+
+	archivesResponseBody := fmt.Sprintf(
+		`{
+			"archives": [
+				"https://api.chess.com/pub/player/%v/games/2021/10",
+				"https://api.chess.com/pub/player/%v/games/2021/11",
+				"https://api.chess.com/pub/player/%v/games/2021/12"
+			]
+		}`, username, username, username,
+	)
+
+	getArchivesStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v/games/archives", username))).
+		WillReturnResponse(
+			wiremock.NewResponse().
+				WithBody(archivesResponseBody).
+				WithHeader("Content-Type", "application/json").
+				WithStatus(http.StatusOK),
+		)
+	err = wiremockClient.StubFor(getArchivesStub)
+	assert.NoError(t, err)
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/game",
+			},
+		},
+	}
+
+	actualResponse, err := api.WithRecover(downloader.DownloadArchiveAndDistributeDownloadGameCommands)(&event)
+	assert.NoError(t, err)
+
+	expectedDownloadResponse := fmt.Sprintf(
+		`{"code": "PROFILE_NOT_FOUND", "message": "Profile %v not found!"}`,
+		username,
+	)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 404!")
+	assert.JSONEq(t, expectedDownloadResponse, actualResponse.Body, "Response body is not as expected!")
+
+	verifyGetUsersProfileStub, err := wiremockClient.Verify(getUsersProfileStub.Request(), 1)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verifyGetUsersProfileStub, fmt.Sprintf("Stub of getting user profile %v was not called!", username))
+
+	verifyGetArchivesStub, err := wiremockClient.Verify(getArchivesStub.Request(), 0)
+	assert.NoError(t, err)
+	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
 
 }
 

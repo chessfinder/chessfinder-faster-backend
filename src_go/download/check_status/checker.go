@@ -41,7 +41,7 @@ func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPReques
 	downloadId, downloadIdExists := event.QueryStringParameters["downloadId"]
 	if !downloadIdExists {
 		err = api.ValidationError{
-			Msg: "query parameter downloadId is missing",
+			Message: "query parameter downloadId is missing",
 		}
 		return
 	}

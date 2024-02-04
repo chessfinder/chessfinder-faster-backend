@@ -27,7 +27,7 @@ type SearchResultResponse struct {
 
 func SearchNotFound(searchId string) api.BusinessError {
 	return api.BusinessError{
-		Msg:  fmt.Sprintf("Search result %v not found", searchId),
-		Code: "SEARCH_RESULT_NOT_FOUND",
+		Message: fmt.Sprintf("Search result %v not found", searchId),
+		Code:    "SEARCH_RESULT_NOT_FOUND",
 	}
 }

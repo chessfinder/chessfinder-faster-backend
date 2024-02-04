@@ -103,7 +103,7 @@ func Test_search_result_not_found_is_responded_if_there_is_no_search_for_given_i
 	actualResponse, err := api.WithRecover(statusChecker.Check)(&event)
 	assert.NoError(t, err)
 
-	expectedResponseBody := fmt.Sprintf(`{"msg": "Search result %v not found", "code": "SEARCH_RESULT_NOT_FOUND"}`, searchId)
+	expectedResponseBody := fmt.Sprintf(`{"message": "Search result %v not found", "code": "SEARCH_RESULT_NOT_FOUND"}`, searchId)
 	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Expected error is not met!")
 	assert.Equal(t, 422, actualResponse.StatusCode, "Expected status code is not met!")
 }

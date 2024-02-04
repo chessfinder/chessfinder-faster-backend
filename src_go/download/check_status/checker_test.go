@@ -114,7 +114,7 @@ func Test_download_request_not_found_is_responded_if_there_is_no_task_for_given_
 		assert.FailNow(t, fmt.Sprintf("%v", err.Error()))
 	}
 
-	expectedResponseBody := fmt.Sprintf(`{"code":"DOWNLOAD_REQUEST_NOT_FOUND","msg":"Download request %v not found"}`, downloadId)
+	expectedResponseBody := fmt.Sprintf(`{"code":"DOWNLOAD_REQUEST_NOT_FOUND","message":"Download request %v not found"}`, downloadId)
 
 	assert.JSONEq(t, expectedResponseBody, actualResponse.Body, "Expected error is not met!")
 	assert.Equal(t, 422, actualResponse.StatusCode, "Expected status code is not met!")

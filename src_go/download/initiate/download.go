@@ -15,16 +15,14 @@ type DownloadResponse struct {
 	DownloadId string `json:"downloadId"`
 }
 
-func NoGameAvailable(user DownloadRequest) api.BusinessError {
+func ProfileNotFound(user DownloadRequest) api.BusinessError {
 	return api.BusinessError{
-		Msg:  fmt.Sprintf("Profile %v does not have any information about their played games!", user.Username),
-		Code: "NO_GAME_AVAILABLE",
+		Message: fmt.Sprintf("Profile %v not found!", user.Username),
+		Code:    "PROFILE_NOT_FOUND",
 	}
 }
 
-func ProfileNotFound(user DownloadRequest) api.BusinessError {
-	return api.BusinessError{
-		Msg:  fmt.Sprintf("Profile %v not found!", user.Username),
-		Code: "PROFILE_NOT_FOUND",
-	}
+var UserNameCannotBeEmpty = api.BusinessError{
+	Code:    "INVALID_USERNAME",
+	Message: "Username cannot be empty!",
 }
