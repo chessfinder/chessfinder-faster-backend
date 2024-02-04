@@ -14,5 +14,4 @@ use (
 	./src_go/search/check_status
   ./src_go/search/initiate
   ./src_go/search/process
-  ./notnil_chess
 )
