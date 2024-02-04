@@ -83,18 +83,18 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 
 			var err error
 			userId := uuid.New().String()
-			searchId := uuid.New().String()
-			consistentSearchId := searches.NewConsistentSearchId(userId, searchId, "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????")
+			downloadStartedAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
+			searchId := searches.NewSearchId(userId, &downloadStartedAt, "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????")
 			total := 0
 
-			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-10.json"); assert.NoError(t, err) {
+			if gameRecords, err := loadGameRecords(userId, searchId.String(), "testdata/2022-10.json"); assert.NoError(t, err) {
 				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
 
 			}
 
-			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-11.json"); assert.NoError(t, err) {
+			if gameRecords, err := loadGameRecords(userId, searchId.String(), "testdata/2022-11.json"); assert.NoError(t, err) {
 				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
@@ -103,15 +103,14 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			searchAtartAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 
 			searchRecord := searches.SearchRecord{
-				SearchId:           searchId,
-				ConsistentSearchId: searches.ConsistentSearchId(consistentSearchId),
-				StartAt:            searchAtartAt,
-				LastExaminedAt:     searchAtartAt,
-				Examined:           0,
-				Total:              total,
-				Matched:            []string{},
-				Status:             searches.InProgress,
-				ExpiresAt:          dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
+				SearchId:       searchId,
+				StartAt:        searchAtartAt,
+				LastExaminedAt: searchAtartAt,
+				Examined:       0,
+				Total:          total,
+				Matched:        []string{},
+				Status:         searches.InProgress,
+				ExpiresAt:      dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
 			}
 
 			err = searches.SearchesTable{
@@ -144,7 +143,7 @@ func Test_when_there_is_a_registered_search_BoardFinder_should_look_through_all_
 			}
 			assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId)
+			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId.String())
 			assert.NoError(t, err)
 
 			startOfChecking := time.Now().UTC()
@@ -214,17 +213,17 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 
 			var err error
 			userId := uuid.New().String()
-			searchId := uuid.New().String()
-			consistentSearchId := searches.NewConsistentSearchId(userId, searchId, "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????")
+			downloadStartedAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
+			searchId := searches.NewSearchId(userId, &downloadStartedAt, "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????")
 			total := 0
 
-			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-07_repeating_games.json"); assert.NoError(t, err) {
+			if gameRecords, err := loadGameRecords(userId, searchId.String(), "testdata/2022-07_repeating_games.json"); assert.NoError(t, err) {
 				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
 			}
 
-			if gameRecords, err := loadGameRecords(userId, searchId, "testdata/2022-08.json"); assert.NoError(t, err) {
+			if gameRecords, err := loadGameRecords(userId, searchId.String(), "testdata/2022-08.json"); assert.NoError(t, err) {
 				err = gamesTable.PutGameRecords(gameRecords)
 				assert.NoError(t, err)
 				total += len(gameRecords)
@@ -233,15 +232,14 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			searchAtartAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 
 			searchRecord := searches.SearchRecord{
-				SearchId:           searchId,
-				ConsistentSearchId: searches.ConsistentSearchId(consistentSearchId),
-				StartAt:            searchAtartAt,
-				LastExaminedAt:     searchAtartAt,
-				Examined:           0,
-				Total:              total,
-				Matched:            []string{},
-				Status:             searches.InProgress,
-				ExpiresAt:          dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
+				SearchId:       searchId,
+				StartAt:        searchAtartAt,
+				LastExaminedAt: searchAtartAt,
+				Examined:       0,
+				Total:          total,
+				Matched:        []string{},
+				Status:         searches.InProgress,
+				ExpiresAt:      dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
 			}
 
 			err = searches.SearchesTable{
@@ -273,7 +271,7 @@ func Test_when_there_are_more_then_10_games_that_have_the_same_position_BoardFin
 			}
 			assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId)
+			actualSearchRecord, err := searchesTable.GetSearchRecord(searchId.String())
 			assert.NoError(t, err)
 
 			startOfChecking := time.Now().UTC()

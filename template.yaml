@@ -101,11 +101,9 @@ Resources:
         DownloadGamesQueueUrl: !GetAtt SQS.Outputs.DownloadGamesQueueUrl
         SearchBoardQueueUrl: !GetAtt SQS.Outputs.SearchBoardQueueUrl
         DownloadsTableName: !GetAtt DynamoDB.Outputs.DownloadsTableName
-        DownloadsByConsistentDownloadIdIndexName: !GetAtt DynamoDB.Outputs.DownloadsByConsistentDownloadIdIndexName
         UsersTableName: !GetAtt DynamoDB.Outputs.UsersTableName
         ArchivesTableName: !GetAtt DynamoDB.Outputs.ArchivesTableName
         SearchesTableName: !GetAtt DynamoDB.Outputs.SearchesTableName
-        SearchesByConsistentSearchIdIndexName: !GetAtt DynamoDB.Outputs.SearchesByConsistentSearchIdIndexName
         ChessDotComUrl: "https://api.chess.com"
         DownloadInfoExpiresInSeconds: 900
         SearchInfoExpiresInSeconds: 900

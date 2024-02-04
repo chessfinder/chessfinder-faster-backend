@@ -12,14 +12,19 @@ import (
 
 func main() {
 
-	userTableName, userTableExists := os.LookupEnv("USERS_TABLE_NAME")
-	if !userTableExists {
+	usersTableName, usersTableExists := os.LookupEnv("USERS_TABLE_NAME")
+	if !usersTableExists {
 		panic(errors.New("USERS_TABLE_NAME is missing"))
 	}
 
 	archivesTableName, archivesTableNameExists := os.LookupEnv("ARCHIVES_TABLE_NAME")
 	if !archivesTableNameExists {
 		panic(errors.New("ARCHIVES_TABLE_NAME is missing"))
+	}
+
+	downloadsTableName, downloadsTableNameExists := os.LookupEnv("DOWNLOADS_TABLE_NAME")
+	if !downloadsTableNameExists {
+		panic(errors.New("DOWNLOADS_TABLE_NAME is missing"))
 	}
 
 	searchesTableName, searchesTableNameExists := os.LookupEnv("SEARCHES_TABLE_NAME")
@@ -57,8 +62,9 @@ func main() {
 	}
 
 	registrar := SearchRegistrar{
-		userTableName:       userTableName,
+		usersTableName:      usersTableName,
 		archivesTableName:   archivesTableName,
+		downloadsTableName:  downloadsTableName,
 		searchesTableName:   searchesTableName,
 		searchBoardQueueUrl: searchBoardQueueUrl,
 		searchInfoExpiresIn: searchInfoExpiresIn,

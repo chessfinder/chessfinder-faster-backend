@@ -31,14 +31,13 @@ var awsConfig = aws.Config{
 }
 
 var downloader = ArchiveDownloader{
-	downloadGamesQueueUrl:                    "http://localhost:4566/000000000000/chessfinder_sqs-DownloadGames.fifo",
-	chessDotComUrl:                           "http://0.0.0.0:18443",
-	usersTableName:                           "chessfinder_dynamodb-users",
-	archivesTableName:                        "chessfinder_dynamodb-archives",
-	downloadsTableName:                       "chessfinder_dynamodb-downloads",
-	downloadsByConsistentDownloadIdIndexName: "chessfinder_dynamodb-downloadsByConsistentDownloadId",
-	downloadInfoExpiresIn:                    24 * time.Hour,
-	awsConfig:                                &awsConfig,
+	downloadGamesQueueUrl: "http://localhost:4566/000000000000/chessfinder_sqs-DownloadGames.fifo",
+	chessDotComUrl:        "http://0.0.0.0:18443",
+	usersTableName:        "chessfinder_dynamodb-users",
+	archivesTableName:     "chessfinder_dynamodb-archives",
+	downloadsTableName:    "chessfinder_dynamodb-downloads",
+	downloadInfoExpiresIn: 24 * time.Hour,
+	awsConfig:             &awsConfig,
 }
 
 var awsSession = session.Must(session.NewSession(&awsConfig))
@@ -152,9 +151,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_archives_fo
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownloadRecord)
 
-	expectedConsistentDownloadId := downloads.NewConsistentDownloadId(userId)
-
-	assert.Equal(t, expectedConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
 	assert.Equal(t, 0, actualDownloadRecord.Failed)
 	assert.Equal(t, 0, actualDownloadRecord.Succeed)
 	assert.Equal(t, 0, actualDownloadRecord.Done)
@@ -426,9 +422,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_archives_as
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownloadRecord)
 
-	expectedConsistentDownloadId := downloads.NewConsistentDownloadId(userId)
-
-	assert.Equal(t, expectedConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
 	assert.Equal(t, 0, actualDownloadRecord.Failed)
 	assert.Equal(t, 0, actualDownloadRecord.Succeed)
 	assert.Equal(t, 0, actualDownloadRecord.Done)
@@ -694,9 +687,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_archives_as
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownloadRecord)
 
-	expectedConsistentDownloadId := downloads.NewConsistentDownloadId(userId)
-
-	assert.Equal(t, expectedConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
 	assert.Equal(t, 0, actualDownloadRecord.Failed)
 	assert.Equal(t, 0, actualDownloadRecord.Succeed)
 	assert.Equal(t, 0, actualDownloadRecord.Done)
@@ -917,9 +907,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownloadRecord)
 
-	expectedConsistentDownloadId := downloads.NewConsistentDownloadId(userId)
-
-	assert.Equal(t, expectedConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
 	assert.Equal(t, 0, actualDownloadRecord.Failed)
 	assert.Equal(t, 0, actualDownloadRecord.Succeed)
 	assert.Equal(t, 0, actualDownloadRecord.Done)
@@ -1047,258 +1034,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_all_missing_arc
 
 }
 
-func Test_ArchiveDownloader_should_ignore_previous_download_process_if_if_is_almost_expired_and_start_downloading(t *testing.T) {
-	var err error
-	startOfTest := time.Now()
-
-	err = deleteAllDownloads()
-	assert.NoError(t, err)
-
-	defer wiremockClient.Reset()
-
-	username := strings.ToLower(uuid.New().String())
-	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
-
-	existingUserRecord := users.UserRecord{
-		UserId:              userId,
-		Platform:            users.ChessDotCom,
-		Username:            username,
-		DownloadFromScratch: false,
-	}
-
-	err = usersTable.PutUserRecord(existingUserRecord)
-	assert.NoError(t, err)
-
-	previousDownloadId := uuid.New().String()
-	previouseDownloadExpiresAt := startOfTest.Add(5 * time.Second)
-	previousDownload := downloads.DownloadRecord{
-		ConsistentDownloadId: downloads.NewConsistentDownloadId(userId),
-		DownloadId:           previousDownloadId,
-		Failed:               0,
-		Succeed:              0,
-		Done:                 0,
-		Pending:              3,
-		Total:                3,
-		StartAt:              db.Zuludatetime(startOfTest.Add(-downloader.downloadInfoExpiresIn - time.Second)),
-		LastDownloadedAt:     db.Zuludatetime(startOfTest.Add(-downloader.downloadInfoExpiresIn - time.Second)),
-		ExpiresAt:            dynamodbattribute.UnixTime(previouseDownloadExpiresAt),
-	}
-	err = downloadsTable.PutDownloadRecord(previousDownload)
-	assert.NoError(t, err)
-
-	usersProfileReponseBody := fmt.Sprintf(
-		`{
-      "player_id": 191338281,
-      "@id": "%v",
-      "url": "https://www.chess.com/member/%v",
-      "username": "%v",
-      "followers": 10,
-      "country": "https://api.chess.com/pub/country/AM",
-      "last_online": 1678264516,
-      "joined": 1658920370,
-      "status": "premium",
-      "is_streamer": false,
-      "verified": false,
-      "league": "Champion"
-    }`,
-		userId,
-		username,
-		username,
-	)
-
-	getUsersProfileStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v", username))).
-		WillReturnResponse(
-			wiremock.NewResponse().
-				WithBody(usersProfileReponseBody).
-				WithHeader("Content-Type", "application/json").
-				WithStatus(http.StatusOK),
-		)
-	err = wiremockClient.StubFor(getUsersProfileStub)
-	assert.NoError(t, err)
-
-	archivesResponseBody := fmt.Sprintf(
-		`{
-			"archives": [
-				"https://api.chess.com/pub/player/%v/games/2021/10",
-				"https://api.chess.com/pub/player/%v/games/2021/11",
-				"https://api.chess.com/pub/player/%v/games/2021/12"
-			]
-		}`, username, username, username,
-	)
-
-	getArchivesStub := wiremock.Get(wiremock.URLPathEqualTo(fmt.Sprintf("/pub/player/%v/games/archives", username))).
-		WillReturnResponse(
-			wiremock.NewResponse().
-				WithBody(archivesResponseBody).
-				WithHeader("Content-Type", "application/json").
-				WithStatus(http.StatusOK),
-		)
-	err = wiremockClient.StubFor(getArchivesStub)
-	assert.NoError(t, err)
-
-	event := events.APIGatewayV2HTTPRequest{
-		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM"}`, username),
-		RequestContext: events.APIGatewayV2HTTPRequestContext{
-			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
-				Method: "POST",
-				Path:   "/api/faster/game",
-			},
-		},
-	}
-
-	actualResponse, err := downloader.DownloadArchiveAndDistributeDownloadGameCommands(&event)
-	assert.NoError(t, err)
-
-	startOfCheck := time.Now()
-
-	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
-
-	actualDownloadResponse := DownloadResponse{}
-	err = json.Unmarshal([]byte(actualResponse.Body), &actualDownloadResponse)
-	assert.NoError(t, err)
-
-	downloadId := actualDownloadResponse.DownloadId
-
-	actualDownloadRecord, err := downloadsTable.GetDownloadRecord(downloadId)
-	assert.NoError(t, err)
-	assert.NotNil(t, actualDownloadRecord)
-
-	expectedConsistentDownloadId := downloads.NewConsistentDownloadId(userId)
-
-	assert.Equal(t, expectedConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
-	assert.Equal(t, 0, actualDownloadRecord.Failed)
-	assert.Equal(t, 0, actualDownloadRecord.Succeed)
-	assert.Equal(t, 0, actualDownloadRecord.Done)
-	assert.Equal(t, 3, actualDownloadRecord.Pending)
-	assert.Equal(t, 3, actualDownloadRecord.Total)
-	assert.True(t, startOfTest.Before(actualDownloadRecord.StartAt.ToTime()))
-	assert.True(t, startOfCheck.After(actualDownloadRecord.StartAt.ToTime()))
-	assert.True(t, startOfTest.Before(actualDownloadRecord.LastDownloadedAt.ToTime()))
-	assert.True(t, startOfCheck.After(actualDownloadRecord.LastDownloadedAt.ToTime()))
-
-	assert.True(t, startOfTest.Add(downloader.downloadInfoExpiresIn-time.Second).Before(time.Time(actualDownloadRecord.ExpiresAt)))
-	assert.True(t, startOfCheck.Add(downloader.downloadInfoExpiresIn+time.Second).After(time.Time(actualDownloadRecord.ExpiresAt)))
-
-	verifyGetUsersProfileStub, err := wiremockClient.Verify(getUsersProfileStub.Request(), 0)
-	assert.NoError(t, err)
-	assert.Equal(t, true, verifyGetUsersProfileStub, fmt.Sprintf("Stub of getting user profile %v was not called!", username))
-
-	verifyGetArchivesStub, err := wiremockClient.Verify(getArchivesStub.Request(), 1)
-	assert.NoError(t, err)
-	assert.Equal(t, true, verifyGetArchivesStub, "Stub of getting archives was not called!")
-
-	actualUserRecord, err := usersTable.GetUserRecord(username, users.ChessDotCom)
-	assert.NoError(t, err)
-	assert.NotNil(t, actualUserRecord)
-
-	expectedUserRecord := users.UserRecord{
-		UserId:              userId,
-		Platform:            "CHESS_DOT_COM",
-		Username:            username,
-		DownloadFromScratch: false,
-	}
-
-	assert.Equal(t, expectedUserRecord, *actualUserRecord)
-
-	archiveId_2021_10 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
-	archive_2021_10, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_10)
-	assert.NoError(t, err)
-	assert.NotNil(t, archive_2021_10)
-
-	expectedArchive_2021_10 := archives.ArchiveRecord{
-		UserId:       userId,
-		ArchiveId:    archiveId_2021_10,
-		Resource:     archiveId_2021_10,
-		Year:         2021,
-		Month:        10,
-		DownloadedAt: nil,
-		Downloaded:   0,
-	}
-
-	assert.Equal(t, expectedArchive_2021_10, *archive_2021_10)
-
-	archiveId_2021_11 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
-	archive_2021_11, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_11)
-	assert.NoError(t, err)
-	assert.NotNil(t, archive_2021_11)
-
-	expectedArchive_2021_11 := archives.ArchiveRecord{
-		UserId:       userId,
-		ArchiveId:    archiveId_2021_11,
-		Resource:     archiveId_2021_11,
-		Year:         2021,
-		Month:        11,
-		DownloadedAt: nil,
-		Downloaded:   0,
-	}
-
-	assert.Equal(t, expectedArchive_2021_11, *archive_2021_11)
-
-	archiveId_2021_12 := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/12", username)
-	archive_2021_12, err := archivesTable.GetArchiveRecord(userId, archiveId_2021_12)
-	assert.NoError(t, err)
-	assert.NotNil(t, archive_2021_12)
-
-	expectedArchive_2021_12 := archives.ArchiveRecord{
-		UserId:       userId,
-		ArchiveId:    archiveId_2021_12,
-		Resource:     archiveId_2021_12,
-		Year:         2021,
-		Month:        12,
-		DownloadedAt: nil,
-		Downloaded:   0,
-	}
-
-	assert.Equal(t, expectedArchive_2021_12, *archive_2021_12, fmt.Sprintf("Archive %v is not present in %v table!", archiveId_2021_12, downloader.archivesTableName))
-
-	lastThreeCommands, err := queue.GetLastNCommands(svc, downloader.downloadGamesQueueUrl, 3)
-	assert.NoError(t, err)
-
-	actualCommands := make([]queue.DownloadGamesCommand, len(lastThreeCommands))
-	for i, message := range lastThreeCommands {
-		var command queue.DownloadGamesCommand
-		err = json.Unmarshal([]byte(*message.Body), &command)
-		if err != nil {
-			return
-		}
-		actualCommands[i] = command
-	}
-	assert.NoError(t, err)
-
-	command_2021_10 := queue.DownloadGamesCommand{
-		Username:   username,
-		Platform:   queue.Platform("CHESS_DOT_COM"),
-		UserId:     userId,
-		ArchiveId:  archiveId_2021_10,
-		DownloadId: downloadId,
-	}
-
-	command_2021_11 := queue.DownloadGamesCommand{
-		Username:   username,
-		Platform:   queue.Platform("CHESS_DOT_COM"),
-		UserId:     userId,
-		ArchiveId:  archiveId_2021_11,
-		DownloadId: downloadId,
-	}
-
-	command_2021_12 := queue.DownloadGamesCommand{
-		Username:   username,
-		Platform:   queue.Platform("CHESS_DOT_COM"),
-		UserId:     userId,
-		ArchiveId:  archiveId_2021_12,
-		DownloadId: downloadId,
-	}
-
-	expectedCommands := []queue.DownloadGamesCommand{
-		command_2021_10,
-		command_2021_11,
-		command_2021_12,
-	}
-
-	assert.Equal(t, expectedCommands, actualCommands, "Commands are not equal!")
-
-}
-
 func Test_ArchiveDownloader_should_return_id_of_the_previous_download_process_and_never_start_downloading(t *testing.T) {
 	var err error
 	startOfTest := time.Now()
@@ -1321,19 +1056,18 @@ func Test_ArchiveDownloader_should_return_id_of_the_previous_download_process_an
 	err = usersTable.PutUserRecord(existingUserRecord)
 	assert.NoError(t, err)
 
-	previousDownloadId := uuid.New().String()
+	previousDownloadId := downloads.NewDownloadId(userId)
 	previouseDownloadExpiresAt := startOfTest.Add(25 * time.Second)
 	previousDownload := downloads.DownloadRecord{
-		ConsistentDownloadId: downloads.NewConsistentDownloadId(userId),
-		DownloadId:           previousDownloadId,
-		Failed:               0,
-		Succeed:              0,
-		Done:                 0,
-		Pending:              3,
-		Total:                3,
-		StartAt:              db.Zuludatetime(startOfTest.Add(-downloader.downloadInfoExpiresIn - time.Second)),
-		LastDownloadedAt:     db.Zuludatetime(startOfTest.Add(-downloader.downloadInfoExpiresIn - time.Second)),
-		ExpiresAt:            dynamodbattribute.UnixTime(previouseDownloadExpiresAt),
+		DownloadId:       previousDownloadId,
+		Failed:           0,
+		Succeed:          0,
+		Done:             0,
+		Pending:          3,
+		Total:            3,
+		StartAt:          db.Zuludatetime(startOfTest.Add(-downloader.downloadInfoExpiresIn - time.Second)),
+		LastDownloadedAt: db.Zuludatetime(startOfTest.Add(-downloader.downloadInfoExpiresIn - time.Second)),
+		ExpiresAt:        dynamodbattribute.UnixTime(previouseDownloadExpiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(previousDownload)
@@ -1414,7 +1148,6 @@ func Test_ArchiveDownloader_should_return_id_of_the_previous_download_process_an
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownloadRecord)
 
-	assert.Equal(t, previousDownload.ConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
 	assert.Equal(t, previousDownload.DownloadId, actualDownloadRecord.DownloadId)
 	assert.Equal(t, previousDownload.Failed, actualDownloadRecord.Failed)
 	assert.Equal(t, previousDownload.Succeed, actualDownloadRecord.Succeed)
@@ -1577,9 +1310,6 @@ func Test_ArchiveDownloader_should_emit_DownloadGameCommands_for_partially_downl
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownloadRecord)
 
-	expectedConsistentDownloadId := downloads.NewConsistentDownloadId(userId)
-
-	assert.Equal(t, expectedConsistentDownloadId, actualDownloadRecord.ConsistentDownloadId)
 	assert.Equal(t, 0, actualDownloadRecord.Failed)
 	assert.Equal(t, 0, actualDownloadRecord.Succeed)
 	assert.Equal(t, 0, actualDownloadRecord.Done)

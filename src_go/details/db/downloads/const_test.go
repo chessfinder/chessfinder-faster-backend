@@ -22,9 +22,3 @@ var downloadsTable = DownloadsTable{
 	Name:           downloadsTableName,
 	DynamodbClient: dynamodbClient,
 }
-
-var downloadsByConsistentDownloadIdIndex = DownloadsByConsistentDownloadIdIndex{
-	Name:           "chessfinder_dynamodb-downloadsByConsistentDownloadId",
-	TableName:      downloadsTableName,
-	DynamodbClient: dynamodbClient,
-}

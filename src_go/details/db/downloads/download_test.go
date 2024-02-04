@@ -15,8 +15,8 @@ import (
 
 func Test_DownloadRecord_should_be_stored_in_correct_form(t *testing.T) {
 
-	downloadId := uuid.New().String()
-	consistentId := NewConsistentDownloadId("user1")
+	userId := uuid.New().String()
+	downloadId := NewDownloadId(userId)
 	startAt := time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC)
 	lastDownloadedAt := time.Date(2023, time.October, 5, 19, 45, 17, 321000000, time.UTC)
 	expiresAt := time.Date(2023, time.December, 6, 19, 45, 17, 0, time.UTC)
@@ -27,16 +27,15 @@ func Test_DownloadRecord_should_be_stored_in_correct_form(t *testing.T) {
 	total := 7
 
 	download := DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentId,
-		StartAt:              db.Zuludatetime(startAt),
-		LastDownloadedAt:     db.Zuludatetime(lastDownloadedAt),
-		Succeed:              succeed,
-		Failed:               failed,
-		Done:                 done,
-		Pending:              pending,
-		Total:                total,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startAt),
+		LastDownloadedAt: db.Zuludatetime(lastDownloadedAt),
+		Succeed:          succeed,
+		Failed:           failed,
+		Done:             done,
+		Pending:          pending,
+		Total:            total,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(download)
@@ -44,10 +43,7 @@ func Test_DownloadRecord_should_be_stored_in_correct_form(t *testing.T) {
 
 	expectedMarshalledItems := map[string]*dynamodb.AttributeValue{
 		"download_id": {
-			S: aws.String(downloadId),
-		},
-		"consistent_download_id": {
-			S: aws.String("dXNlcjE="),
+			S: aws.String(downloadId.String()),
 		},
 		"start_at": {
 			S: aws.String("2023-10-01T11:30:17.123Z"),
@@ -89,7 +85,7 @@ func Test_DownloadRecord_should_be_stored_in_correct_form(t *testing.T) {
 			TableName: aws.String(downloadsTableName),
 			Key: map[string]*dynamodb.AttributeValue{
 				"download_id": {
-					S: aws.String(downloadId),
+					S: aws.String(downloadId.String()),
 				},
 			},
 		},
@@ -103,7 +99,6 @@ func Test_DownloadRecord_should_be_stored_in_correct_form(t *testing.T) {
 
 	expectedDownload := download
 
-	assert.Equal(t, expectedDownload.ConsistentDownloadId, actualDownload.ConsistentDownloadId)
 	assert.Equal(t, expectedDownload.StartAt, actualDownload.StartAt)
 	assert.Equal(t, expectedDownload.LastDownloadedAt, actualDownload.LastDownloadedAt)
 	assert.Equal(t, time.Time(expectedDownload.ExpiresAt).UTC(), time.Time(actualDownload.ExpiresAt).UTC())

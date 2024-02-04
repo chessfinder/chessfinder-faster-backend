@@ -22,9 +22,6 @@ Parameters:
 
   DownloadsTableName:
     Type: String
-
-  DownloadsByConsistentDownloadIdIndexName:
-    Type: String
   
   UsersTableName:
     Type: String
@@ -33,9 +30,6 @@ Parameters:
     Type: String
   
   SearchesTableName:
-    Type: String
-
-  SearchesByConsistentSearchIdIndexName:
     Type: String
 
   DownloadInfoExpiresInSeconds:
@@ -150,7 +144,6 @@ Resources:
           DOWNLOAD_GAMES_QUEUE_URL: !Ref DownloadGamesQueueUrl
           CHESS_DOT_COM_URL: !Ref ChessDotComUrl
           DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
-          DOWNLOADS_BY_CONSISTENT_DOWNLOAD_ID_INDEX_NAME: !Ref DownloadsByConsistentDownloadIdIndexName
           USERS_TABLE_NAME: !Ref UsersTableName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
           DOWNLOAD_INFO_EXPIRES_IN_SECONDS: !Ref DownloadInfoExpiresInSeconds
@@ -224,8 +217,8 @@ Resources:
           USERS_TABLE_NAME: !Ref UsersTableName
           CHESSFINDER_VALIDATION_CORE_FUNCTION_NAME: !Ref ChessfinderValidationCoreFunctionName
           ARCHIVES_TABLE_NAME: !Ref ArchivesTableName
+          DOWNLOADS_TABLE_NAME: !Ref DownloadsTableName
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
-          SEARCHES_BY_CONSISTENT_SEARCH_ID_INDEX_NAME: !Ref SearchesByConsistentSearchIdIndexName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
           SEARCH_INFO_EXPIRES_IN_SECONDS: !Ref SearchInfoExpiresInSeconds
       Role: !Ref ChessfinderLambdaRoleArn

@@ -11,18 +11,20 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type SearchRegistrar struct {
-	userTableName       string
+	usersTableName      string
 	archivesTableName   string
+	downloadsTableName  string
 	searchesTableName   string
 	searchBoardQueueUrl string
 	searchInfoExpiresIn time.Duration
@@ -76,8 +78,8 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	}
 
 	logger.Info("fetching user from db", zap.String("user", searchRequest.Username))
-	userCandidate, err := users.UsersTable{
-		Name:           registrar.userTableName,
+	user, err := users.UsersTable{
+		Name:           registrar.usersTableName,
 		DynamodbClient: dynamodbClient,
 	}.GetUserRecord(searchRequest.Username, users.Platform(searchRequest.Platform))
 
@@ -86,14 +88,56 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 		return
 	}
 
-	if userCandidate == nil {
+	if user == nil {
 		err = ProfileIsNotCached(searchRequest.Username, searchRequest.Platform)
 		logger.Info("profile is not cached")
 		return
 	}
-	user := *userCandidate
 
 	logger = logger.With(zap.String("userId", user.UserId))
+
+	logger.Info("fetching download record ...")
+
+	searchesTable := searches.SearchesTable{
+		Name:           registrar.searchesTableName,
+		DynamodbClient: dynamodbClient,
+	}
+
+	downloadId := downloads.NewDownloadId(user.UserId)
+	exisitngDownload, err := downloads.DownloadsTable{
+		Name:           registrar.downloadsTableName,
+		DynamodbClient: dynamodbClient,
+	}.GetDownloadRecord(downloadId.String())
+
+	if err != nil {
+		logger.Error("error while getting download record", zap.Error(err))
+		return
+	}
+
+	var exisitngDownloadStartedAt *db.ZuluDateTime = nil
+
+	if exisitngDownload != nil {
+		logger = logger.With(zap.String("downloadId", downloadId.String()))
+		logger.Info("download record found")
+		exisitngDownloadStartedAt = &exisitngDownload.StartAt
+	}
+
+	exisitngSearchId := searches.NewSearchId(user.UserId, exisitngDownloadStartedAt, searchRequest.Board)
+	exisitngSearch, err := searchesTable.GetSearchRecord(exisitngSearchId.String())
+	if err != nil {
+		logger.Error("error while getting search record", zap.Error(err))
+		return
+	}
+
+	if exisitngSearch != nil {
+		logger.Info("search record found")
+		responseEvent, err = searchIdToResponseEvent(exisitngSearch.SearchId.String())
+
+		if err != nil {
+			logger.Error("error while marshalling search response")
+		}
+		return
+	}
 
 	logger.Info("fetching archives from db")
 	archives, err :=
@@ -117,18 +161,14 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 		return
 	}
 
-	searchId := uuid.New().String()
-	logger = logger.With(zap.String("searchResultId", searchId))
+	searchId := searches.NewSearchId(user.UserId, exisitngDownloadStartedAt, searchRequest.Board)
+	logger = logger.With(zap.String("searchResultId", searchId.String()))
 	now := time.Now()
 
-	consistentSearchId := searches.NewConsistentSearchId(user.UserId, searchId, searchRequest.Board)
-	searchResult := searches.NewSearchRecord(searchId, consistentSearchId, now, downloadedGames, registrar.searchInfoExpiresIn)
+	searchResult := searches.NewSearchRecord(searchId, now, downloadedGames, registrar.searchInfoExpiresIn)
 
 	logger.Info("putting search result")
-	err = searches.SearchesTable{
-		Name:           registrar.searchesTableName,
-		DynamodbClient: dynamodbClient,
-	}.PutSearchRecord(searchResult)
+	err = searchesTable.PutSearchRecord(searchResult)
 
 	if err != nil {
 		logger.Error("error while persisting search record", zap.Error(err))
@@ -139,7 +179,7 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 
 	searchBoardCommand := queue.SearchBoardCommand{
 		UserId:   user.UserId,
-		SearchId: searchId,
+		SearchId: searchId.String(),
 		Board:    searchRequest.Board,
 	}
 
@@ -151,33 +191,43 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	sendMessageInput := &sqs.SendMessageInput{
 		MessageBody: aws.String(string(searchBoardCommandJson)),
 		QueueUrl:    aws.String(registrar.searchBoardQueueUrl),
-		//fixme this should be the boeard, but that makes the test flaky. in test we need to wait for the message to be processed and forgotten by SQS. To overcome this we should generate valid boear each time. That will break the restriction of deduplication.
+		//fixme this should be the boeard, but that makes the test flaky. in test we need to wait for the message to be processed and forgotten by SQS. To overcome this we should generate valid boead each time. That will break the restriction of deduplication.
 		MessageDeduplicationId: aws.String(searchBoardCommand.SearchId),
 		MessageGroupId:         aws.String(user.UserId),
 	}
 
 	_, err = svc.SendMessage(sendMessageInput)
 	if err != nil {
-		logger.Error("error while sending search board command")
+		logger.Error("error while sending search board command", zap.Error(err))
 	}
 
 	logger.Info("search board command sent")
 
-	searchResponse := SearchResponse{
-		SearchId: searchId,
-	}
+	responseEvent, err = searchIdToResponseEvent(searchId.String())
 
-	searchResponseJson, err := json.Marshal(searchResponse)
 	if err != nil {
 		logger.Error("error while marshalling search response")
 	}
 
+	return
+}
+
+func searchIdToResponseEvent(searchId string) (responseEvent events.APIGatewayV2HTTPResponse, err error) {
+	searchResponse := SearchResponse{
+		SearchId: searchId,
+	}
+
+	jsonBody, err := json.Marshal(searchResponse)
+	if err != nil {
+		return
+	}
+
 	responseEvent = events.APIGatewayV2HTTPResponse{
 		StatusCode: 200,
+		Body:       string(jsonBody),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-		Body: string(searchResponseJson),
 	}
 
 	return

@@ -37,7 +37,10 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 
 	startOfTest := time.Now()
 
-	searchId := uuid.New().String()
+	userId := uuid.New().String()
+	downloadStartedAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
+	board := uuid.New().String()
+	searchId := searches.NewSearchId(userId, &downloadStartedAt, board)
 
 	event := events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
@@ -47,7 +50,7 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 			},
 		},
 		QueryStringParameters: map[string]string{
-			"searchId": searchId,
+			"searchId": searchId.String(),
 		},
 	}
 
@@ -56,17 +59,15 @@ func Test_search_result_is_delivered_if_there_is_a_search_for_given_id(t *testin
 	lastExaminedAt, err := db.ZuluDateTimeFromString("2021-02-01T00:11:24.000Z")
 	assert.NoError(t, err)
 
-	consistentSearchId := searches.NewConsistentSearchId("user1", "download1", "board1")
 	searchRecord := searches.SearchRecord{
-		SearchId:           searchId,
-		ConsistentSearchId: searches.ConsistentSearchId(consistentSearchId),
-		LastExaminedAt:     lastExaminedAt,
-		StartAt:            startAt,
-		Examined:           15,
-		Total:              100,
-		Matched:            []string{"https://www.chess.com/game/live/88704743803", "https://www.chess.com/game/live/88624306385"},
-		Status:             "SEARCHED_ALL",
-		ExpiresAt:          dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
+		SearchId:       searchId,
+		LastExaminedAt: lastExaminedAt,
+		StartAt:        startAt,
+		Examined:       15,
+		Total:          100,
+		Matched:        []string{"https://www.chess.com/game/live/88704743803", "https://www.chess.com/game/live/88624306385"},
+		Status:         "SEARCHED_ALL",
+		ExpiresAt:      dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
 	}
 
 	err = searches.SearchesTable{

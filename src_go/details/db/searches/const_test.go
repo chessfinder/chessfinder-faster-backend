@@ -22,9 +22,3 @@ var searchesTable = SearchesTable{
 	Name:           searchesTableName,
 	DynamodbClient: dynamodbClient,
 }
-
-var searchesByConsistentSearchIdIndex = SearchesByConsistentSearchIdIndex{
-	Name:           "chessfinder_dynamodb-searchesByConsistentSearchId",
-	TableName:      searchesTableName,
-	DynamodbClient: dynamodbClient,
-}

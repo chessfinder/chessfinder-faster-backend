@@ -68,7 +68,7 @@ func (checker *SearchResultChecker) Check(event *events.APIGatewayV2HTTPRequest)
 	searchRecord := *searchRecordCandidate
 
 	searchResultResponse := SearchResultResponse{
-		SearchId:       searchRecord.SearchId,
+		SearchId:       searchRecord.SearchId.String(),
 		Total:          searchRecord.Total,
 		StartAt:        searchRecord.StartAt.ToTime(),
 		LastExaminedAt: searchRecord.LastExaminedAt.ToTime(),

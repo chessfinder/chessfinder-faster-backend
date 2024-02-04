@@ -1,7 +1,8 @@
 package searches
 
 import (
-	"encoding/base64"
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -11,15 +12,14 @@ import (
 )
 
 type SearchRecord struct {
-	SearchId           string                     `dynamodbav:"search_id"`
-	ConsistentSearchId ConsistentSearchId         `dynamodbav:"consistent_search_id"`
-	StartAt            db.ZuluDateTime            `dynamodbav:"start_at"`
-	LastExaminedAt     db.ZuluDateTime            `dynamodbav:"last_examined_at"`
-	Examined           int                        `dynamodbav:"examined"`
-	Total              int                        `dynamodbav:"total"`
-	Matched            []string                   `dynamodbav:"matched,stringset"`
-	Status             SearchStatus               `dynamodbav:"status"`
-	ExpiresAt          dynamodbattribute.UnixTime `dynamodbav:"expires_at"`
+	SearchId       SearchId                   `dynamodbav:"search_id"`
+	StartAt        db.ZuluDateTime            `dynamodbav:"start_at"`
+	LastExaminedAt db.ZuluDateTime            `dynamodbav:"last_examined_at"`
+	Examined       int                        `dynamodbav:"examined"`
+	Total          int                        `dynamodbav:"total"`
+	Matched        []string                   `dynamodbav:"matched,stringset"`
+	Status         SearchStatus               `dynamodbav:"status"`
+	ExpiresAt      dynamodbattribute.UnixTime `dynamodbav:"expires_at"`
 }
 
 type SearchStatus string
@@ -30,39 +30,44 @@ const (
 	SearchedPartially SearchStatus = "SEARCHED_PARTIALLY"
 )
 
-func NewSearchRecord(searchId string, consistentSearchId ConsistentSearchId, startAt time.Time, downlaodedGames int, expiresIn time.Duration) SearchRecord {
+func NewSearchRecord(searchId SearchId, startAt time.Time, downlaodedGames int, expiresIn time.Duration) SearchRecord {
 	expiresAt := startAt.Add(expiresIn)
 	return SearchRecord{
-		SearchId:           searchId,
-		ConsistentSearchId: consistentSearchId,
-		StartAt:            db.Zuludatetime(startAt),
-		LastExaminedAt:     db.Zuludatetime(startAt),
-		Examined:           0,
-		Total:              downlaodedGames,
-		Matched:            []string{},
-		Status:             InProgress,
-		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
+		SearchId:       searchId,
+		StartAt:        db.Zuludatetime(startAt),
+		LastExaminedAt: db.Zuludatetime(startAt),
+		Examined:       0,
+		Total:          downlaodedGames,
+		Matched:        []string{},
+		Status:         InProgress,
+		ExpiresAt:      dynamodbattribute.UnixTime(expiresAt),
 	}
 }
 
-type ConsistentSearchId struct {
+type SearchId struct {
 	value string
 }
 
-func (id ConsistentSearchId) String() string { return id.value }
+func (id SearchId) String() string { return id.value }
 
-func NewConsistentSearchId(userId string, downloadId string, board string) ConsistentSearchId {
-	data := userId + "|" + downloadId + "|" + board
-	id := base64.StdEncoding.EncodeToString([]byte(data))
-	return ConsistentSearchId{value: id}
+func NewSearchId(userId string, downloadStartedAt *db.ZuluDateTime, board string) SearchId {
+	var data string
+	if downloadStartedAt == nil {
+		data = userId + "#_#" + board
+	} else {
+		data = userId + "#" + downloadStartedAt.String() + "#" + board
+	}
+	hash := sha256.Sum256([]byte(data))
+	id := hex.EncodeToString(hash[:])
+	return SearchId{value: id}
 }
 
-func (id ConsistentSearchId) MarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
+func (id SearchId) MarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
 	av.S = aws.String(id.String())
 	return nil
 }
 
-func (e *ConsistentSearchId) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
+func (e *SearchId) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
 	if av.S == nil || *av.S == "" {
 		return nil
 	}
