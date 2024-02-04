@@ -67,7 +67,7 @@ func (checker *DownloadStatusChecker) Check(event *events.APIGatewayV2HTTPReques
 	downloadRecord := *downloadRecordCandidate
 
 	downloadStatusResponse := DownloadResultResponse{
-		DownloadId:       downloadRecord.DownloadId,
+		DownloadId:       downloadRecord.DownloadId.String(),
 		StartAt:          downloadRecord.StartAt.ToTime(),
 		LastDownloadedAt: downloadRecord.LastDownloadedAt.ToTime(),
 		Failed:           downloadRecord.Failed,

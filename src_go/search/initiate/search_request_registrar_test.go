@@ -12,10 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/archives"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/downloads"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
@@ -39,8 +41,9 @@ func (s MockedValidator) Validate(requestId string, board string, logger *zap.Lo
 }
 
 var registrar = SearchRegistrar{
-	userTableName:       "chessfinder_dynamodb-users",
+	usersTableName:      "chessfinder_dynamodb-users",
 	archivesTableName:   "chessfinder_dynamodb-archives",
+	downloadsTableName:  "chessfinder_dynamodb-downloads",
 	searchesTableName:   "chessfinder_dynamodb-searches",
 	searchBoardQueueUrl: "http://localhost:4566/000000000000/chessfinder_sqs-SearchBoard.fifo",
 	searchInfoExpiresIn: 24 * time.Hour,
@@ -51,7 +54,7 @@ var dynamodbClient = dynamodb.New(awsSession)
 var svc = sqs.New(awsSession)
 
 var usersTable = users.UsersTable{
-	Name:           registrar.userTableName,
+	Name:           registrar.usersTableName,
 	DynamodbClient: dynamodbClient,
 }
 
@@ -60,12 +63,17 @@ var archivesTable = archives.ArchivesTable{
 	DynamodbClient: dynamodbClient,
 }
 
+var downloadsTable = downloads.DownloadsTable{
+	Name:           registrar.downloadsTableName,
+	DynamodbClient: dynamodbClient,
+}
+
 var searchesTable = searches.SearchesTable{
 	Name:           registrar.searchesTableName,
 	DynamodbClient: dynamodbClient,
 }
 
-func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_and_there_are_cached_archives(t *testing.T) {
+func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_if_there_are_cached_archives_and_no_search_exists_for_the_given_board(t *testing.T) {
 	var err error
 	startOfTest := time.Now()
 
@@ -80,6 +88,29 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	}
 
 	err = usersTable.PutUserRecord(user)
+	assert.NoError(t, err)
+
+	downloadId := downloads.NewDownloadId(userId)
+	download := downloads.DownloadRecord{
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startOfTest),
+		LastDownloadedAt: db.Zuludatetime(startOfTest),
+		Succeed:          10,
+		Failed:           0,
+		Done:             10,
+		Pending:          0,
+		Total:            10,
+		ExpiresAt:        dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
+	}
+
+	err = downloadsTable.PutDownloadRecord(download)
+	assert.NoError(t, err)
+
+	otherBoard := "????R?r?/?????kR?/????Q???/????????/????????/????????/????????/????????"
+	otherSearchId := searches.NewSearchId(userId, &download.StartAt, otherBoard)
+	otherSearch := searches.NewSearchRecord(otherSearchId, startOfTest, 10, 24*time.Hour)
+
+	err = searchesTable.PutSearchRecord(otherSearch)
 	assert.NoError(t, err)
 
 	archive1Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
@@ -165,6 +196,206 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_an
 	}
 
 	assert.Equal(t, expectedCommand, actualCommand, "Commands are not equal!")
+
+}
+
+func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_existing_user_if_there_is_a_search_for_the_given_board(t *testing.T) {
+	var err error
+	startOfTest := time.Now()
+
+	registrar.validator = MockedValidator{isAlwaysValid: true}
+
+	username := uuid.New().String()
+	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
+	user := users.UserRecord{
+		UserId:   userId,
+		Username: username,
+		Platform: users.ChessDotCom,
+	}
+
+	err = usersTable.PutUserRecord(user)
+	assert.NoError(t, err)
+
+	downloadId := downloads.NewDownloadId(userId)
+	download := downloads.DownloadRecord{
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startOfTest),
+		LastDownloadedAt: db.Zuludatetime(startOfTest),
+		Succeed:          10,
+		Failed:           0,
+		Done:             10,
+		Pending:          0,
+		Total:            10,
+		ExpiresAt:        dynamodbattribute.UnixTime(startOfTest.Add(24 * time.Hour)),
+	}
+
+	err = downloadsTable.PutDownloadRecord(download)
+	assert.NoError(t, err)
+
+	board := "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"
+	existingSearchId := searches.NewSearchId(userId, &download.StartAt, board)
+	existingSearch := searches.NewSearchRecord(existingSearchId, startOfTest, 10, 24*time.Hour)
+
+	err = searchesTable.PutSearchRecord(existingSearch)
+	assert.NoError(t, err)
+
+	archive1Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
+	archive1DownloadedAt := db.Zuludatetime(time.Date(2021, 10, 17, 0, 0, 0, 0, time.UTC))
+	archive1 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archive1Resource,
+		Resource:     archive1Resource,
+		Year:         2021,
+		Month:        10,
+		DownloadedAt: &archive1DownloadedAt,
+		Downloaded:   17,
+	}
+
+	err = archivesTable.PutArchiveRecord(archive1)
+	assert.NoError(t, err)
+
+	archive2Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
+	archive2DownloadedAt := db.Zuludatetime(time.Date(2021, 11, 23, 0, 0, 0, 0, time.UTC))
+	archive2 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archive2Resource,
+		Resource:     archive2Resource,
+		Year:         2021,
+		Month:        11,
+		DownloadedAt: &archive2DownloadedAt,
+		Downloaded:   23,
+	}
+
+	err = archivesTable.PutArchiveRecord(archive2)
+	assert.NoError(t, err)
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/board",
+			},
+		},
+	}
+
+	actualResponse, err := registrar.RegisterSearchRequest(&event)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
+
+	actualSearchResultResponse := SearchResponse{}
+	err = json.Unmarshal([]byte(actualResponse.Body), &actualSearchResultResponse)
+	assert.NoError(t, err)
+
+	actualSearchRecord, err := searchesTable.GetSearchRecord(actualSearchResultResponse.SearchId)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualSearchRecord)
+
+	assert.Equal(t, existingSearch.SearchId, actualSearchRecord.SearchId)
+	assert.Equal(t, existingSearch.StartAt.String(), actualSearchRecord.StartAt.String())
+	assert.Equal(t, existingSearch.LastExaminedAt.String(), actualSearchRecord.LastExaminedAt.String())
+	assert.Equal(t, existingSearch.Examined, actualSearchRecord.Examined)
+	assert.Equal(t, existingSearch.Status, actualSearchRecord.Status)
+	assert.Equal(t, existingSearch.Total, actualSearchRecord.Total)
+	assert.ElementsMatch(t, existingSearch.Matched, actualSearchRecord.Matched)
+	assert.Equal(t, time.Time(existingSearch.ExpiresAt).Unix(), time.Time(actualSearchRecord.ExpiresAt).Unix())
+
+	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
+	assert.NoError(t, err)
+	assert.Nil(t, lastCommand)
+
+}
+
+func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_existing_user_if_there_is_a_default_search_for_the_given_board(t *testing.T) {
+	var err error
+	startOfTest := time.Now()
+
+	registrar.validator = MockedValidator{isAlwaysValid: true}
+
+	username := uuid.New().String()
+	userId := fmt.Sprintf("https://api.chess.com/pub/player/%v", username)
+	user := users.UserRecord{
+		UserId:   userId,
+		Username: username,
+		Platform: users.ChessDotCom,
+	}
+
+	err = usersTable.PutUserRecord(user)
+	assert.NoError(t, err)
+
+	board := "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"
+	existingSearchId := searches.NewSearchId(userId, nil, board)
+	existingSearch := searches.NewSearchRecord(existingSearchId, startOfTest, 10, 24*time.Hour)
+
+	err = searchesTable.PutSearchRecord(existingSearch)
+	assert.NoError(t, err)
+
+	archive1Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/10", username)
+	archive1DownloadedAt := db.Zuludatetime(time.Date(2021, 10, 17, 0, 0, 0, 0, time.UTC))
+	archive1 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archive1Resource,
+		Resource:     archive1Resource,
+		Year:         2021,
+		Month:        10,
+		DownloadedAt: &archive1DownloadedAt,
+		Downloaded:   17,
+	}
+
+	err = archivesTable.PutArchiveRecord(archive1)
+	assert.NoError(t, err)
+
+	archive2Resource := fmt.Sprintf("https://api.chess.com/pub/player/%v/games/2021/11", username)
+	archive2DownloadedAt := db.Zuludatetime(time.Date(2021, 11, 23, 0, 0, 0, 0, time.UTC))
+	archive2 := archives.ArchiveRecord{
+		UserId:       userId,
+		ArchiveId:    archive2Resource,
+		Resource:     archive2Resource,
+		Year:         2021,
+		Month:        11,
+		DownloadedAt: &archive2DownloadedAt,
+		Downloaded:   23,
+	}
+
+	err = archivesTable.PutArchiveRecord(archive2)
+	assert.NoError(t, err)
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/board",
+			},
+		},
+	}
+
+	actualResponse, err := registrar.RegisterSearchRequest(&event)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, actualResponse.StatusCode, "Response status code is not 200!")
+
+	actualSearchResultResponse := SearchResponse{}
+	err = json.Unmarshal([]byte(actualResponse.Body), &actualSearchResultResponse)
+	assert.NoError(t, err)
+
+	actualSearchRecord, err := searchesTable.GetSearchRecord(actualSearchResultResponse.SearchId)
+	assert.NoError(t, err)
+	assert.NotNil(t, actualSearchRecord)
+
+	assert.Equal(t, existingSearch.SearchId, actualSearchRecord.SearchId)
+	assert.Equal(t, existingSearch.StartAt.String(), actualSearchRecord.StartAt.String())
+	assert.Equal(t, existingSearch.LastExaminedAt.String(), actualSearchRecord.LastExaminedAt.String())
+	assert.Equal(t, existingSearch.Examined, actualSearchRecord.Examined)
+	assert.Equal(t, existingSearch.Status, actualSearchRecord.Status)
+	assert.Equal(t, existingSearch.Total, actualSearchRecord.Total)
+	assert.ElementsMatch(t, existingSearch.Matched, actualSearchRecord.Matched)
+	assert.Equal(t, time.Time(existingSearch.ExpiresAt).Unix(), time.Time(actualSearchRecord.ExpiresAt).Unix())
+
+	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
+	assert.NoError(t, err)
+	assert.Nil(t, lastCommand)
 
 }
 

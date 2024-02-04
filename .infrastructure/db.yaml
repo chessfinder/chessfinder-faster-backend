@@ -32,22 +32,9 @@ Resources:
       AttributeDefinitions:
         - AttributeName: download_id
           AttributeType: S
-        - AttributeName: consistent_download_id
-          AttributeType: S
-        - AttributeName: expires_at
-          AttributeType: N
       KeySchema:
         - AttributeName: download_id
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: !Sub "${TheStackName}-downloadsByConsistentDownloadId"
-          KeySchema:
-            - AttributeName: consistent_download_id
-              KeyType: HASH
-            - AttributeName: expires_at
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
       TimeToLiveSpecification:
         AttributeName: expires_at
@@ -105,22 +92,9 @@ Resources:
       AttributeDefinitions:
         - AttributeName: search_id
           AttributeType: S
-        - AttributeName: consistent_search_id
-          AttributeType: S
-        - AttributeName: expires_at
-          AttributeType: N
       KeySchema:
         - AttributeName: search_id
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: !Sub "${TheStackName}-searchesByConsistentSearchId"
-          KeySchema:
-            - AttributeName: consistent_search_id
-              KeyType: HASH
-            - AttributeName: expires_at
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
       TimeToLiveSpecification:
         AttributeName: expires_at
@@ -133,11 +107,6 @@ Outputs:
   DownloadsTableName:
     Description: "Downloads Table Name"
     Value: !Ref DownloadsTable
-  DownloadsByConsistentDownloadIdIndexName:
-    Description: "Downloads By Consistent Download Id Index Name"
-     # this is a shame that we have to hardcode this
-    # Value: "!GetAtt ???.0.IndexName"
-    Value: !Sub "${TheStackName}-downloadsByConsistentDownloadId"
   GamesTableName:
     Description: "Games Table Name"
     Value: !Ref GamesTable
@@ -152,8 +121,3 @@ Outputs:
   SearchesTableName:
     Description: "Searches Table Name"
     Value: !Ref SearchesTable
-  SearchesByConsistentSearchIdIndexName:
-    Description: "Searches By Consistent Search Id Index Name"
-     # this is a shame that we have to hardcode this
-    # Value: "!GetAtt ???.0.IndexName"
-    Value: !Sub "${TheStackName}-searchesByConsistentSearchId"

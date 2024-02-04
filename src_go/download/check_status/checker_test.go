@@ -37,7 +37,8 @@ var downloadsTable = downloads.DownloadsTable{
 
 func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *testing.T) {
 	var err error
-	downloadId := uuid.New().String()
+	userId := uuid.New().String()
+	downloadId := downloads.NewDownloadId(userId)
 
 	event := events.APIGatewayV2HTTPRequest{
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
@@ -47,27 +48,25 @@ func Test_download_task_status_is_delivered_if_there_is_a_task_for_given_id(t *t
 			},
 		},
 		QueryStringParameters: map[string]string{
-			"downloadId": downloadId,
+			"downloadId": downloadId.String(),
 		},
 	}
 
-	consistentDownloadId := downloads.NewConsistentDownloadId(downloadId)
 	startAt := time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC)
 	lastDownloadedAt := time.Date(2023, time.October, 5, 19, 45, 17, 321000000, time.UTC)
 
 	expiresAt := time.Date(2023, time.December, 6, 19, 45, 17, 0, time.UTC)
 
 	dowloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              db.Zuludatetime(startAt),
-		LastDownloadedAt:     db.Zuludatetime(lastDownloadedAt),
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
-		Succeed:              2,
-		Failed:               5,
-		Done:                 7,
-		Pending:              3,
-		Total:                10,
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startAt),
+		LastDownloadedAt: db.Zuludatetime(lastDownloadedAt),
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
+		Succeed:          2,
+		Failed:           5,
+		Done:             7,
+		Pending:          3,
+		Total:            10,
 	}
 
 	err = downloadsTable.PutDownloadRecord(dowloadRecord)

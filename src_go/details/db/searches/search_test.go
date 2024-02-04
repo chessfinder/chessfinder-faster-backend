@@ -15,8 +15,11 @@ import (
 
 func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 
-	seachId := uuid.New().String()
-	consistentId := NewConsistentSearchId("user1", "download1", "board1")
+	userId := uuid.New().String()
+	downloadStartedAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
+	board := uuid.New().String()
+	searchId := NewSearchId(userId, &downloadStartedAt, board)
+
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
@@ -27,15 +30,14 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 	matched := []string{matchedGame1, matchedGame2}
 	expiresAt := time.Date(2023, time.September, 6, 19, 45, 17, 0, time.UTC)
 	search := SearchRecord{
-		SearchId:           seachId,
-		ConsistentSearchId: consistentId,
-		StartAt:            startAt,
-		LastExaminedAt:     lastExaminedAt,
-		Examined:           examined,
-		Status:             status,
-		Total:              total,
-		Matched:            matched,
-		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
+		SearchId:       searchId,
+		StartAt:        startAt,
+		LastExaminedAt: lastExaminedAt,
+		Examined:       examined,
+		Status:         status,
+		Total:          total,
+		Matched:        matched,
+		ExpiresAt:      dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)
@@ -43,10 +45,7 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 
 	expectedMarshalledItems := map[string]*dynamodb.AttributeValue{
 		"search_id": {
-			S: aws.String(seachId),
-		},
-		"consistent_search_id": {
-			S: aws.String("dXNlcjF8ZG93bmxvYWQxfGJvYXJkMQ=="),
+			S: aws.String(searchId.String()),
 		},
 		"start_at": {
 			S: aws.String("2023-10-01T11:30:17.123Z"),
@@ -87,7 +86,7 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 			TableName: aws.String(searchesTableName),
 			Key: map[string]*dynamodb.AttributeValue{
 				"search_id": {
-					S: aws.String(seachId),
+					S: aws.String(searchId.String()),
 				},
 			},
 		},
@@ -101,7 +100,6 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 
 	expectedSearch := search
 
-	assert.Equal(t, expectedSearch.ConsistentSearchId, actualSearch.ConsistentSearchId)
 	assert.Equal(t, expectedSearch.StartAt, actualSearch.StartAt)
 	assert.Equal(t, expectedSearch.LastExaminedAt, actualSearch.LastExaminedAt)
 	assert.Equal(t, expectedSearch.Examined, actualSearch.Examined)
@@ -113,8 +111,11 @@ func Test_SearchRecord_should_be_stored_in_correct_form(t *testing.T) {
 
 func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is_empty_slice(t *testing.T) {
 
-	seachId := uuid.New().String()
-	consistentId := NewConsistentSearchId("user1", "download1", "board1")
+	userId := uuid.New().String()
+	downloadStartedAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
+	board := uuid.New().String()
+	searchId := NewSearchId(userId, &downloadStartedAt, board)
+
 	startAt := db.Zuludatetime(time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC))
 	lastExaminedAt := db.Zuludatetime(time.Date(2023, time.September, 5, 19, 45, 17, 321000000, time.UTC))
 	examined := 456
@@ -123,15 +124,14 @@ func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is
 	expiresAt := time.Date(2023, time.September, 6, 19, 45, 17, 0, time.UTC)
 
 	search := SearchRecord{
-		SearchId:           seachId,
-		ConsistentSearchId: consistentId,
-		StartAt:            startAt,
-		LastExaminedAt:     lastExaminedAt,
-		Examined:           examined,
-		Status:             status,
-		Total:              total,
-		Matched:            nil,
-		ExpiresAt:          dynamodbattribute.UnixTime(expiresAt),
+		SearchId:       searchId,
+		StartAt:        startAt,
+		LastExaminedAt: lastExaminedAt,
+		Examined:       examined,
+		Status:         status,
+		Total:          total,
+		Matched:        nil,
+		ExpiresAt:      dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(search)
@@ -139,10 +139,7 @@ func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is
 
 	expectedMarshalledItems := map[string]*dynamodb.AttributeValue{
 		"search_id": {
-			S: aws.String(seachId),
-		},
-		"consistent_search_id": {
-			S: aws.String("dXNlcjF8ZG93bmxvYWQxfGJvYXJkMQ=="),
+			S: aws.String(searchId.String()),
 		},
 		"start_at": {
 			S: aws.String("2023-10-01T11:30:17.123Z"),
@@ -180,7 +177,7 @@ func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is
 			TableName: aws.String(searchesTableName),
 			Key: map[string]*dynamodb.AttributeValue{
 				"search_id": {
-					S: aws.String(seachId),
+					S: aws.String(searchId.String()),
 				},
 			},
 		},
@@ -194,7 +191,6 @@ func Test_SearchRecord_should_be_stored_in_correct_form_even_if_matched_field_is
 
 	expectedSearch := search
 
-	assert.Equal(t, expectedSearch.ConsistentSearchId, actualSearch.ConsistentSearchId)
 	assert.Equal(t, expectedSearch.LastExaminedAt, actualSearch.LastExaminedAt)
 	assert.Equal(t, expectedSearch.Examined, actualSearch.Examined)
 	assert.Equal(t, expectedSearch.Total, actualSearch.Total)

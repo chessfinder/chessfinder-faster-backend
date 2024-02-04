@@ -65,7 +65,7 @@ func (table DownloadsTable) IncrementSuccess(currentDownload DownloadRecord, now
 		TableName: aws.String(table.Name),
 		Key: map[string]*dynamodb.AttributeValue{
 			"download_id": {
-				S: aws.String(currentDownload.DownloadId),
+				S: aws.String(currentDownload.DownloadId.String()),
 			},
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -99,7 +99,7 @@ func (table DownloadsTable) IncrementFailure(currentDownload DownloadRecord, now
 		TableName: aws.String(table.Name),
 		Key: map[string]*dynamodb.AttributeValue{
 			"download_id": {
-				S: aws.String(currentDownload.DownloadId),
+				S: aws.String(currentDownload.DownloadId.String()),
 			},
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{

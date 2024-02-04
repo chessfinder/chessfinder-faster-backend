@@ -132,22 +132,20 @@ func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_
 		EndTimestamp: 1659431445,
 	}
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	downloadId := downloads.NewDownloadId(userId)
 	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
 	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              startedAt,
-		LastDownloadedAt:     lastArchiveDownloadedAt,
-		Succeed:              3,
-		Failed:               0,
-		Done:                 3,
-		Pending:              2,
-		Total:                5,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          startedAt,
+		LastDownloadedAt: lastArchiveDownloadedAt,
+		Succeed:          3,
+		Failed:           0,
+		Done:             3,
+		Pending:          2,
+		Total:            5,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -213,7 +211,7 @@ func Test_when_pgn_filtering_is_on_CommitDownloader_should_download_and_persist_
 
 	assert.ElementsMatch(t, expectedGames, actualGames)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
@@ -314,22 +312,20 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	err = gamesTable.PutGameRecords([]games.GameRecord{existingGame1, existingGame2, existingGame3})
 	assert.NoError(t, err)
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	downloadId := downloads.NewDownloadId(userId)
 	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
 	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              startedAt,
-		LastDownloadedAt:     lastArchiveDownloadedAt,
-		Succeed:              3,
-		Failed:               0,
-		Done:                 3,
-		Pending:              2,
-		Total:                5,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          startedAt,
+		LastDownloadedAt: lastArchiveDownloadedAt,
+		Succeed:          3,
+		Failed:           0,
+		Done:             3,
+		Pending:          2,
+		Total:            5,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -395,7 +391,7 @@ func Test_when_archive_is_partially_downloaded_CommitDownloader_should_download_
 	assert.Equal(t, 6, len(actualGames))
 	assert.ElementsMatch(t, expectedGames, actualGames)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
@@ -522,22 +518,20 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 	err = gamesTable.PutGameRecords([]games.GameRecord{existingGame1, existingGame2, existingGame3})
 	assert.NoError(t, err)
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	downloadId := downloads.NewDownloadId(userId)
 	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
 	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              startedAt,
-		LastDownloadedAt:     lastArchiveDownloadedAt,
-		Succeed:              3,
-		Failed:               0,
-		Done:                 3,
-		Pending:              2,
-		Total:                5,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          startedAt,
+		LastDownloadedAt: lastArchiveDownloadedAt,
+		Succeed:          3,
+		Failed:           0,
+		Done:             3,
+		Pending:          2,
+		Total:            5,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -602,7 +596,7 @@ func Test_when_archive_is_reset_yet_partially_downloaded_CommitDownloader_should
 	assert.Equal(t, 6, len(actualGames))
 	assert.ElementsMatch(t, expectedGames, actualGames)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
@@ -700,22 +694,20 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 		EndTimestamp: 1659431445,
 	}
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	downloadId := downloads.NewDownloadId(userId)
 	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
 	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              startedAt,
-		LastDownloadedAt:     lastArchiveDownloadedAt,
-		Succeed:              3,
-		Failed:               0,
-		Done:                 3,
-		Pending:              2,
-		Total:                5,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          startedAt,
+		LastDownloadedAt: lastArchiveDownloadedAt,
+		Succeed:          3,
+		Failed:           0,
+		Done:             3,
+		Pending:          2,
+		Total:            5,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -780,7 +772,7 @@ func Test_when_archive_is_not_downloaded_CommitDownloader_should_download_all_ga
 
 	assert.ElementsMatch(t, expectedGames, actualGames)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
@@ -829,22 +821,20 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 	err = archivesTable.PutArchiveRecord(archiveRecord)
 	assert.NoError(t, err)
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	downloadId := downloads.NewDownloadId(userId)
 	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
 	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              startedAt,
-		LastDownloadedAt:     lastArchiveDownloadedAt,
-		Succeed:              3,
-		Failed:               0,
-		Done:                 3,
-		Pending:              2,
-		Total:                5,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          startedAt,
+		LastDownloadedAt: lastArchiveDownloadedAt,
+		Succeed:          3,
+		Failed:           0,
+		Done:             3,
+		Pending:          2,
+		Total:            5,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -893,7 +883,7 @@ func Test_when_archive_is_fully_downloaded_CommitDownloader_should_skip_the_proc
 	assert.Equal(t, 6, actualArchive.Downloaded)
 	assert.Equal(t, lastDownloadedAt, *actualArchive.DownloadedAt)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
@@ -924,22 +914,20 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 	userId := uuid.New().String()
 	archiveId := uuid.New().String()
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(userId)
+	downloadId := downloads.NewDownloadId(userId)
 	startedAt := db.Zuludatetime(startOfTest.Add(-10 * time.Hour))
 	lastArchiveDownloadedAt := db.Zuludatetime(startOfTest.Add(-1 * time.Hour))
 	expiresAt := startOfTest.Add(14 * time.Hour)
 	downloadRecord := downloads.DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: consistentDownloadId,
-		StartAt:              startedAt,
-		LastDownloadedAt:     lastArchiveDownloadedAt,
-		Succeed:              3,
-		Failed:               0,
-		Done:                 3,
-		Pending:              2,
-		Total:                5,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          startedAt,
+		LastDownloadedAt: lastArchiveDownloadedAt,
+		Succeed:          3,
+		Failed:           0,
+		Done:             3,
+		Pending:          2,
+		Total:            5,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(downloadRecord)
@@ -982,7 +970,7 @@ func Test_when_archive_does_not_exists_CommitDownloader_should_skip_the_process(
 	}
 	assert.Equal(t, expectedCommandsProcessed, actualCommandsProcessed)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 

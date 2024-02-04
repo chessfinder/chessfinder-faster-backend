@@ -16,8 +16,8 @@ import (
 func Test_DownloadTable_should_persist_download_record_into_the_table(t *testing.T) {
 	var err error
 
-	downloadId := uuid.New().String()
-	constistentId := NewConsistentDownloadId("user1")
+	userId := uuid.New().String()
+	downloadId := NewDownloadId(userId)
 	startAt := time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC)
 	lastDownloadedAt := time.Date(2023, time.October, 5, 19, 45, 17, 321000000, time.UTC)
 	succeed := 1
@@ -28,16 +28,15 @@ func Test_DownloadTable_should_persist_download_record_into_the_table(t *testing
 	expiresAt := time.Date(2023, time.December, 6, 19, 45, 17, 0, time.UTC)
 
 	download := DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: constistentId,
-		StartAt:              db.Zuludatetime(startAt),
-		LastDownloadedAt:     db.Zuludatetime(lastDownloadedAt),
-		Succeed:              succeed,
-		Failed:               failed,
-		Done:                 done,
-		Pending:              pending,
-		Total:                total,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startAt),
+		LastDownloadedAt: db.Zuludatetime(lastDownloadedAt),
+		Succeed:          succeed,
+		Failed:           failed,
+		Done:             done,
+		Pending:          pending,
+		Total:            total,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	err = downloadsTable.PutDownloadRecord(download)
@@ -49,7 +48,7 @@ func Test_DownloadTable_should_persist_download_record_into_the_table(t *testing
 			TableName: aws.String(downloadsTableName),
 			Key: map[string]*dynamodb.AttributeValue{
 				"download_id": {
-					S: aws.String(downloadId),
+					S: aws.String(downloadId.String()),
 				},
 			},
 		},
@@ -63,7 +62,6 @@ func Test_DownloadTable_should_persist_download_record_into_the_table(t *testing
 
 	expectedDownload := download
 
-	assert.Equal(t, expectedDownload.ConsistentDownloadId, actualDownload.ConsistentDownloadId)
 	assert.Equal(t, expectedDownload.StartAt, actualDownload.StartAt)
 	assert.Equal(t, expectedDownload.LastDownloadedAt, actualDownload.LastDownloadedAt)
 	assert.Equal(t, time.Time(expectedDownload.ExpiresAt).UTC(), time.Time(actualDownload.ExpiresAt).UTC())
@@ -77,8 +75,8 @@ func Test_DownloadTable_should_persist_download_record_into_the_table(t *testing
 func Test_DownloadTable_should_get_download_record_from_the_table(t *testing.T) {
 	var err error
 
-	downloadId := uuid.New().String()
-	constistentId := NewConsistentDownloadId("user1")
+	userId := uuid.New().String()
+	downloadId := NewDownloadId(userId)
 	startAt := time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC)
 	lastDownloadedAt := time.Date(2023, time.October, 5, 19, 45, 17, 321000000, time.UTC)
 	succeed := 1
@@ -89,16 +87,15 @@ func Test_DownloadTable_should_get_download_record_from_the_table(t *testing.T) 
 	expiresAt := time.Date(2023, time.December, 6, 19, 45, 17, 0, time.UTC)
 
 	download := DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: constistentId,
-		StartAt:              db.Zuludatetime(startAt),
-		LastDownloadedAt:     db.Zuludatetime(lastDownloadedAt),
-		Succeed:              succeed,
-		Failed:               failed,
-		Done:                 done,
-		Pending:              pending,
-		Total:                total,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startAt),
+		LastDownloadedAt: db.Zuludatetime(lastDownloadedAt),
+		Succeed:          succeed,
+		Failed:           failed,
+		Done:             done,
+		Pending:          pending,
+		Total:            total,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(download)
@@ -106,10 +103,7 @@ func Test_DownloadTable_should_get_download_record_from_the_table(t *testing.T) 
 
 	expectedMarshalledItems := map[string]*dynamodb.AttributeValue{
 		"download_id": {
-			S: aws.String(downloadId),
-		},
-		"consistent_download_id": {
-			S: aws.String("dXNlcjE="),
+			S: aws.String(downloadId.String()),
 		},
 		"start_at": {
 			S: aws.String("2023-10-01T11:30:17.123Z"),
@@ -146,13 +140,12 @@ func Test_DownloadTable_should_get_download_record_from_the_table(t *testing.T) 
 
 	assert.NoError(t, err)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 	assert.NotNil(t, actualDownload)
 
 	expectedDownload := download
 
-	assert.Equal(t, expectedDownload.ConsistentDownloadId, actualDownload.ConsistentDownloadId)
 	assert.Equal(t, expectedDownload.StartAt, actualDownload.StartAt)
 	assert.Equal(t, expectedDownload.LastDownloadedAt, actualDownload.LastDownloadedAt)
 	assert.Equal(t, time.Time(expectedDownload.ExpiresAt).UTC(), time.Time(actualDownload.ExpiresAt).UTC())
@@ -177,8 +170,8 @@ func Test_DownloadTable_should_increment_success(t *testing.T) {
 	var err error
 	expiresIn := 24 * time.Hour
 
-	downloadId := uuid.New().String()
-	constistentId := NewConsistentDownloadId("user1")
+	userId := uuid.New().String()
+	downloadId := NewDownloadId(userId)
 	startAt := time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC)
 	lastDownloadedAt := time.Date(2023, time.October, 5, 19, 45, 17, 321000000, time.UTC)
 	succeed := 1
@@ -189,16 +182,15 @@ func Test_DownloadTable_should_increment_success(t *testing.T) {
 	expiresAt := time.Date(2023, time.December, 6, 19, 45, 17, 0, time.UTC)
 
 	download := DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: constistentId,
-		StartAt:              db.Zuludatetime(startAt),
-		LastDownloadedAt:     db.Zuludatetime(lastDownloadedAt),
-		Succeed:              succeed,
-		Failed:               failed,
-		Done:                 done,
-		Pending:              pending,
-		Total:                total,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startAt),
+		LastDownloadedAt: db.Zuludatetime(lastDownloadedAt),
+		Succeed:          succeed,
+		Failed:           failed,
+		Done:             done,
+		Pending:          pending,
+		Total:            total,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(download)
@@ -219,7 +211,7 @@ func Test_DownloadTable_should_increment_success(t *testing.T) {
 	err = downloadsTable.IncrementSuccess(download, newLastDownloadedAt, expiresIn)
 	assert.NoError(t, err)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 
 	assert.Equal(t, newLastDownloadedAt, actualDownload.LastDownloadedAt)
@@ -233,8 +225,8 @@ func Test_DownloadTable_should_increment_failure(t *testing.T) {
 	var err error
 	expiresIn := 24 * time.Hour
 
-	downloadId := uuid.New().String()
-	constistentId := NewConsistentDownloadId("user1")
+	userId := uuid.New().String()
+	downloadId := NewDownloadId(userId)
 	startAt := time.Date(2023, time.October, 1, 11, 30, 17, 123000000, time.UTC)
 	lastDownloadedAt := time.Date(2023, time.October, 5, 19, 45, 17, 321000000, time.UTC)
 	succeed := 1
@@ -245,16 +237,15 @@ func Test_DownloadTable_should_increment_failure(t *testing.T) {
 	expiresAt := time.Date(2023, time.December, 6, 19, 45, 17, 0, time.UTC)
 
 	download := DownloadRecord{
-		DownloadId:           downloadId,
-		ConsistentDownloadId: constistentId,
-		StartAt:              db.Zuludatetime(startAt),
-		LastDownloadedAt:     db.Zuludatetime(lastDownloadedAt),
-		Succeed:              succeed,
-		Failed:               failed,
-		Done:                 done,
-		Pending:              pending,
-		Total:                total,
-		ExpiresAt:            dynamodbattribute.UnixTime(expiresAt),
+		DownloadId:       downloadId,
+		StartAt:          db.Zuludatetime(startAt),
+		LastDownloadedAt: db.Zuludatetime(lastDownloadedAt),
+		Succeed:          succeed,
+		Failed:           failed,
+		Done:             done,
+		Pending:          pending,
+		Total:            total,
+		ExpiresAt:        dynamodbattribute.UnixTime(expiresAt),
 	}
 
 	actualMarshalledItems, err := dynamodbattribute.MarshalMap(download)
@@ -275,7 +266,7 @@ func Test_DownloadTable_should_increment_failure(t *testing.T) {
 	err = downloadsTable.IncrementFailure(download, newLastDownloadedAt, expiresIn)
 	assert.NoError(t, err)
 
-	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId)
+	actualDownload, err := downloadsTable.GetDownloadRecord(downloadId.String())
 	assert.NoError(t, err)
 
 	assert.Equal(t, newLastDownloadedAt, actualDownload.LastDownloadedAt)

@@ -22,22 +22,18 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-const DownloadInfoUpToNSecondsBeforeExpires = time.Second * 10
-
 type ArchiveDownloader struct {
-	chessDotComUrl                           string
-	awsConfig                                *aws.Config
-	usersTableName                           string
-	archivesTableName                        string
-	downloadsTableName                       string
-	downloadsByConsistentDownloadIdIndexName string
-	downloadGamesQueueUrl                    string
-	metricsNamespace                         string
-	downloadInfoExpiresIn                    time.Duration
+	chessDotComUrl        string
+	awsConfig             *aws.Config
+	usersTableName        string
+	archivesTableName     string
+	downloadsTableName    string
+	downloadGamesQueueUrl string
+	metricsNamespace      string
+	downloadInfoExpiresIn time.Duration
 }
 
 func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCommands(
@@ -115,11 +111,10 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 
 	logger.Info("checking for existing download record...")
 
-	existingDownloadRecord, err := downloads.DownloadsByConsistentDownloadIdIndex{
-		Name:           downloader.downloadsByConsistentDownloadIdIndexName,
-		TableName:      downloader.downloadsTableName,
+	existingDownloadRecord, err := downloads.DownloadsTable{
+		Name:           downloader.downloadsTableName,
 		DynamodbClient: dynamodbClient,
-	}.LatestDownload(downloads.NewConsistentDownloadId(profile.UserId))
+	}.GetDownloadRecord(downloads.NewDownloadId(profile.UserId).String())
 
 	if err != nil {
 		logger.Error("impossible to get the latest download record!", zap.Error(err))
@@ -128,19 +123,13 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 
 	now := time.Now()
 	if existingDownloadRecord != nil {
-		downloadInfoCanBeUsedUpTo := time.Time(existingDownloadRecord.ExpiresAt).Add(-DownloadInfoUpToNSecondsBeforeExpires)
-		logger.Info("download record found", zap.String("downloadId", existingDownloadRecord.DownloadId))
-		if now.Before(downloadInfoCanBeUsedUpTo) {
-			logger.Info("download record is still valid. Returning the existing download id")
-			responseEvent, err = downloadIdToResponseEvent(existingDownloadRecord.DownloadId)
-			if err != nil {
-				logger.Error("impossible to create the response event!", zap.Error(err))
-			}
-
-			return
+		logger.Info("download record found", zap.String("downloadId", existingDownloadRecord.DownloadId.String()))
+		responseEvent, err = downloadIdToResponseEvent(existingDownloadRecord.DownloadId.String())
+		if err != nil {
+			logger.Error("impossible to create the response event!", zap.Error(err))
 		}
 
-		logger.Info("download record is almost expired. Downloading again...", zap.Time("expiresAt", time.Time(existingDownloadRecord.ExpiresAt)))
+		return
 	}
 
 	logger.Info("no download record found. Downloading...")
@@ -183,10 +172,9 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 
-	downloadId := uuid.New().String()
-	consistentDownloadId := downloads.NewConsistentDownloadId(profile.UserId)
+	downloadId := downloads.NewDownloadId(profile.UserId)
 	total := len(missingArchives) + len(partaillyDownloadedArchives)
-	downloadRecord := downloads.NewDownloadRecord(downloadId, consistentDownloadId, total, now, downloader.downloadInfoExpiresIn)
+	downloadRecord := downloads.NewDownloadRecord(downloadId, total, now, downloader.downloadInfoExpiresIn)
 
 	err = downloads.DownloadsTable{
 		Name:           downloader.downloadsTableName,
@@ -213,7 +201,7 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 
-	responseEvent, err = downloadIdToResponseEvent(downloadId)
+	responseEvent, err = downloadIdToResponseEvent(downloadId.String())
 	if err != nil {
 		logger.Error("impossible to create the response event!", zap.Error(err))
 	}
@@ -470,7 +458,7 @@ func (downloader ArchiveDownloader) publishDownloadGameCommands(
 			Platform:   "CHESS_DOT_COM",
 			ArchiveId:  archive.ArchiveId,
 			UserId:     archive.UserId,
-			DownloadId: downloadRecords.DownloadId,
+			DownloadId: downloadRecords.DownloadId.String(),
 		}
 		var jsonBody []byte
 		jsonBody, err = json.Marshal(command)
