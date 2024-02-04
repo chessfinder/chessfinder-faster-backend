@@ -42,7 +42,7 @@ func (checker *SearchResultChecker) Check(event *events.APIGatewayV2HTTPRequest)
 	searchId, searchIdExists := event.QueryStringParameters["searchId"]
 	if !searchIdExists {
 		err = api.ValidationError{
-			Msg: "query parameter searchId is missing",
+			Message: "query parameter searchId is missing",
 		}
 		return
 	}

@@ -67,6 +67,12 @@ func (downloader *ArchiveDownloader) DownloadArchiveAndDistributeDownloadGameCom
 		return
 	}
 
+	if downloadRequest.Username == "" {
+		logger.Info("username cannot be empty")
+		err = UserNameCannotBeEmpty
+		return
+	}
+
 	downloadRequest.Username = strings.ToLower(downloadRequest.Username)
 
 	logger = logger.With(zap.String("username", downloadRequest.Username), zap.String("platform", downloadRequest.Platform))
@@ -267,7 +273,6 @@ func (downloader ArchiveDownloader) getAndPersistUser(
 
 	logger.Info("profile found in chess.com")
 
-	// why we get it from the table after making a request to chess.com?
 	usersTable := users.UsersTable{
 		Name:           downloader.usersTableName,
 		DynamodbClient: dynamodbClient,

@@ -41,7 +41,6 @@ For those familiar with Forsyth-Edwards Notation (FEN), PPN differs in its abili
 Consider the PPN: `??----rk/?????Npp/????????/????????/????????/????????/????????/????????`. ![Smothered Mate PPN](/doc/smothered_mate_partial_position_1.png)
 
 This notation describes a specific configuration of a chessboard where:
-This notation describes a specific configuration of a chessboard where:
 - The first two squares of the eighth rank (A8 and B8) are unknown (`??`), followed by four definitively empty squares (`----`), ending with a black rook (`r`) and king (`k`) on G8 and H8.
 - On the seventh rank (A7 to H7), the state of the first five squares is unknown (`?????`), the sixth square (F7) is occupied by a white knight (`N`), and the last two squares (G7 and H7) are occupied by black pawns (`pp`).
 - The state of the rest of the board (ranks 1-6) is entirely unknown, as indicated by rows of question marks (`?`).

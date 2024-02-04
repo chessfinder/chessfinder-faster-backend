@@ -51,7 +51,7 @@ var registrar = SearchRegistrar{
 }
 var awsSession = session.Must(session.NewSession(&awsConfig))
 var dynamodbClient = dynamodb.New(awsSession)
-var svc = sqs.New(awsSession)
+var sqsClient = sqs.New(awsSession)
 
 var usersTable = users.UsersTable{
 	Name:           registrar.usersTableName,
@@ -180,7 +180,7 @@ func Test_SearchRegistrar_should_emit_SearchBoardCommand_for_an_existing_user_if
 	assert.True(t, startOfTest.Add(registrar.searchInfoExpiresIn-time.Second).Before(time.Time(actualSearchRecord.ExpiresAt)))
 	assert.True(t, startOfCheck.Add(registrar.searchInfoExpiresIn+time.Second).After(time.Time(actualSearchRecord.ExpiresAt)))
 
-	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
+	lastCommand, err := queue.GetLastNCommands(sqsClient, registrar.searchBoardQueueUrl, 1)
 	assert.NoError(t, err)
 
 	actualCommand := queue.SearchBoardCommand{}
@@ -301,7 +301,7 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_existing_use
 	assert.ElementsMatch(t, existingSearch.Matched, actualSearchRecord.Matched)
 	assert.Equal(t, time.Time(existingSearch.ExpiresAt).Unix(), time.Time(actualSearchRecord.ExpiresAt).Unix())
 
-	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
+	lastCommand, err := queue.GetLastNCommands(sqsClient, registrar.searchBoardQueueUrl, 1)
 	assert.NoError(t, err)
 	assert.Nil(t, lastCommand)
 
@@ -393,7 +393,7 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_existing_use
 	assert.ElementsMatch(t, existingSearch.Matched, actualSearchRecord.Matched)
 	assert.Equal(t, time.Time(existingSearch.ExpiresAt).Unix(), time.Time(actualSearchRecord.ExpiresAt).Unix())
 
-	lastCommand, err := queue.GetLastNCommands(svc, registrar.searchBoardQueueUrl, 1)
+	lastCommand, err := queue.GetLastNCommands(sqsClient, registrar.searchBoardQueueUrl, 1)
 	assert.NoError(t, err)
 	assert.Nil(t, lastCommand)
 
@@ -431,13 +431,13 @@ func Test_SearchRegistrar_not_should_emit_SearchBoardCommand_for_an_existing_use
 	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
 
 	expectedErroneousResponse := fmt.Sprintf(
-		`{"code":"%v","msg":"%v"}`,
+		`{"code":"%v","message":"%v"}`,
 		"NO_GAME_AVAILABLE",
 		fmt.Sprintf("Profile %v does not have any information about their played games!", username),
 	)
 	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
 
-	amountOfCommands, err := countCommands(svc, registrar)
+	amountOfCommands, err := countCommands(sqsClient, registrar)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
@@ -466,13 +466,13 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_an_invalid_sear
 	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
 
 	expectedErroneousResponse := fmt.Sprintf(
-		`{"code":"%v","msg":"%v"}`,
+		`{"code":"%v","message":"%v"}`,
 		"INVALID_SEARCH_BOARD",
 		"Invalid board!",
 	)
 	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
 
-	amountOfCommands, err := countCommands(svc, registrar)
+	amountOfCommands, err := countCommands(sqsClient, registrar)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
@@ -501,13 +501,45 @@ func Test_SearchRegistrar_should_not_emit_SearchBoardCommand_for_a_non_existing_
 	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
 
 	expectedErroneousResponse := fmt.Sprintf(
-		`{"code":"%v","msg":"%v"}`,
+		`{"code":"%v","message":"%v"}`,
 		"PROFILE_IS_NOT_CACHED",
 		fmt.Sprintf("Profile %s from %s is not cached!", username, "CHESS_DOT_COM"),
 	)
 	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
 
-	amountOfCommands, err := countCommands(svc, registrar)
+	amountOfCommands, err := countCommands(sqsClient, registrar)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")
+}
+
+func Test_SearchRegistrar_return_error_if_the_username_if_empty(t *testing.T) {
+	var err error
+
+	registrar.validator = MockedValidator{isAlwaysValid: true}
+
+	username := ""
+
+	event := events.APIGatewayV2HTTPRequest{
+		Body: fmt.Sprintf(`{"username":"%v", "platform": "CHESS_DOT_COM", "board": "????R?r?/?????kq?/????Q???/????????/????????/????????/????????/????????"}`, username),
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+				Path:   "/api/faster/board",
+			},
+		},
+	}
+
+	actualResponse, err := api.WithRecover(registrar.RegisterSearchRequest)(&event)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, actualResponse.StatusCode, "Response status code is not 422!")
+
+	expectedErroneousResponse := `{"code": "INVALID_USERNAME", "message":"Username cannot be empty!"}`
+
+	assert.JSONEq(t, expectedErroneousResponse, actualResponse.Body, "Response body is not equal!")
+
+	amountOfCommands, err := countCommands(sqsClient, registrar)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 0, amountOfCommands, "Amount of commands is not equal!")

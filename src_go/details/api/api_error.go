@@ -11,13 +11,13 @@ type ApiError interface {
 }
 
 type BusinessError struct {
-	Code string `json:"code"`
-	Msg  string `json:"msg"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 var ServiceOverloaded = BusinessError{
-	Msg:  "Service is overloaded. Please try again later.",
-	Code: "SERVICE_OVERLOADED",
+	Message: "Service is overloaded. Please try again later.",
+	Code:    "SERVICE_OVERLOADED",
 }
 
 func (businessError BusinessError) toResponseEvent() (responseEvent events.APIGatewayV2HTTPResponse) {
@@ -36,19 +36,19 @@ func (businessError BusinessError) toResponseEvent() (responseEvent events.APIGa
 }
 
 func (businessError BusinessError) Error() string {
-	return businessError.Msg
+	return businessError.Message
 }
 
 type ValidationError struct {
-	Msg string
+	Message string `json:"message"`
 }
 
 var InvalidBody = ValidationError{
-	Msg: "Invalid body",
+	Message: "Invalid body",
 }
 
 func (invalid ValidationError) toResponseEvent() (responseEvent events.APIGatewayV2HTTPResponse) {
-	responseEvent.Body = string(invalid.Msg)
+	responseEvent.Body = string(invalid.Message)
 	responseEvent.StatusCode = 400
 	responseEvent.Headers = map[string]string{
 		"Content-Type": "application/json",
@@ -57,7 +57,7 @@ func (invalid ValidationError) toResponseEvent() (responseEvent events.APIGatewa
 }
 
 func (invalid ValidationError) Error() string {
-	return invalid.Msg
+	return invalid.Message
 }
 
 func WithRecover(handler func(*events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error)) func(*events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
