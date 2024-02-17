@@ -49,7 +49,8 @@ This notation describes a specific configuration of a chessboard where:
 This PPN is useful for searching games where you remember a specific arrangement involving an empty middle section on the top rank, a black rook and king at the end of the top rank, a white knight on the seventh rank, and two black pawns at the end of the seventh rank, but the rest of the board details are unclear or forgotten.
 
 These two games will match the PPN above:
-![Smothered Mate 1](/doc/smothered_mate_exact_position_1.png)
+
+![Smothered Mate 1](/doc/smothered_mate_exact_position_2.png)
 ![Smothered Mate 2](/doc/smothered_mate_exact_position_1.png)
 
 Let's now consider this PPN: `??----rk/?????Npp/??????--/????????/????????/????????/????????/????????`
