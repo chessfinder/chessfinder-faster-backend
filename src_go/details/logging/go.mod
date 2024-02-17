@@ -1,6 +1,6 @@
 module github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging
 
-go 1.21.0
+go 1.21.1
 
 require go.uber.org/zap v1.26.0
 

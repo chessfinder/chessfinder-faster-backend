@@ -1,6 +1,6 @@
 module github.com/chessfinder/chessfinder-faster-backend/src_go/details/db
 
-go 1.21.0
+go 1.21.1
 
 require (
 	github.com/aws/aws-sdk-go v1.45.24

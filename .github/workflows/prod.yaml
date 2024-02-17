@@ -6,42 +6,48 @@ on:
       - '**'
 
 jobs:
-  releasing:
+  build:
+    name: Compile, Build and Deploy QA
     runs-on: ubuntu-latest
-    container: amazonlinux:2
+
+    # no need if we don't use amazon linux 2
+    # container: amazonlinux:2
 
     steps:     
-      - name: Setup Amazon Linux
-        shell: bash
-        run: |
-          yum update -y > /dev/null
-          yum upgrade -y > /dev/null
-          yum install zip -y > /dev/null
-          yum install unzip -y > /dev/null
-          yum install tar -y > /dev/null
-          yum install gzip -y > /dev/null
-          yum install wget -y > /dev/null
-          yum install which -y > /dev/null
-          yum groupinstall "Development Tools" -y > /dev/null
+      # no need if we don't use amazon linux 2
+      # - name: Setup Amazon Linux
+      #   shell: bash
+      #   run: |
+      #     yum update -y > /dev/null
+      #     yum upgrade -y > /dev/null
+      #     yum install zip -y > /dev/null
+      #     yum install unzip -y > /dev/null
+      #     yum install tar -y > /dev/null
+      #     yum install gzip -y > /dev/null
+      #     yum install wget -y > /dev/null
+      #     yum install which -y > /dev/null
+      #     yum groupinstall "Development Tools" -y > /dev/null
 
-      - name: Install Python 3
-        shell: bash
-        run: |
-          yum install python3 -y > /dev/null
-          alternatives --install /usr/bin/python python /usr/bin/python2.7 1
-          alternatives --install /usr/bin/python python /usr/bin/python3 2
-          echo 1 | alternatives --config python
-          ln -sf /usr/bin/pip3 /usr/bin/pip
+      # no need if we don't use amazon linux 2
+      # - name: Install Python 3
+      #   shell: bash
+      #   run: |
+      #     yum install python3 -y > /dev/null
+      #     alternatives --install /usr/bin/python python /usr/bin/python2.7 1
+      #     alternatives --install /usr/bin/python python /usr/bin/python3 2
+      #     echo 1 | alternatives --config python
+      #     ln -sf /usr/bin/pip3 /usr/bin/pip
 
       - name: Install SDKMAN
         shell: bash
         run: curl -s "https://get.sdkman.io" | bash > /dev/null
 
-      - name: Install GIT
-        shell: bash
-        run: |
-          yum install git -y > /dev/null
-          git config --global --add safe.directory '*'
+      # no need if we don't use amazon linux 2
+      # - name: Install GIT
+      #   shell: bash
+      #   run: |
+      #     yum install git -y > /dev/null
+      #     git config --global --add safe.directory '*'
 
       - name: Install GraalVM JDK
         shell: bash
@@ -69,29 +75,15 @@ jobs:
         shell: bash
         run: |
           curl -O https://dl.google.com/go/go1.21.1.linux-amd64.tar.gz
-          tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+          # no need if we don't use amazon linux 2
+          # tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
           rm go1.21.1.linux-amd64.tar.gz
           echo "/usr/local/go/bin" >> $GITHUB_PATH
         
       - name: Checkout Code
         uses: actions/checkout@v3
       
-      - name: Derive Tag
-        run: |
-          echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-          echo "release_version=$GITHUB_REF_NAME" >> $GITHUB_ENV
-      # - name: Create release
-      #   uses: actions/create-release@v1.1.4
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     tag_name: ${{ env.release_version }}
-      #     release_name: Release ${{ env.release_version }}
-      #     body: |
-      #       This release contains changes for version ${{ env.release_version }}.
-      #     draft: false
-      #     prerelease: false
-
       - name: SCALA - Packaging Code
         shell: bash
         run: |
@@ -142,11 +134,13 @@ jobs:
           zip process.zip bootstrap
           cd ../../../
       
-      - name: Make Python 3 default
-        shell: bash
-        run: |
-          echo 2 | alternatives --config python
-          python --version
+      # no need if we don't use amazon linux 2
+      # - name: Make Python 3 default
+      #   shell: bash
+      #   run: |
+      #     echo 2 | alternatives --config python
+      #     python --version
+      #     ldd --version
       
       - name: Setup SAM
         uses: aws-actions/setup-sam@v2
@@ -163,3 +157,19 @@ jobs:
       - name: Deploying Application
         run: |
           sam deploy --template-file template.yaml --stack-name chessfinder-prod --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND --s3-bucket ${{ secrets.AWS_APPLICATION_BUCKET }} --parameter-overrides ChessfinderZoneFileId=${{ secrets.CHESSFINDER_ZONE_FILE_ID }} EnvType=PROD
+
+      - name: Derive Tag
+        run: |
+          echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+          echo "release_version=$GITHUB_REF_NAME" >> $GITHUB_ENV
+      # - name: Create release
+      #   uses: actions/create-release@v1.1.4
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ env.release_version }}
+      #     release_name: Release ${{ env.release_version }}
+      #     body: |
+      #       This release contains changes for version ${{ env.release_version }}.
+      #     draft: false
+      #     prerelease: false
