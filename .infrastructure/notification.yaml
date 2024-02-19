@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  TheStackName:
+    Type: String
+    Description: The name of the stack
+  ChessfinderLambdaRoleArn:
+    Type: String
+    Description: The ARN of the role that allows the lambda to execute
+
+Resources:
+  NotificationQueue: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: !Sub "${TheStackName}-Alarms.fifo"
+      FifoQueue: true
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 129
+      ContentBasedDeduplication: false
+  
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${TheStackName}-Alarms.fifo"
+      ContentBasedDeduplication: false
+      # DeliveryStatusLogging: 
+      #   - LoggingConfig
+      FifoTopic: true
+  
+  NotificationTopicCanWriteIntoQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref NotificationQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Allow-SNS-SendMessage
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt NotificationQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref NotificationTopic
+  
+  NotificationTopicToQueueBinding:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt NotificationQueue.Arn
+      Protocol: sqs
+      RawMessageDelivery: true
+      TopicArn: !Ref NotificationTopic
+    DependsOn: 
+      - NotificationTopicCanWriteIntoQueuePolicy
+
+Outputs:
+  NotificationQueueArn:
+    Description: The ARN of the notification queue
+    Value: !GetAtt NotificationQueue.Arn
+  NotificationTopicArn:
+    Description: The ARN of the notification topic
+    Value: !Ref NotificationTopic
+    Export:
+      Name: !Sub "${TheStackName}-NotificationTopicArn"
+
+  

@@ -8,61 +8,17 @@ Parameters:
   ChessfinderLambdaRoleArn:
     Type: String
     Description: The ARN of the role that allows the lambda to execute
+  NotificationQueueArn:
+    Type: String
+    Description: The ARN of the queue that receives the notifications
 
 Resources:
-  AlarmQueue: 
-    Type: AWS::SQS::Queue
-    Properties: 
-      QueueName: !Sub "${TheStackName}-Alarms.fifo"
-      FifoQueue: true
-      VisibilityTimeout: 60
-      MessageRetentionPeriod: 129
-      ContentBasedDeduplication: false
-  
-  AlarmTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub "${TheStackName}-Alarms.fifo"
-      ContentBasedDeduplication: false
-      # DeliveryStatusLogging: 
-      #   - LoggingConfig
-      FifoTopic: true
-  
-  AlarmTopicCanWriteIntoQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues:
-        - !Ref AlarmQueue
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: Allow-SNS-SendMessage
-            Effect: Allow
-            Principal:
-              AWS: '*'
-            Action:
-              - sqs:SendMessage
-            Resource: !GetAtt AlarmQueue.Arn
-            Condition:
-              ArnEquals:
-                aws:SourceArn: !Ref AlarmTopic
-  
-  AlarmTopicToQueueBinding:
-    Type: AWS::SNS::Subscription
-    Properties:
-      Endpoint: !GetAtt AlarmQueue.Arn
-      Protocol: sqs
-      RawMessageDelivery: true
-      TopicArn: !Ref AlarmTopic
-    DependsOn: 
-      - AlarmTopicCanWriteIntoQueuePolicy
-
   ProfileNotFound:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
       AlarmActions: 
-        - !Ref AlarmTopic
+        - !Ref NotificationTopic
       AlarmDescription: 'Profile not found in chess.com'
       AlarmName: !Sub "${TheStackName}-ProfileNotFound"
       ComparisonOperator: 'GreaterThanThreshold'
@@ -76,7 +32,7 @@ Resources:
       MetricName: ChessDotComMeter
       Namespace: !Ref TheStackName
       OKActions: 
-        - !Ref AlarmTopic
+        - !Ref NotificationTopic
       Period: 60
       Statistic: Sum
       Threshold: 1
@@ -88,8 +44,8 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions: 
-        - !Ref AlarmTopic
-      AlarmDescription: 'Profile not found in chess.com'
+        - !Ref NotificationTopic
+      AlarmDescription: 'Profile checked in chess.com'
       AlarmName: !Sub "${TheStackName}-ProfileIsSearched"
       ComparisonOperator: 'GreaterThanThreshold'
       DatapointsToAlarm: 1
@@ -100,7 +56,7 @@ Resources:
       MetricName: ChessDotComMeter
       Namespace: !Ref TheStackName
       OKActions: 
-        - !Ref AlarmTopic
+        - !Ref NotificationTopic
       Period: 60
       Statistic: Sum
       Threshold: 1
@@ -156,7 +112,7 @@ Resources:
       Events:
         NotificationCommand:
           Properties:
-            Queue: !GetAtt AlarmQueue.Arn
+            Queue: !GetAtt NotificationQueueArn
             BatchSize: 10
           Type: SQS
       Timeout: 60

@@ -53,6 +53,22 @@ Resources:
       Parameters:
         TheStackName: !Ref AWS::StackName
 
+  Notifications:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/notification.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
+  
+  Notifiers:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: .infrastructure/notifier.yaml
+      Parameters:
+        TheStackName: !Ref AWS::StackName
+        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
+        NotificationQueueArn: !GetAtt Notifications.Outputs.NotificationQueueArn      
+
   Core:
     Type: AWS::Serverless::Application
     Properties:
@@ -124,13 +140,3 @@ Resources:
         HostedZoneId: !GetAtt Api.Outputs.ChessfinderApiRegionalHostedZoneId
         EvaluateTargetHealth: false
     DependsOn: Api
-
-  ChessfinderAlarms:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: .infrastructure/alarm.yaml
-      Parameters:
-        TheStackName: !Ref AWS::StackName
-        ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-    DependsOn: 
-      - Api
