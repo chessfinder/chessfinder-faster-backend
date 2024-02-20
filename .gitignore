@@ -16,9 +16,9 @@ target
 hole/
 .infrastructure/slower_api.yaml
 
-src_go/details/notification/notification
-src_go/details/notification/notification.zip
-src_go/details/notification/bootstrap
+src_go/details/notification/subscriber/notification
+src_go/details/notification/subscriber/notification.zip
+src_go/details/notification/subscriber/bootstrap
 
 src_go/search/check_status/check_status
 src_go/search/check_status/check_status.zip

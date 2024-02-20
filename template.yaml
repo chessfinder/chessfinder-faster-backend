@@ -67,7 +67,8 @@ Resources:
       Parameters:
         TheStackName: !Ref AWS::StackName
         ChessfinderLambdaRoleArn: !GetAtt Roles.Outputs.RoleForChessfinderLambdaArn
-        NotificationQueueArn: !GetAtt Notifications.Outputs.NotificationQueueArn      
+        NotificationQueueArn: !GetAtt Notifications.Outputs.NotificationQueueArn
+        NotificationTopicArn: !GetAtt Notifications.Outputs.NotificationTopicArn      
 
   Core:
     Type: AWS::Serverless::Application

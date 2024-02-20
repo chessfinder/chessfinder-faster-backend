@@ -10,7 +10,7 @@ Resources:
   NotificationQueue: 
     Type: AWS::SQS::Queue
     Properties: 
-      QueueName: !Sub "${TheStackName}-Alarms.fifo"
+      QueueName: !Sub "${TheStackName}-Notifications.fifo"
       FifoQueue: true
       VisibilityTimeout: 60
       MessageRetentionPeriod: 129
@@ -19,7 +19,7 @@ Resources:
   NotificationTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub "${TheStackName}-Alarms.fifo"
+      TopicName: !Sub "${TheStackName}-Notifications.fifo"
       ContentBasedDeduplication: false
       # DeliveryStatusLogging: 
       #   - LoggingConfig
@@ -63,5 +63,3 @@ Outputs:
     Value: !Ref NotificationTopic
     Export:
       Name: !Sub "${TheStackName}-NotificationTopicArn"
-
-  
