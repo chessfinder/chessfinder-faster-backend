@@ -5,9 +5,6 @@ Parameters:
   TheStackName:
     Type: String
     Description: The name of the stack
-  ChessfinderLambdaRoleArn:
-    Type: String
-    Description: The ARN of the role that allows the lambda to execute
 
 Resources:
   NotificationQueue: 
