@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/api"
@@ -17,6 +18,7 @@ import (
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/searches"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/db/users"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/logging"
+	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/metrics"
 	"github.com/chessfinder/chessfinder-faster-backend/src_go/details/queue"
 	"go.uber.org/zap"
 )
@@ -54,6 +56,17 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	}
 
 	logger = logger.With(zap.String("method", method), zap.String("path", path))
+
+	cloudWatchClient := cloudwatch.New(awsSession)
+	searchAttemptMeter := metrics.SearchAttemtMeter{
+		Namespace:        "Search",
+		CloudWatchClient: cloudWatchClient,
+	}
+
+	errOfTotalMetricRegistration := searchAttemptMeter.SearchStatistics(metrics.Total)
+	if errOfTotalMetricRegistration != nil {
+		logger.Error("error while registering total search attempt metric", zap.Error(errOfTotalMetricRegistration))
+	}
 
 	searchRequest := SearchRequest{}
 	err = json.Unmarshal([]byte(event.Body), &searchRequest)
@@ -137,6 +150,14 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 
 	if exisitngSearch != nil {
 		logger.Info("search record found")
+		errOfTotalSuccessfulMetricRegistration := searchAttemptMeter.SearchStatistics(metrics.TotalSuccessful)
+		if errOfTotalSuccessfulMetricRegistration != nil {
+			logger.Error("error while registering total successful search attempt metric", zap.Error(errOfTotalSuccessfulMetricRegistration))
+		}
+		errOfDuplicateSuccessfulMetricRegistration := searchAttemptMeter.SearchStatistics(metrics.DuplicateSuccessful)
+		if errOfDuplicateSuccessfulMetricRegistration != nil {
+			logger.Error("error while registering duplicated successful search attempt metric", zap.Error(errOfDuplicateSuccessfulMetricRegistration))
+		}
 		responseEvent, err = searchIdToResponseEvent(exisitngSearch.SearchId.String())
 
 		if err != nil {
@@ -205,6 +226,16 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 	_, err = svc.SendMessage(sendMessageInput)
 	if err != nil {
 		logger.Error("error while sending search board command", zap.Error(err))
+	}
+
+	errOfTotalSuccessfulMetricRegistration := searchAttemptMeter.SearchStatistics(metrics.TotalSuccessful)
+	if errOfTotalSuccessfulMetricRegistration != nil {
+		logger.Error("error while registering total successful search attempt metric", zap.Error(errOfTotalSuccessfulMetricRegistration))
+	}
+
+	errOfUniqueSuccessfulMetricRegistration := searchAttemptMeter.SearchStatistics(metrics.DuplicateSuccessful)
+	if errOfUniqueSuccessfulMetricRegistration != nil {
+		logger.Error("error while registering unique search attempt metric", zap.Error(errOfUniqueSuccessfulMetricRegistration))
 	}
 
 	logger.Info("search board command sent")

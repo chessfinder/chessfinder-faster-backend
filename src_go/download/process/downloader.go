@@ -184,6 +184,11 @@ func (downloader *GameDownloader) ProcessSingle(
 			logger.Error("impossible to register the metric ChessDotComStatistics", zap.Error(errFromMetricRegistration))
 		}
 
+		downloadedGamesMeter := metrics.DownloadMeter{
+			Namespace:        downloader.metricsNamespace,
+			CloudWatchClient: cloudWatchClient,
+		}
+
 		responseBodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			logger.Error("impossible to read the response body from chess.com!", zap.Error(err))
@@ -213,6 +218,11 @@ func (downloader *GameDownloader) ProcessSingle(
 				logger.Error("impossible to increment the download status", zap.Error(err))
 			}
 			return
+		}
+
+		errOfDownloadedGamesMetricRegistration := downloadedGamesMeter.SearchStatistics(len(chessDotComGames.Games))
+		if errOfDownloadedGamesMetricRegistration != nil {
+			logger.Error("error while registering amount of downloaded games metric", zap.Error(errOfDownloadedGamesMetricRegistration))
 		}
 
 		var latestDownloadedGameRecord *games.GameRecord
