@@ -15,7 +15,7 @@ services:
         "1000",
         "--local-response-templating",
         "--root-dir",
-        "/home/wiremock/storage"
+        "/home/wiremock"
       ]
   # dynamodb:
   #   image: amazon/dynamodb-local:latest
