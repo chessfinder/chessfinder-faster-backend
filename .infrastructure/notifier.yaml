@@ -16,22 +16,22 @@ Parameters:
     Description: The ARN of the topic that sends the notifications
 
 Resources:
-  ProfileNotFound:
+  ProfileIsNotFound:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
       AlarmActions: 
         - !Ref NotificationTopicArn
       AlarmDescription: 'Profile not found in chess.com'
-      AlarmName: !Sub "${TheStackName}-ProfileNotFound"
+      AlarmName: !Sub "${TheStackName}-ProfileIsNotFound"
       ComparisonOperator: 'GreaterThanThreshold'
-      DatapointsToAlarm: 1
+      DatapointsToAlarm: 2
       Dimensions: 
         - Name: Action
           Value: GetProfile
         - Name: StatusCode
           Value: 404
-      EvaluationPeriods: 1
+      EvaluationPeriods: 3
       MetricName: ChessDotComMeter
       Namespace: !Ref TheStackName
       OKActions: 

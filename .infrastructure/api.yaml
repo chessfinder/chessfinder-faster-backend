@@ -221,6 +221,7 @@ Resources:
           SEARCHES_TABLE_NAME: !Ref SearchesTableName
           SEARCH_BOARD_QUEUE_URL: !Ref SearchBoardQueueUrl
           SEARCH_INFO_EXPIRES_IN_SECONDS: !Ref SearchInfoExpiresInSeconds
+          THE_STACK_NAME: !Ref TheStackName
       Role: !Ref ChessfinderLambdaRoleArn
       LoggingConfig:
         LogFormat: JSON

@@ -30,6 +30,7 @@ type SearchRegistrar struct {
 	searchesTableName   string
 	searchBoardQueueUrl string
 	searchInfoExpiresIn time.Duration
+	metricsNamespace    string
 	awsConfig           *aws.Config
 	validator           BoardValidator
 }
@@ -59,7 +60,7 @@ func (registrar *SearchRegistrar) RegisterSearchRequest(event *events.APIGateway
 
 	cloudWatchClient := cloudwatch.New(awsSession)
 	searchAttemptMeter := metrics.SearchAttemtMeter{
-		Namespace:        "Search",
+		Namespace:        registrar.metricsNamespace,
 		CloudWatchClient: cloudWatchClient,
 	}
 
