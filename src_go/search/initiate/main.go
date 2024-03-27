@@ -52,6 +52,11 @@ func main() {
 		panic(err)
 	}
 
+	theStackName, theStackNameExists := os.LookupEnv("THE_STACK_NAME")
+	if !theStackNameExists {
+		panic(errors.New("THE_STACK_NAME is missing"))
+	}
+
 	awsRegion, awsRegionExists := os.LookupEnv("AWS_REGION")
 	if !awsRegionExists {
 		panic(errors.New("AWS_REGION is missing"))
@@ -68,6 +73,7 @@ func main() {
 		searchesTableName:   searchesTableName,
 		searchBoardQueueUrl: searchBoardQueueUrl,
 		searchInfoExpiresIn: searchInfoExpiresIn,
+		metricsNamespace:    theStackName,
 		awsConfig:           awsConfig,
 		validator: DelegatedBoardValidator{
 			FunctionName: chessfinderValidationCoreFunctionName,
